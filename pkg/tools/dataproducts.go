@@ -1,0 +1,83 @@
+package tools
+
+import (
+	"context"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+// ListDataProductsInput is the input for the list_data_products tool (empty).
+type ListDataProductsInput struct{}
+
+func (t *Toolkit) registerListDataProductsTool(server *mcp.Server, cfg *toolConfig) {
+	baseHandler := func(ctx context.Context, req *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
+		return t.handleListDataProducts(ctx, req)
+	}
+
+	wrappedHandler := t.wrapHandler(ToolListDataProducts, baseHandler, cfg)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        string(ToolListDataProducts),
+		Description: "List data products in the DataHub catalog. Data products group datasets for specific business use cases.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListDataProductsInput) (*mcp.CallToolResult, any, error) {
+		return wrappedHandler(ctx, req, input)
+	})
+}
+
+func (t *Toolkit) handleListDataProducts(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, any, error) {
+	products, err := t.client.ListDataProducts(ctx)
+	if err != nil {
+		return ErrorResult(err.Error()), nil, nil
+	}
+
+	jsonResult, err := JSONResult(products)
+	if err != nil {
+		return ErrorResult("failed to format result: " + err.Error()), nil, nil
+	}
+
+	return jsonResult, nil, nil
+}
+
+// GetDataProductInput is the input for the get_data_product tool.
+type GetDataProductInput struct {
+	URN string `json:"urn" jsonschema_description:"The DataHub URN of the data product"`
+}
+
+func (t *Toolkit) registerGetDataProductTool(server *mcp.Server, cfg *toolConfig) {
+	baseHandler := func(ctx context.Context, req *mcp.CallToolRequest, input any) (*mcp.CallToolResult, any, error) {
+		productInput, ok := input.(GetDataProductInput)
+		if !ok {
+			return ErrorResult("internal error: invalid input type"), nil, nil
+		}
+		return t.handleGetDataProduct(ctx, req, productInput)
+	}
+
+	wrappedHandler := t.wrapHandler(ToolGetDataProduct, baseHandler, cfg)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        string(ToolGetDataProduct),
+		Description: "Get detailed information about a data product including its assets (datasets), owners, and domain",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetDataProductInput) (*mcp.CallToolResult, any, error) {
+		return wrappedHandler(ctx, req, input)
+	})
+}
+
+func (t *Toolkit) handleGetDataProduct(
+	ctx context.Context, _ *mcp.CallToolRequest, input GetDataProductInput,
+) (*mcp.CallToolResult, any, error) {
+	if input.URN == "" {
+		return ErrorResult("urn parameter is required"), nil, nil
+	}
+
+	product, err := t.client.GetDataProduct(ctx, input.URN)
+	if err != nil {
+		return ErrorResult(err.Error()), nil, nil
+	}
+
+	jsonResult, err := JSONResult(product)
+	if err != nil {
+		return ErrorResult("failed to format result: " + err.Error()), nil, nil
+	}
+
+	return jsonResult, nil, nil
+}
