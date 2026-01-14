@@ -261,7 +261,7 @@ func (c *Client) Search(ctx context.Context, query string, opts ...SearchOption)
 	}
 
 	if err := c.Execute(ctx, SearchQuery, variables, &response); err != nil {
-		return nil, fmt.Errorf("Search(%q): %w", query, err)
+		return nil, fmt.Errorf("search(%q): %w", query, err)
 	}
 
 	result := &types.SearchResult{
