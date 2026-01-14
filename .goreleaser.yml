@@ -1,0 +1,108 @@
+version: 2
+
+env:
+  - GO111MODULE=on
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: mcp-datahub
+    main: ./cmd/mcp-datahub
+    binary: mcp-datahub
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+      - -tags=netgo
+      - -a
+    ldflags: -s -w -X main.Version={{.Version}}
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: '{{ .ProjectName }}_checksums.txt'
+
+signs:
+  - id: archives
+    cmd: cosign
+    artifacts: archive
+    signature: "${artifact}.sigstore.json"
+    args: ["sign-blob", "--yes", "--bundle=${signature}", "${artifact}"]
+  - id: checksums
+    cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args: ["sign-blob", "--yes", "--bundle=${signature}", "${artifact}"]
+
+sboms:
+  - artifacts: archive
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - Merge pull request
+      - Merge branch
+
+dockers_v2:
+  - id: alpine
+    dockerfile: Dockerfile
+    ids: [mcp-datahub]
+    images: [ghcr.io/txn2/mcp-datahub]
+    tags: [latest, "{{ .Tag }}", "v{{ .Major }}"]
+    platforms: [linux/amd64, linux/arm64]
+
+docker_signs:
+  - cmd: cosign
+    args: ["sign", "--yes", "${artifact}"]
+    artifacts: all
+
+nfpms:
+  - id: default
+    file_name_template: '{{ .ProjectName }}_{{ .Arch }}'
+    homepage: https://mcp-datahub.txn2.com
+    description: MCP server for DataHub data catalogs
+    maintainer: Craig Johnston <cj@imti.co>
+    license: Apache 2.0
+    vendor: txn2
+    formats: [apk, deb, rpm]
+
+release:
+  github:
+    owner: txn2
+    name: mcp-datahub
+
+brews:
+  - name: mcp-datahub
+    repository:
+      owner: txn2
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: https://mcp-datahub.txn2.com
+    description: "MCP server for DataHub data catalogs"
+    license: "Apache-2.0"
