@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+// writeJSON writes a JSON response to the http.ResponseWriter for tests.
+func writeJSON(t *testing.T, w http.ResponseWriter, v interface{}) {
+	t.Helper()
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		t.Errorf("failed to encode JSON response: %v", err)
+	}
+}
+
 func TestNew(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -202,7 +210,7 @@ func TestClientExecute(t *testing.T) {
 				}
 
 				w.WriteHeader(tt.statusCode)
-				json.NewEncoder(w).Encode(tt.response)
+				writeJSON(t, w, tt.response)
 			}))
 			defer server.Close()
 
@@ -240,7 +248,7 @@ func TestClientExecute(t *testing.T) {
 
 func TestClientPing(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"__typename": "Query",
 			},
@@ -265,7 +273,7 @@ func TestClientPing(t *testing.T) {
 
 func TestClientSearch(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"search": map[string]interface{}{
 					"start": 0,
@@ -331,10 +339,12 @@ func TestClientSearchOptions(t *testing.T) {
 		var req struct {
 			Variables map[string]interface{} `json:"variables"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("failed to decode request: %v", err)
+		}
 		receivedInput = req.Variables["input"].(map[string]interface{})
 
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"search": map[string]interface{}{
 					"start":         0,
@@ -379,7 +389,7 @@ func TestClientSearchOptions(t *testing.T) {
 
 func TestClientGetEntity(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"entity": map[string]interface{}{
 					"urn":         "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.schema.table,PROD)",
@@ -432,7 +442,7 @@ func TestClientGetEntity(t *testing.T) {
 
 func TestClientGetEntityNotFound(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"entity": map[string]interface{}{
 					"urn": "",
@@ -459,7 +469,7 @@ func TestClientGetEntityNotFound(t *testing.T) {
 
 func TestClientGetEntityWithPropertiesAndDeprecation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"entity": map[string]interface{}{
 					"urn":         "urn:li:dataset:test",
@@ -525,7 +535,7 @@ func TestClientGetEntityWithPropertiesAndDeprecation(t *testing.T) {
 
 func TestClientGetSchema(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"dataset": map[string]interface{}{
 					"schemaMetadata": map[string]interface{}{
@@ -583,7 +593,7 @@ func TestClientGetSchema(t *testing.T) {
 
 func TestClientGetLineage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"searchAcrossLineage": map[string]interface{}{
 					"searchResults": []map[string]interface{}{
@@ -628,7 +638,7 @@ func TestClientGetLineage(t *testing.T) {
 
 func TestClientGetQueries(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"dataset": map[string]interface{}{
 					"usageStats": map[string]interface{}{
@@ -671,7 +681,7 @@ func TestClientGetQueries(t *testing.T) {
 
 func TestClientListTags(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"search": map[string]interface{}{
 					"searchResults": []map[string]interface{}{
@@ -715,7 +725,7 @@ func TestClientListTags(t *testing.T) {
 
 func TestClientListDomains(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"listDomains": map[string]interface{}{
 					"total": 1,
@@ -762,7 +772,7 @@ func TestClientListDomains(t *testing.T) {
 
 func TestClientGetGlossaryTerm(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"glossaryTerm": map[string]interface{}{
 					"urn":              "urn:li:glossaryTerm:business.revenue",
@@ -803,7 +813,7 @@ func TestClientGetGlossaryTerm(t *testing.T) {
 
 func TestClientGetGlossaryTermNotFound(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"glossaryTerm": map[string]interface{}{
 					"urn": "",
@@ -830,7 +840,7 @@ func TestClientGetGlossaryTermNotFound(t *testing.T) {
 
 func TestClientListDataProducts(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"listDataProducts": map[string]interface{}{
 					"total": 1,
@@ -912,7 +922,7 @@ func TestClientListDataProducts(t *testing.T) {
 
 func TestClientGetDataProduct(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"dataProduct": map[string]interface{}{
 					"urn": "urn:li:dataProduct:test",
@@ -985,7 +995,7 @@ func TestClientGetDataProduct(t *testing.T) {
 
 func TestClientGetDataProductNotFound(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"dataProduct": map[string]interface{}{
 					"urn": "",
@@ -1014,7 +1024,7 @@ func TestClientContextTimeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Simulate slow response
 		time.Sleep(100 * time.Millisecond)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{},
 		})
 	}))
@@ -1040,7 +1050,9 @@ func TestClientContextTimeout(t *testing.T) {
 func TestClientServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
+		if _, err := w.Write([]byte("Internal Server Error")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -1072,14 +1084,18 @@ func TestNewFromEnv(t *testing.T) {
 	// Save existing env vars
 	origURL := os.Getenv("DATAHUB_URL")
 	origToken := os.Getenv("DATAHUB_TOKEN")
-	defer func() {
-		restoreEnv("DATAHUB_URL", origURL)
-		restoreEnv("DATAHUB_TOKEN", origToken)
-	}()
+	t.Cleanup(func() {
+		restoreEnvT(t, "DATAHUB_URL", origURL)
+		restoreEnvT(t, "DATAHUB_TOKEN", origToken)
+	})
 
 	// Set valid env vars
-	os.Setenv("DATAHUB_URL", "https://datahub.example.com")
-	os.Setenv("DATAHUB_TOKEN", "test-token")
+	if err := os.Setenv("DATAHUB_URL", "https://datahub.example.com"); err != nil {
+		t.Fatalf("failed to set DATAHUB_URL: %v", err)
+	}
+	if err := os.Setenv("DATAHUB_TOKEN", "test-token"); err != nil {
+		t.Fatalf("failed to set DATAHUB_TOKEN: %v", err)
+	}
 
 	client, err := NewFromEnv()
 	if err != nil {
@@ -1095,14 +1111,18 @@ func TestNewFromEnvMissingConfig(t *testing.T) {
 	// Save existing env vars
 	origURL := os.Getenv("DATAHUB_URL")
 	origToken := os.Getenv("DATAHUB_TOKEN")
-	defer func() {
-		restoreEnv("DATAHUB_URL", origURL)
-		restoreEnv("DATAHUB_TOKEN", origToken)
-	}()
+	t.Cleanup(func() {
+		restoreEnvT(t, "DATAHUB_URL", origURL)
+		restoreEnvT(t, "DATAHUB_TOKEN", origToken)
+	})
 
 	// Clear env vars
-	os.Unsetenv("DATAHUB_URL")
-	os.Unsetenv("DATAHUB_TOKEN")
+	if err := os.Unsetenv("DATAHUB_URL"); err != nil {
+		t.Fatalf("failed to unset DATAHUB_URL: %v", err)
+	}
+	if err := os.Unsetenv("DATAHUB_TOKEN"); err != nil {
+		t.Fatalf("failed to unset DATAHUB_TOKEN: %v", err)
+	}
 
 	_, err := NewFromEnv()
 	if err == nil {
@@ -1110,10 +1130,15 @@ func TestNewFromEnvMissingConfig(t *testing.T) {
 	}
 }
 
-func restoreEnv(key, value string) {
+func restoreEnvT(t *testing.T, key, value string) {
+	t.Helper()
+	var err error
 	if value == "" {
-		os.Unsetenv(key)
+		err = os.Unsetenv(key)
 	} else {
-		os.Setenv(key, value)
+		err = os.Setenv(key, value)
+	}
+	if err != nil {
+		t.Errorf("failed to restore env %s: %v", key, err)
 	}
 }

@@ -42,24 +42,33 @@ func TestNewWithProvidedConfig(t *testing.T) {
 
 	// Clean up
 	if datahubClient != nil {
-		datahubClient.Close()
+		if err := datahubClient.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
 	}
 }
 
 func TestNewWithInvalidEnvConfig(t *testing.T) {
-	// Save and clear env vars
+	// Save original values
 	origURL := os.Getenv("DATAHUB_URL")
 	origToken := os.Getenv("DATAHUB_TOKEN")
 	origTimeout := os.Getenv("DATAHUB_TIMEOUT")
 
-	os.Unsetenv("DATAHUB_URL")
-	os.Unsetenv("DATAHUB_TOKEN")
-	os.Setenv("DATAHUB_TIMEOUT", "invalid")
+	// Set test values
+	if err := os.Unsetenv("DATAHUB_URL"); err != nil {
+		t.Fatalf("failed to unset DATAHUB_URL: %v", err)
+	}
+	if err := os.Unsetenv("DATAHUB_TOKEN"); err != nil {
+		t.Fatalf("failed to unset DATAHUB_TOKEN: %v", err)
+	}
+	if err := os.Setenv("DATAHUB_TIMEOUT", "invalid"); err != nil {
+		t.Fatalf("failed to set DATAHUB_TIMEOUT: %v", err)
+	}
 
 	t.Cleanup(func() {
-		setEnvOrUnset("DATAHUB_URL", origURL)
-		setEnvOrUnset("DATAHUB_TOKEN", origToken)
-		setEnvOrUnset("DATAHUB_TIMEOUT", origTimeout)
+		restoreEnv(t, "DATAHUB_URL", origURL)
+		restoreEnv(t, "DATAHUB_TOKEN", origToken)
+		restoreEnv(t, "DATAHUB_TIMEOUT", origTimeout)
 	})
 
 	opts := DefaultOptions()
@@ -70,16 +79,21 @@ func TestNewWithInvalidEnvConfig(t *testing.T) {
 }
 
 func TestNewWithMissingConfig(t *testing.T) {
-	// Save and clear env vars
+	// Save original values
 	origURL := os.Getenv("DATAHUB_URL")
 	origToken := os.Getenv("DATAHUB_TOKEN")
 
-	os.Unsetenv("DATAHUB_URL")
-	os.Unsetenv("DATAHUB_TOKEN")
+	// Unset values
+	if err := os.Unsetenv("DATAHUB_URL"); err != nil {
+		t.Fatalf("failed to unset DATAHUB_URL: %v", err)
+	}
+	if err := os.Unsetenv("DATAHUB_TOKEN"); err != nil {
+		t.Fatalf("failed to unset DATAHUB_TOKEN: %v", err)
+	}
 
 	t.Cleanup(func() {
-		setEnvOrUnset("DATAHUB_URL", origURL)
-		setEnvOrUnset("DATAHUB_TOKEN", origToken)
+		restoreEnv(t, "DATAHUB_URL", origURL)
+		restoreEnv(t, "DATAHUB_TOKEN", origToken)
 	})
 
 	opts := DefaultOptions()
@@ -95,7 +109,9 @@ func TestNewWithMissingConfig(t *testing.T) {
 	}
 	if datahubClient != nil {
 		t.Error("New() should return nil client when unconfigured")
-		datahubClient.Close()
+		if err := datahubClient.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
 	}
 }
 
@@ -105,10 +121,15 @@ func TestVersion(t *testing.T) {
 	}
 }
 
-func setEnvOrUnset(key, value string) {
+func restoreEnv(t *testing.T, key, value string) {
+	t.Helper()
+	var err error
 	if value == "" {
-		os.Unsetenv(key)
+		err = os.Unsetenv(key)
 	} else {
-		os.Setenv(key, value)
+		err = os.Setenv(key, value)
+	}
+	if err != nil {
+		t.Errorf("failed to restore env %s: %v", key, err)
 	}
 }

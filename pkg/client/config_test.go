@@ -97,23 +97,23 @@ func TestFromEnv(t *testing.T) {
 
 	// Restore on cleanup
 	t.Cleanup(func() {
-		setEnvOrUnset("DATAHUB_URL", origURL)
-		setEnvOrUnset("DATAHUB_TOKEN", origToken)
-		setEnvOrUnset("DATAHUB_TIMEOUT", origTimeout)
-		setEnvOrUnset("DATAHUB_RETRY_MAX", origRetryMax)
-		setEnvOrUnset("DATAHUB_DEFAULT_LIMIT", origDefaultLimit)
-		setEnvOrUnset("DATAHUB_MAX_LIMIT", origMaxLimit)
-		setEnvOrUnset("DATAHUB_MAX_LINEAGE_DEPTH", origMaxDepth)
+		setEnvOrUnsetT(t, "DATAHUB_URL", origURL)
+		setEnvOrUnsetT(t, "DATAHUB_TOKEN", origToken)
+		setEnvOrUnsetT(t, "DATAHUB_TIMEOUT", origTimeout)
+		setEnvOrUnsetT(t, "DATAHUB_RETRY_MAX", origRetryMax)
+		setEnvOrUnsetT(t, "DATAHUB_DEFAULT_LIMIT", origDefaultLimit)
+		setEnvOrUnsetT(t, "DATAHUB_MAX_LIMIT", origMaxLimit)
+		setEnvOrUnsetT(t, "DATAHUB_MAX_LINEAGE_DEPTH", origMaxDepth)
 	})
 
 	t.Run("reads basic env vars", func(t *testing.T) {
-		os.Setenv("DATAHUB_URL", "https://test.datahub.io")
-		os.Setenv("DATAHUB_TOKEN", "test-token-123")
-		os.Unsetenv("DATAHUB_TIMEOUT")
-		os.Unsetenv("DATAHUB_RETRY_MAX")
-		os.Unsetenv("DATAHUB_DEFAULT_LIMIT")
-		os.Unsetenv("DATAHUB_MAX_LIMIT")
-		os.Unsetenv("DATAHUB_MAX_LINEAGE_DEPTH")
+		mustSetenv(t, "DATAHUB_URL", "https://test.datahub.io")
+		mustSetenv(t, "DATAHUB_TOKEN", "test-token-123")
+		mustUnsetenv(t, "DATAHUB_TIMEOUT")
+		mustUnsetenv(t, "DATAHUB_RETRY_MAX")
+		mustUnsetenv(t, "DATAHUB_DEFAULT_LIMIT")
+		mustUnsetenv(t, "DATAHUB_MAX_LIMIT")
+		mustUnsetenv(t, "DATAHUB_MAX_LINEAGE_DEPTH")
 
 		cfg, err := FromEnv()
 		if err != nil {
@@ -133,13 +133,13 @@ func TestFromEnv(t *testing.T) {
 	})
 
 	t.Run("reads all env vars", func(t *testing.T) {
-		os.Setenv("DATAHUB_URL", "https://full.datahub.io")
-		os.Setenv("DATAHUB_TOKEN", "full-token")
-		os.Setenv("DATAHUB_TIMEOUT", "60")
-		os.Setenv("DATAHUB_RETRY_MAX", "5")
-		os.Setenv("DATAHUB_DEFAULT_LIMIT", "20")
-		os.Setenv("DATAHUB_MAX_LIMIT", "200")
-		os.Setenv("DATAHUB_MAX_LINEAGE_DEPTH", "10")
+		mustSetenv(t, "DATAHUB_URL", "https://full.datahub.io")
+		mustSetenv(t, "DATAHUB_TOKEN", "full-token")
+		mustSetenv(t, "DATAHUB_TIMEOUT", "60")
+		mustSetenv(t, "DATAHUB_RETRY_MAX", "5")
+		mustSetenv(t, "DATAHUB_DEFAULT_LIMIT", "20")
+		mustSetenv(t, "DATAHUB_MAX_LIMIT", "200")
+		mustSetenv(t, "DATAHUB_MAX_LINEAGE_DEPTH", "10")
 
 		cfg, err := FromEnv()
 		if err != nil {
@@ -164,9 +164,9 @@ func TestFromEnv(t *testing.T) {
 	})
 
 	t.Run("invalid timeout", func(t *testing.T) {
-		os.Setenv("DATAHUB_URL", "https://test.io")
-		os.Setenv("DATAHUB_TOKEN", "token")
-		os.Setenv("DATAHUB_TIMEOUT", "invalid")
+		mustSetenv(t, "DATAHUB_URL", "https://test.io")
+		mustSetenv(t, "DATAHUB_TOKEN", "token")
+		mustSetenv(t, "DATAHUB_TIMEOUT", "invalid")
 
 		_, err := FromEnv()
 		if err == nil {
@@ -175,10 +175,10 @@ func TestFromEnv(t *testing.T) {
 	})
 
 	t.Run("invalid retry max", func(t *testing.T) {
-		os.Setenv("DATAHUB_URL", "https://test.io")
-		os.Setenv("DATAHUB_TOKEN", "token")
-		os.Unsetenv("DATAHUB_TIMEOUT")
-		os.Setenv("DATAHUB_RETRY_MAX", "not-a-number")
+		mustSetenv(t, "DATAHUB_URL", "https://test.io")
+		mustSetenv(t, "DATAHUB_TOKEN", "token")
+		mustUnsetenv(t, "DATAHUB_TIMEOUT")
+		mustSetenv(t, "DATAHUB_RETRY_MAX", "not-a-number")
 
 		_, err := FromEnv()
 		if err == nil {
@@ -187,11 +187,11 @@ func TestFromEnv(t *testing.T) {
 	})
 
 	t.Run("invalid default limit", func(t *testing.T) {
-		os.Setenv("DATAHUB_URL", "https://test.io")
-		os.Setenv("DATAHUB_TOKEN", "token")
-		os.Unsetenv("DATAHUB_TIMEOUT")
-		os.Unsetenv("DATAHUB_RETRY_MAX")
-		os.Setenv("DATAHUB_DEFAULT_LIMIT", "abc")
+		mustSetenv(t, "DATAHUB_URL", "https://test.io")
+		mustSetenv(t, "DATAHUB_TOKEN", "token")
+		mustUnsetenv(t, "DATAHUB_TIMEOUT")
+		mustUnsetenv(t, "DATAHUB_RETRY_MAX")
+		mustSetenv(t, "DATAHUB_DEFAULT_LIMIT", "abc")
 
 		_, err := FromEnv()
 		if err == nil {
@@ -200,12 +200,12 @@ func TestFromEnv(t *testing.T) {
 	})
 
 	t.Run("invalid max limit", func(t *testing.T) {
-		os.Setenv("DATAHUB_URL", "https://test.io")
-		os.Setenv("DATAHUB_TOKEN", "token")
-		os.Unsetenv("DATAHUB_TIMEOUT")
-		os.Unsetenv("DATAHUB_RETRY_MAX")
-		os.Unsetenv("DATAHUB_DEFAULT_LIMIT")
-		os.Setenv("DATAHUB_MAX_LIMIT", "xyz")
+		mustSetenv(t, "DATAHUB_URL", "https://test.io")
+		mustSetenv(t, "DATAHUB_TOKEN", "token")
+		mustUnsetenv(t, "DATAHUB_TIMEOUT")
+		mustUnsetenv(t, "DATAHUB_RETRY_MAX")
+		mustUnsetenv(t, "DATAHUB_DEFAULT_LIMIT")
+		mustSetenv(t, "DATAHUB_MAX_LIMIT", "xyz")
 
 		_, err := FromEnv()
 		if err == nil {
@@ -214,13 +214,13 @@ func TestFromEnv(t *testing.T) {
 	})
 
 	t.Run("invalid max lineage depth", func(t *testing.T) {
-		os.Setenv("DATAHUB_URL", "https://test.io")
-		os.Setenv("DATAHUB_TOKEN", "token")
-		os.Unsetenv("DATAHUB_TIMEOUT")
-		os.Unsetenv("DATAHUB_RETRY_MAX")
-		os.Unsetenv("DATAHUB_DEFAULT_LIMIT")
-		os.Unsetenv("DATAHUB_MAX_LIMIT")
-		os.Setenv("DATAHUB_MAX_LINEAGE_DEPTH", "bad")
+		mustSetenv(t, "DATAHUB_URL", "https://test.io")
+		mustSetenv(t, "DATAHUB_TOKEN", "token")
+		mustUnsetenv(t, "DATAHUB_TIMEOUT")
+		mustUnsetenv(t, "DATAHUB_RETRY_MAX")
+		mustUnsetenv(t, "DATAHUB_DEFAULT_LIMIT")
+		mustUnsetenv(t, "DATAHUB_MAX_LIMIT")
+		mustSetenv(t, "DATAHUB_MAX_LINEAGE_DEPTH", "bad")
 
 		_, err := FromEnv()
 		if err == nil {
@@ -229,10 +229,29 @@ func TestFromEnv(t *testing.T) {
 	})
 }
 
-func setEnvOrUnset(key, value string) {
+func mustSetenv(t *testing.T, key, value string) {
+	t.Helper()
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatalf("failed to set %s: %v", key, err)
+	}
+}
+
+func mustUnsetenv(t *testing.T, key string) {
+	t.Helper()
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatalf("failed to unset %s: %v", key, err)
+	}
+}
+
+func setEnvOrUnsetT(t *testing.T, key, value string) {
+	t.Helper()
+	var err error
 	if value == "" {
-		os.Unsetenv(key)
+		err = os.Unsetenv(key)
 	} else {
-		os.Setenv(key, value)
+		err = os.Setenv(key, value)
+	}
+	if err != nil {
+		t.Errorf("failed to set/unset env %s: %v", key, err)
 	}
 }
