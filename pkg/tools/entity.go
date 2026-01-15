@@ -9,6 +9,8 @@ import (
 // GetEntityInput is the input for the get_entity tool.
 type GetEntityInput struct {
 	URN string `json:"urn" jsonschema_description:"The DataHub URN of the entity"`
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
 func (t *Toolkit) registerGetEntityTool(server *mcp.Server, cfg *toolConfig) {
@@ -35,7 +37,13 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult("urn parameter is required"), nil, nil
 	}
 
-	entity, err := t.client.GetEntity(ctx, input.URN)
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
+	entity, err := datahubClient.GetEntity(ctx, input.URN)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}
