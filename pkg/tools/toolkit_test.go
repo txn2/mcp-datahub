@@ -8,6 +8,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/txn2/mcp-datahub/pkg/client"
+	"github.com/txn2/mcp-datahub/pkg/multiserver"
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
@@ -355,5 +356,360 @@ func TestToolkitNoMiddleware(t *testing.T) {
 
 	if !handlerCalled {
 		t.Error("Handler should be called")
+	}
+}
+
+func TestNewToolkitWithManager(t *testing.T) {
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {
+				URL:   "https://staging.datahub.example.com",
+				Token: "staging-token",
+			},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	toolkit := NewToolkitWithManager(mgr, DefaultConfig())
+
+	if toolkit == nil {
+		t.Fatal("NewToolkitWithManager() returned nil")
+	}
+	if !toolkit.HasManager() {
+		t.Error("HasManager() should return true")
+	}
+	if toolkit.Manager() != mgr {
+		t.Error("Manager() should return the manager")
+	}
+	if toolkit.Client() != nil {
+		t.Error("Client() should return nil in manager mode")
+	}
+}
+
+func TestNewToolkitWithManager_WithOptions(t *testing.T) {
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	middlewareCalled := false
+	mw := BeforeFunc(func(ctx context.Context, _ *ToolContext) (context.Context, error) {
+		middlewareCalled = true
+		return ctx, nil
+	})
+
+	toolkit := NewToolkitWithManager(mgr, DefaultConfig(), WithMiddleware(mw))
+
+	if !toolkit.HasMiddleware() {
+		t.Error("HasMiddleware() should return true")
+	}
+
+	// Verify middleware setup
+	_ = middlewareCalled
+}
+
+func TestToolkitHasManager(t *testing.T) {
+	tests := []struct {
+		name       string
+		setupFunc  func() *Toolkit
+		wantResult bool
+	}{
+		{
+			name: "single client mode",
+			setupFunc: func() *Toolkit {
+				return NewToolkit(&mockClient{}, DefaultConfig())
+			},
+			wantResult: false,
+		},
+		{
+			name: "manager mode",
+			setupFunc: func() *Toolkit {
+				cfg := multiserver.Config{
+					Default: "default",
+					Primary: client.Config{URL: "https://localhost", Token: "token"},
+				}
+				mgr := multiserver.NewManager(cfg)
+				return NewToolkitWithManager(mgr, DefaultConfig())
+			},
+			wantResult: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			toolkit := tt.setupFunc()
+			if toolkit.HasManager() != tt.wantResult {
+				t.Errorf("HasManager() = %v, want %v", toolkit.HasManager(), tt.wantResult)
+			}
+		})
+	}
+}
+
+func TestToolkitManager(t *testing.T) {
+	// Test nil manager in single client mode
+	mock := &mockClient{}
+	toolkit := NewToolkit(mock, DefaultConfig())
+	if toolkit.Manager() != nil {
+		t.Error("Manager() should return nil in single client mode")
+	}
+
+	// Test non-nil manager in manager mode
+	cfg := multiserver.Config{
+		Default: "default",
+		Primary: client.Config{URL: "https://localhost", Token: "token"},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	toolkit = NewToolkitWithManager(mgr, DefaultConfig())
+	if toolkit.Manager() != mgr {
+		t.Error("Manager() should return the manager")
+	}
+}
+
+func TestToolkitConnectionInfos_SingleClient(t *testing.T) {
+	mock := &mockClient{}
+	toolkit := NewToolkit(mock, DefaultConfig())
+
+	infos := toolkit.ConnectionInfos()
+
+	if len(infos) != 1 {
+		t.Errorf("expected 1 connection info, got %d", len(infos))
+	}
+	if infos[0].Name != "default" {
+		t.Errorf("expected name 'default', got %q", infos[0].Name)
+	}
+	if !infos[0].IsDefault {
+		t.Error("single connection should be default")
+	}
+	if infos[0].URL != "configured via single client" {
+		t.Errorf("unexpected URL: %q", infos[0].URL)
+	}
+}
+
+func TestToolkitConnectionInfos_MultiServer(t *testing.T) {
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {URL: "https://staging.datahub.example.com"},
+			"dev":     {URL: "https://dev.datahub.example.com"},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	toolkit := NewToolkitWithManager(mgr, DefaultConfig())
+	infos := toolkit.ConnectionInfos()
+
+	if len(infos) != 3 {
+		t.Errorf("expected 3 connection infos, got %d", len(infos))
+	}
+
+	// Verify default connection
+	var foundDefault bool
+	for _, info := range infos {
+		if info.IsDefault {
+			foundDefault = true
+			if info.Name != "prod" {
+				t.Errorf("expected default name 'prod', got %q", info.Name)
+			}
+		}
+	}
+	if !foundDefault {
+		t.Error("no default connection found")
+	}
+}
+
+func TestToolkitConnectionCount_SingleClient(t *testing.T) {
+	mock := &mockClient{}
+	toolkit := NewToolkit(mock, DefaultConfig())
+
+	if toolkit.ConnectionCount() != 1 {
+		t.Errorf("expected 1, got %d", toolkit.ConnectionCount())
+	}
+}
+
+func TestToolkitConnectionCount_MultiServer(t *testing.T) {
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {URL: "https://staging.datahub.example.com"},
+			"dev":     {URL: "https://dev.datahub.example.com"},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	toolkit := NewToolkitWithManager(mgr, DefaultConfig())
+
+	if toolkit.ConnectionCount() != 3 {
+		t.Errorf("expected 3, got %d", toolkit.ConnectionCount())
+	}
+}
+
+func TestToolkitGetClient_SingleClientMode(t *testing.T) {
+	mock := &mockClient{}
+	toolkit := NewToolkit(mock, DefaultConfig())
+
+	// Empty connection name should return the single client
+	c, err := toolkit.getClient("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if c != mock {
+		t.Error("expected mock client")
+	}
+
+	// Any connection name should still return the single client
+	c, err = toolkit.getClient("anything")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if c != mock {
+		t.Error("expected mock client even with connection name")
+	}
+}
+
+func TestToolkitGetClient_SingleClientMode_NoClient(t *testing.T) {
+	// Create toolkit without client
+	toolkit := &Toolkit{
+		config:          DefaultConfig(),
+		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
+		registeredTools: make(map[ToolName]bool),
+	}
+
+	_, err := toolkit.getClient("")
+	if err == nil {
+		t.Error("expected error when no client configured")
+	}
+	if err.Error() != "no client configured" {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestToolkitGetClient_MultiServerMode(t *testing.T) {
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {
+				URL:   "https://staging.datahub.example.com",
+				Token: "staging-token",
+			},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	toolkit := NewToolkitWithManager(mgr, DefaultConfig())
+
+	// Empty connection name returns default client
+	c1, err := toolkit.getClient("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if c1 == nil {
+		t.Error("expected non-nil client")
+	}
+
+	// Explicit connection name
+	c2, err := toolkit.getClient("staging")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if c2 == nil {
+		t.Error("expected non-nil client")
+	}
+
+	// Clients should be different
+	if c1 == c2 {
+		t.Error("expected different clients for different connections")
+	}
+}
+
+func TestToolkitGetClient_MultiServerMode_UnknownConnection(t *testing.T) {
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	toolkit := NewToolkitWithManager(mgr, DefaultConfig())
+
+	_, err := toolkit.getClient("unknown")
+	if err == nil {
+		t.Error("expected error for unknown connection")
+	}
+}
+
+func TestToolkitRegisterAll_MultiServer(t *testing.T) {
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	toolkit := NewToolkitWithManager(mgr, DefaultConfig())
+
+	impl := &mcp.Implementation{Name: "test", Version: "1.0.0"}
+	server := mcp.NewServer(impl, nil)
+	toolkit.RegisterAll(server)
+
+	// Verify all tools are registered
+	for _, name := range AllTools() {
+		if !toolkit.registeredTools[name] {
+			t.Errorf("RegisterAll() should register %s", name)
+		}
+	}
+
+	// Verify ToolListConnections is included
+	if !toolkit.registeredTools[ToolListConnections] {
+		t.Error("RegisterAll() should register ToolListConnections")
 	}
 }
