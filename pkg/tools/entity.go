@@ -48,6 +48,35 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult(err.Error()), nil, nil
 	}
 
+	// Build response - include query context if provider configured
+	if t.queryProvider != nil {
+		response := map[string]any{
+			"entity": entity,
+		}
+
+		// Add table resolution
+		if table, tableErr := t.queryProvider.ResolveTable(ctx, input.URN); tableErr == nil && table != nil {
+			response["query_table"] = table
+		}
+
+		// Add query examples
+		if examples, examplesErr := t.queryProvider.GetQueryExamples(ctx, input.URN); examplesErr == nil && len(examples) > 0 {
+			response["query_examples"] = examples
+		}
+
+		// Add availability status
+		if avail, availErr := t.queryProvider.GetTableAvailability(ctx, input.URN); availErr == nil && avail != nil {
+			response["query_availability"] = avail
+		}
+
+		jsonResult, jsonErr := JSONResult(response)
+		if jsonErr != nil {
+			return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
+		}
+		return jsonResult, nil, nil
+	}
+
+	// No query provider - return entity only
 	jsonResult, err := JSONResult(entity)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
