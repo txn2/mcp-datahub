@@ -58,7 +58,7 @@ func TestHandleListDataProducts(t *testing.T) {
 			}
 
 			toolkit := NewToolkit(mock, DefaultConfig())
-			result, _, _ := toolkit.handleListDataProducts(context.Background(), nil)
+			result, _, _ := toolkit.handleListDataProducts(context.Background(), nil, ListDataProductsInput{})
 
 			if tt.wantErr {
 				if !result.IsError {
