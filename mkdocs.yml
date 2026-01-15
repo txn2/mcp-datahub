@@ -81,7 +81,6 @@ nav:
     - Security: reference/security.md
   - Support:
     - FAQ: faq.md
-    - Migration Guide: migration.md
     - Troubleshooting: support/troubleshooting.md
     - Changelog: support/changelog.md
 
