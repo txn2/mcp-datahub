@@ -15,6 +15,7 @@ const (
 	ToolListDomains      ToolName = "datahub_list_domains"
 	ToolListDataProducts ToolName = "datahub_list_data_products"
 	ToolGetDataProduct   ToolName = "datahub_get_data_product"
+	ToolListConnections  ToolName = "datahub_list_connections"
 )
 
 // AllTools returns all available tool names.
@@ -30,5 +31,6 @@ func AllTools() []ToolName {
 		ToolListDomains,
 		ToolListDataProducts,
 		ToolGetDataProduct,
+		ToolListConnections,
 	}
 }

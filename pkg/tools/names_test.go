@@ -20,6 +20,7 @@ func TestToolNameConstants(t *testing.T) {
 		{ToolListDomains, "datahub_list_domains"},
 		{ToolListDataProducts, "datahub_list_data_products"},
 		{ToolGetDataProduct, "datahub_get_data_product"},
+		{ToolListConnections, "datahub_list_connections"},
 	}
 
 	for _, tc := range names {
@@ -34,8 +35,8 @@ func TestToolNameConstants(t *testing.T) {
 func TestAllTools(t *testing.T) {
 	tools := AllTools()
 
-	// Should return all 10 tools
-	expectedCount := 10
+	// Should return all 11 tools
+	expectedCount := 11
 	if len(tools) != expectedCount {
 		t.Errorf("AllTools() count = %d, want %d", len(tools), expectedCount)
 	}
@@ -52,6 +53,7 @@ func TestAllTools(t *testing.T) {
 		ToolListDomains:      true,
 		ToolListDataProducts: true,
 		ToolGetDataProduct:   true,
+		ToolListConnections:  true,
 	}
 
 	for _, tool := range tools {
