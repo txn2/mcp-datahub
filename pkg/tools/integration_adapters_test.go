@@ -832,3 +832,360 @@ func contains(s, substr string) bool {
 	}
 	return false
 }
+
+// Additional tests for extractURNFromInput to cover all input types.
+
+func TestExtractURNFromInput_AllTypes(t *testing.T) {
+	tests := []struct {
+		name  string
+		input any
+		want  string
+	}{
+		{
+			name:  "GetEntityInput",
+			input: GetEntityInput{URN: "urn:entity"},
+			want:  "urn:entity",
+		},
+		{
+			name:  "GetSchemaInput",
+			input: GetSchemaInput{URN: "urn:schema"},
+			want:  "urn:schema",
+		},
+		{
+			name:  "GetLineageInput",
+			input: GetLineageInput{URN: "urn:lineage"},
+			want:  "urn:lineage",
+		},
+		{
+			name:  "GetQueriesInput",
+			input: GetQueriesInput{URN: "urn:queries"},
+			want:  "urn:queries",
+		},
+		{
+			name:  "GetGlossaryTermInput",
+			input: GetGlossaryTermInput{URN: "urn:glossary"},
+			want:  "urn:glossary",
+		},
+		{
+			name:  "GetDataProductInput",
+			input: GetDataProductInput{URN: "urn:product"},
+			want:  "urn:product",
+		},
+		{
+			name:  "unknown type",
+			input: struct{}{},
+			want:  "",
+		},
+		{
+			name:  "string type",
+			input: "just a string",
+			want:  "",
+		},
+		{
+			name:  "nil",
+			input: nil,
+			want:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractURNFromInput(tt.input)
+			if got != tt.want {
+				t.Errorf("extractURNFromInput() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// Tests for extractURNsFromData covering different data structures.
+
+func TestExtractURNsFromData_EntitiesArray(t *testing.T) {
+	data := map[string]any{
+		"entities": []any{
+			map[string]any{"urn": "urn:1", "name": "One"},
+			map[string]any{"urn": "urn:2", "name": "Two"},
+			map[string]any{"name": "No URN"}, // missing urn field
+		},
+	}
+
+	urns := extractURNsFromData(data)
+	if len(urns) != 2 {
+		t.Errorf("expected 2 URNs, got %d: %v", len(urns), urns)
+	}
+}
+
+func TestExtractURNsFromData_NodesArray(t *testing.T) {
+	data := map[string]any{
+		"nodes": []any{
+			map[string]any{"urn": "urn:node1"},
+			map[string]any{"urn": "urn:node2"},
+		},
+	}
+
+	urns := extractURNsFromData(data)
+	if len(urns) != 2 {
+		t.Errorf("expected 2 URNs, got %d", len(urns))
+	}
+}
+
+func TestExtractURNsFromData_DirectURN(t *testing.T) {
+	data := map[string]any{
+		"urn":  "urn:direct",
+		"name": "Test",
+	}
+
+	urns := extractURNsFromData(data)
+	if len(urns) != 1 || urns[0] != "urn:direct" {
+		t.Errorf("expected ['urn:direct'], got %v", urns)
+	}
+}
+
+func TestExtractURNsFromData_Combined(t *testing.T) {
+	data := map[string]any{
+		"urn": "urn:main",
+		"entities": []any{
+			map[string]any{"urn": "urn:e1"},
+		},
+		"nodes": []any{
+			map[string]any{"urn": "urn:n1"},
+		},
+	}
+
+	urns := extractURNsFromData(data)
+	if len(urns) != 3 {
+		t.Errorf("expected 3 URNs, got %d", len(urns))
+	}
+}
+
+func TestExtractURNsFromData_Empty(t *testing.T) {
+	data := map[string]any{}
+	urns := extractURNsFromData(data)
+	if len(urns) != 0 {
+		t.Errorf("expected 0 URNs, got %d", len(urns))
+	}
+}
+
+// Tests for inputToMap edge cases.
+
+func TestInputToMap_SimpleStruct(t *testing.T) {
+	input := SearchInput{Query: "test", Limit: 10}
+	m := inputToMap(input)
+
+	if m == nil {
+		t.Fatal("inputToMap returned nil")
+	}
+	if m["query"] != "test" {
+		t.Errorf("expected query=test, got %v", m["query"])
+	}
+}
+
+func TestInputToMap_NilInput(t *testing.T) {
+	// nil marshals to JSON "null" which can't unmarshal to map
+	m := inputToMap(nil)
+	if m != nil {
+		t.Error("inputToMap(nil) should return nil for non-mappable input")
+	}
+}
+
+func TestInputToMap_UnmarshalableInput(t *testing.T) {
+	// Create input that marshals fine but can't unmarshal to map[string]any
+	m := inputToMap("just a string")
+	if m != nil {
+		t.Error("inputToMap should return nil for non-object JSON")
+	}
+}
+
+// Tests for AccessFilterMiddleware After method edge cases.
+
+func TestAccessFilterMiddleware_After_NilResult(t *testing.T) {
+	filter := &mockAccessFilter{}
+	mw := NewAccessFilterMiddleware(filter)
+
+	tc := NewToolContext(ToolSearch, SearchInput{Query: "test"})
+
+	result, err := mw.After(context.Background(), tc, nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != nil {
+		t.Error("expected nil result to be returned as-is")
+	}
+}
+
+func TestAccessFilterMiddleware_After_EmptyContent(t *testing.T) {
+	filter := &mockAccessFilter{}
+	mw := NewAccessFilterMiddleware(filter)
+
+	tc := NewToolContext(ToolSearch, SearchInput{Query: "test"})
+	result := &mcp.CallToolResult{Content: []mcp.Content{}}
+
+	filtered, err := mw.After(context.Background(), tc, result, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if filtered != result {
+		t.Error("expected empty result to be returned as-is")
+	}
+}
+
+func TestAccessFilterMiddleware_After_ErrorResult(t *testing.T) {
+	filter := &mockAccessFilter{}
+	mw := NewAccessFilterMiddleware(filter)
+
+	tc := NewToolContext(ToolSearch, SearchInput{Query: "test"})
+	result := ErrorResult("some error")
+
+	filtered, err := mw.After(context.Background(), tc, result, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if filtered != result {
+		t.Error("expected error result to be returned as-is")
+	}
+}
+
+func TestAccessFilterMiddleware_After_FilterError(t *testing.T) {
+	filter := &mockAccessFilter{
+		filterURNsFunc: func(_ context.Context, _ []string) ([]string, error) {
+			return nil, errors.New("filter failed")
+		},
+	}
+	mw := NewAccessFilterMiddleware(filter)
+
+	tc := NewToolContext(ToolSearch, SearchInput{Query: "test"})
+	result := TextResult(`{"entities":[{"urn":"urn:1"}]}`)
+
+	filtered, err := mw.After(context.Background(), tc, result, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should return original result when filter fails
+	if filtered != result {
+		t.Error("expected original result on filter error")
+	}
+}
+
+// Tests for MetadataEnricherMiddleware After edge cases.
+
+func TestMetadataEnricherMiddleware_After_NilResult(t *testing.T) {
+	enricher := &mockMetadataEnricher{}
+	mw := NewMetadataEnricherMiddleware(enricher)
+
+	tc := NewToolContext(ToolGetEntity, GetEntityInput{URN: "test"})
+
+	result, err := mw.After(context.Background(), tc, nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != nil {
+		t.Error("expected nil result to be returned as-is")
+	}
+}
+
+func TestMetadataEnricherMiddleware_After_EmptyContent(t *testing.T) {
+	enricher := &mockMetadataEnricher{}
+	mw := NewMetadataEnricherMiddleware(enricher)
+
+	tc := NewToolContext(ToolGetEntity, GetEntityInput{URN: "test"})
+	result := &mcp.CallToolResult{Content: []mcp.Content{}}
+
+	enriched, err := mw.After(context.Background(), tc, result, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if enriched != result {
+		t.Error("expected empty result to be returned as-is")
+	}
+}
+
+func TestMetadataEnricherMiddleware_After_NoURN(t *testing.T) {
+	called := false
+	enricher := &mockMetadataEnricher{
+		enrichFunc: func(_ context.Context, _ string, data map[string]any) (map[string]any, error) {
+			called = true
+			return data, nil
+		},
+	}
+	mw := NewMetadataEnricherMiddleware(enricher)
+
+	// ToolContext with SearchInput which doesn't have URN
+	tc := NewToolContext(ToolGetEntity, SearchInput{Query: "test"})
+	result := TextResult(`{"name":"Test"}`)
+
+	enriched, err := mw.After(context.Background(), tc, result, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called {
+		t.Error("enricher should not be called when no URN available")
+	}
+	if enriched != result {
+		t.Error("expected original result when no URN")
+	}
+}
+
+func TestMetadataEnricherMiddleware_After_InvalidJSON(t *testing.T) {
+	enricher := &mockMetadataEnricher{}
+	mw := NewMetadataEnricherMiddleware(enricher)
+
+	tc := NewToolContext(ToolGetEntity, GetEntityInput{URN: "urn:test"})
+	result := TextResult(`not valid json`)
+
+	enriched, err := mw.After(context.Background(), tc, result, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if enriched != result {
+		t.Error("expected original result on parse error")
+	}
+}
+
+func TestMetadataEnricherMiddleware_After_EnricherError(t *testing.T) {
+	enricher := &mockMetadataEnricher{
+		enrichFunc: func(_ context.Context, _ string, _ map[string]any) (map[string]any, error) {
+			return nil, errors.New("enrich failed")
+		},
+	}
+	mw := NewMetadataEnricherMiddleware(enricher)
+
+	tc := NewToolContext(ToolGetEntity, GetEntityInput{URN: "urn:test"})
+	tc.Set(ContextKeyResolvedURN, "urn:test")
+	result := TextResult(`{"urn":"urn:test"}`)
+
+	enriched, err := mw.After(context.Background(), tc, result, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if enriched != result {
+		t.Error("expected original result on enricher error")
+	}
+}
+
+// Tests for getEffectiveURN.
+
+func TestGetEffectiveURN_ResolvedExists(t *testing.T) {
+	tc := NewToolContext(ToolGetEntity, GetEntityInput{URN: "original"})
+	tc.Set(ContextKeyResolvedURN, "resolved")
+
+	if got := getEffectiveURN(tc); got != "resolved" {
+		t.Errorf("expected 'resolved', got %q", got)
+	}
+}
+
+func TestGetEffectiveURN_NoResolved(t *testing.T) {
+	tc := NewToolContext(ToolGetEntity, GetEntityInput{URN: "original"})
+
+	if got := getEffectiveURN(tc); got != "original" {
+		t.Errorf("expected 'original', got %q", got)
+	}
+}
+
+func TestGetEffectiveURN_ResolvedWrongType(t *testing.T) {
+	tc := NewToolContext(ToolGetEntity, GetEntityInput{URN: "original"})
+	tc.Set(ContextKeyResolvedURN, 12345) // wrong type
+
+	if got := getEffectiveURN(tc); got != "original" {
+		t.Errorf("expected 'original', got %q", got)
+	}
+}
