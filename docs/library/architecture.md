@@ -12,36 +12,34 @@ mcp-datahub follows these core principles:
 
 ## Package Structure
 
-```
-github.com/txn2/mcp-datahub/
-├── cmd/mcp-datahub/     # CLI entry point
-├── internal/server/     # Server setup (not exported)
-├── pkg/
-│   ├── client/          # DataHub GraphQL client
-│   ├── tools/           # MCP tool implementations
-│   ├── types/           # Domain types
-│   └── integration/     # Hook interfaces
+```mermaid
+flowchart TB
+    subgraph root["github.com/txn2/mcp-datahub"]
+        cmd["cmd/mcp-datahub<br/>CLI entry point"]
+        internal["internal/server<br/>Server setup (not exported)"]
+        subgraph pkg["pkg/"]
+            client["client<br/>DataHub GraphQL client"]
+            tools["tools<br/>MCP tool implementations"]
+            types["types<br/>Domain types"]
+            integration["integration<br/>Hook interfaces"]
+        end
+    end
 ```
 
 ## Component Diagram
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                     Your MCP Server                        │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                    mcp-datahub                        │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐  │  │
-│  │  │   tools     │  │   client    │  │    types     │  │  │
-│  │  │  (Toolkit)  │──│  (Client)   │──│  (Entities)  │  │  │
-│  │  └─────────────┘  └──────┬──────┘  └──────────────┘  │  │
-│  └──────────────────────────┼───────────────────────────┘  │
-└─────────────────────────────┼──────────────────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────┐
-                    │ DataHub GraphQL │
-                    │       API       │
-                    └─────────────────┘
+```mermaid
+flowchart TB
+    subgraph server["Your MCP Server"]
+        subgraph datahub["mcp-datahub"]
+            tools["tools<br/>(Toolkit)"]
+            client["client<br/>(Client)"]
+            types["types<br/>(Entities)"]
+            tools --> client
+            client --> types
+        end
+    end
+    client --> api["DataHub GraphQL<br/>API"]
 ```
 
 ## Tools Only Design

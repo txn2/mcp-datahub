@@ -10,17 +10,16 @@ Each txn2 library (mcp-trino, mcp-datahub, mcp-nifi, mcp-s3) is an **island**:
 - No shared dependencies
 - Can be used independently or together
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  mcp-trino      │     │  mcp-datahub    │     │  mcp-nifi       │
-│ (no imports)    │     │ (no imports)    │     │ (no imports)    │
-└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
-         └───────────────────────┼───────────────────────┘
-                                 ▼
-                    ┌────────────────────────┐
-                    │    Your Custom MCP     │
-                    │  Imports all, wires    │
-                    └────────────────────────┘
+```mermaid
+flowchart TB
+    trino["mcp-trino<br/>(no imports)"]
+    datahub["mcp-datahub<br/>(no imports)"]
+    nifi["mcp-nifi<br/>(no imports)"]
+    custom["Your Custom MCP<br/>Imports all, wires"]
+
+    trino --> custom
+    datahub --> custom
+    nifi --> custom
 ```
 
 ## Basic Composition
