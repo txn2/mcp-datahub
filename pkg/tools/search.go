@@ -65,6 +65,35 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 		return ErrorResult(err.Error()), nil, nil
 	}
 
+	// Enrich with query availability if provider configured
+	if t.queryProvider != nil && len(result.Entities) > 0 {
+		queryContext := make(map[string]any)
+		for _, entity := range result.Entities {
+			avail, availErr := t.queryProvider.GetTableAvailability(ctx, entity.URN)
+			if availErr == nil && avail != nil {
+				entityCtx := map[string]any{
+					"available": avail.Available,
+				}
+				if avail.Table != nil {
+					entityCtx["table"] = avail.Table.String()
+				}
+				queryContext[entity.URN] = entityCtx
+			}
+		}
+
+		if len(queryContext) > 0 {
+			response := map[string]any{
+				"result":        result,
+				"query_context": queryContext,
+			}
+			jsonResult, jsonErr := JSONResult(response)
+			if jsonErr != nil {
+				return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
+			}
+			return jsonResult, nil, nil
+		}
+	}
+
 	jsonResult, err := JSONResult(result)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
