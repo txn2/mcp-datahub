@@ -9,6 +9,8 @@ import (
 // GetSchemaInput is the input for the get_schema tool.
 type GetSchemaInput struct {
 	URN string `json:"urn" jsonschema_description:"The DataHub URN of the dataset"`
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
 func (t *Toolkit) registerGetSchemaTool(server *mcp.Server, cfg *toolConfig) {
@@ -35,7 +37,13 @@ func (t *Toolkit) handleGetSchema(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult("urn parameter is required"), nil, nil
 	}
 
-	schema, err := t.client.GetSchema(ctx, input.URN)
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
+	schema, err := datahubClient.GetSchema(ctx, input.URN)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}
