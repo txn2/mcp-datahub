@@ -18,7 +18,7 @@ A **composable Go library** for building custom MCP servers that integrate [Data
 - **Build domain-specific assistants** that understand your particular data stack
 - **Extend functionality** with middleware, hooks, and custom integrations
 
-The included CLI binary (`mcp-datahub`) serves as a **reference implementation** demonstrating the library's capabilities—it's fully functional as a standalone DataHub MCP server, but the real power comes from composition.
+The included CLI binary (`mcp-datahub`) serves as a **reference implementation** demonstrating the library's capabilities. It's fully functional as a standalone DataHub MCP server, but the real power comes from composition.
 
 ## Composable Architecture
 
