@@ -10,17 +10,16 @@ Each txn2 library (mcp-trino, mcp-datahub, mcp-nifi, mcp-s3) is an **island**:
 - No shared dependencies
 - Can be used independently or together
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  mcp-trino      │     │  mcp-datahub    │     │  mcp-nifi       │
-│ (no imports)    │     │ (no imports)    │     │ (no imports)    │
-└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
-         └───────────────────────┼───────────────────────┘
-                                 ▼
-                    ┌────────────────────────┐
-                    │    Your Custom MCP     │
-                    │  Imports all, wires    │
-                    └────────────────────────┘
+```mermaid
+flowchart TB
+    trino["mcp-trino<br/>(no imports)"]
+    datahub["mcp-datahub<br/>(no imports)"]
+    nifi["mcp-nifi<br/>(no imports)"]
+    custom["Your Custom MCP<br/>Imports all, wires"]
+
+    trino --> custom
+    datahub --> custom
+    nifi --> custom
 ```
 
 ## Basic Composition
@@ -341,3 +340,218 @@ mcp.AddTool(server, &mcp.Tool{
     Description: "Get company-specific data dictionary",
 }, yourHandler)
 ```
+
+## Error Handling in Middleware
+
+### Failing Fast vs Graceful Degradation
+
+Choose the appropriate error handling strategy for your middleware:
+
+**Fail Fast**: Return error immediately, abort tool execution
+
+```go
+func (m *StrictAuthMiddleware) Before(ctx context.Context, tc *tools.ToolContext) (context.Context, error) {
+    token := ctx.Value("auth_token")
+    if token == nil {
+        // Fail fast: no token means abort
+        return ctx, errors.New("unauthorized: missing token")
+    }
+    return ctx, nil
+}
+```
+
+**Graceful Degradation**: Log issue but continue execution
+
+```go
+func (m *OptionalEnricherMiddleware) After(ctx context.Context, tc *tools.ToolContext, result *mcp.CallToolResult, err error) (*mcp.CallToolResult, error) {
+    enriched, enrichErr := m.enricher.Enrich(ctx, result)
+    if enrichErr != nil {
+        // Log but don't fail - enrichment is optional
+        log.Printf("Warning: enrichment failed: %v", enrichErr)
+        return result, err // Return original result
+    }
+    return enriched, err
+}
+```
+
+### Error Wrapping Pattern
+
+Wrap errors with context for better debugging:
+
+```go
+func (m *MyMiddleware) Before(ctx context.Context, tc *tools.ToolContext) (context.Context, error) {
+    result, err := m.doSomething(ctx)
+    if err != nil {
+        return ctx, fmt.Errorf("middleware %s failed for tool %s: %w", m.name, tc.Name, err)
+    }
+    return ctx, nil
+}
+```
+
+### Recovery Middleware
+
+Add recovery middleware at the start of the chain to catch panics:
+
+```go
+type RecoveryMiddleware struct{}
+
+func (m *RecoveryMiddleware) Before(ctx context.Context, tc *tools.ToolContext) (context.Context, error) {
+    return ctx, nil
+}
+
+func (m *RecoveryMiddleware) After(ctx context.Context, tc *tools.ToolContext, result *mcp.CallToolResult, err error) (*mcp.CallToolResult, error) {
+    // Recovery happens here if panic occurred
+    return result, err
+}
+
+// Register first so it wraps everything
+toolkit := tools.NewToolkit(client,
+    tools.WithMiddleware(&RecoveryMiddleware{}),
+    tools.WithMiddleware(&AuthMiddleware{}),
+    // ... other middleware
+)
+```
+
+## Testing Middleware
+
+### Unit Testing
+
+Test middleware in isolation:
+
+```go
+func TestAuthMiddleware_ValidToken(t *testing.T) {
+    middleware := &AuthMiddleware{secret: "test-secret"}
+    ctx := context.WithValue(context.Background(), "auth_token", validToken)
+    tc := &tools.ToolContext{Name: "datahub_search"}
+
+    newCtx, err := middleware.Before(ctx, tc)
+
+    if err != nil {
+        t.Errorf("Expected no error, got: %v", err)
+    }
+    if newCtx.Value("user_id") == nil {
+        t.Error("Expected user_id in context")
+    }
+}
+
+func TestAuthMiddleware_MissingToken(t *testing.T) {
+    middleware := &AuthMiddleware{secret: "test-secret"}
+    ctx := context.Background()
+    tc := &tools.ToolContext{Name: "datahub_search"}
+
+    _, err := middleware.Before(ctx, tc)
+
+    if err == nil {
+        t.Error("Expected error for missing token")
+    }
+}
+```
+
+### Testing Middleware Chain
+
+Test multiple middleware together:
+
+```go
+func TestMiddlewareChain(t *testing.T) {
+    var executionOrder []string
+
+    middleware1 := tools.BeforeFunc(func(ctx context.Context, tc *tools.ToolContext) (context.Context, error) {
+        executionOrder = append(executionOrder, "m1-before")
+        return ctx, nil
+    })
+
+    middleware2 := tools.BeforeFunc(func(ctx context.Context, tc *tools.ToolContext) (context.Context, error) {
+        executionOrder = append(executionOrder, "m2-before")
+        return ctx, nil
+    })
+
+    toolkit := tools.NewToolkit(mockClient,
+        tools.WithMiddleware(middleware1),
+        tools.WithMiddleware(middleware2),
+    )
+
+    // Execute tool...
+
+    expected := []string{"m1-before", "m2-before"}
+    if !reflect.DeepEqual(executionOrder, expected) {
+        t.Errorf("Expected %v, got %v", expected, executionOrder)
+    }
+}
+```
+
+### Integration Testing with Mock Providers
+
+Test with mock implementations:
+
+```go
+type MockQueryProvider struct {
+    ResolveTableFunc func(ctx context.Context, urn string) (*integration.TableIdentifier, error)
+}
+
+func (m *MockQueryProvider) Name() string { return "mock" }
+
+func (m *MockQueryProvider) ResolveTable(ctx context.Context, urn string) (*integration.TableIdentifier, error) {
+    if m.ResolveTableFunc != nil {
+        return m.ResolveTableFunc(ctx, urn)
+    }
+    return nil, nil
+}
+
+// Use in tests
+func TestWithQueryProvider(t *testing.T) {
+    mockProvider := &MockQueryProvider{
+        ResolveTableFunc: func(ctx context.Context, urn string) (*integration.TableIdentifier, error) {
+            return &integration.TableIdentifier{
+                Catalog: "test",
+                Schema:  "schema",
+                Table:   "table",
+            }, nil
+        },
+    }
+
+    toolkit := tools.NewToolkit(mockClient,
+        tools.WithQueryProvider(mockProvider),
+    )
+
+    // Test tool execution...
+}
+```
+
+## Context Propagation
+
+Pass data between middleware using context:
+
+```go
+// Set in one middleware
+func (m *AuthMiddleware) Before(ctx context.Context, tc *tools.ToolContext) (context.Context, error) {
+    ctx = context.WithValue(ctx, "user_id", userID)
+    ctx = context.WithValue(ctx, "user_roles", roles)
+    ctx = context.WithValue(ctx, "request_id", uuid.New().String())
+    return ctx, nil
+}
+
+// Use in another middleware
+func (m *AuditMiddleware) After(ctx context.Context, tc *tools.ToolContext, result *mcp.CallToolResult, err error) (*mcp.CallToolResult, error) {
+    userID := ctx.Value("user_id").(string)
+    requestID := ctx.Value("request_id").(string)
+    // Log with context...
+    return result, err
+}
+```
+
+## Middleware Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| Stateless | Avoid storing state in middleware structs |
+| Idempotent | Multiple calls should have same effect |
+| Fast | Keep Before/After hooks lightweight |
+| Logged | Log errors before returning them |
+| Tested | Unit test each middleware independently |
+| Ordered | Document expected middleware order |
+
+## Related Topics
+
+- [Architecture](architecture.md): How middleware fits in the system
+- [API Reference](../reference/tools-api.md): Full middleware API
+- [Testing Guide](../guides/testing.md): Comprehensive testing strategies

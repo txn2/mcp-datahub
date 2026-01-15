@@ -27,11 +27,13 @@ mcp-datahub
 
 ## Architecture
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Claude Desktop │────▶│   mcp-datahub    │────▶│    DataHub      │
-│  (MCP Client)   │◀────│   (MCP Server)   │◀────│  GraphQL API    │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
+```mermaid
+flowchart LR
+    claude["Claude Desktop<br/>(MCP Client)"]
+    server["mcp-datahub<br/>(MCP Server)"]
+    datahub["DataHub<br/>GraphQL API"]
+
+    claude <--> server <--> datahub
 ```
 
 ## Next Steps

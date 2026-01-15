@@ -29,26 +29,58 @@ theme:
     - navigation.instant
     - navigation.tabs
     - navigation.sections
+    - navigation.expand
+    - navigation.top
     - search.suggest
+    - search.highlight
     - content.code.copy
+    - content.tabs.link
 
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
   - MCP Server:
     - Overview: server/index.md
     - Installation: server/installation.md
     - Configuration: server/configuration.md
-    - Tools: server/tools.md
+    - Tools Reference: server/tools.md
   - Go Library:
     - Overview: library/index.md
     - Quick Start: library/quickstart.md
     - Architecture: library/architecture.md
     - Composability: library/composability.md
+  - Tutorials:
+    - Overview: tutorials/index.md
+    - Your First Search: tutorials/first-search.md
+    - Exploring Lineage: tutorials/exploring-lineage.md
+    - Building a Custom Server: tutorials/building-custom-server.md
+    - Adding Authentication: tutorials/adding-authentication.md
+  - How-To Guides:
+    - Overview: guides/index.md
+    - Authentication: guides/authentication.md
+    - Multi-Tenant Isolation: guides/multi-tenant.md
+    - Audit Logging: guides/audit-logging.md
+    - Rate Limiting: guides/rate-limiting.md
+    - Custom Middleware: guides/custom-middleware.md
+    - Testing: guides/testing.md
+  - Concepts:
+    - Overview: concepts/index.md
+    - Understanding URNs: concepts/urns.md
+    - Entity Types: concepts/entity-types.md
+    - Lineage Model: concepts/lineage-model.md
+    - MCP Protocol: concepts/mcp-protocol.md
+  - Examples:
+    - Overview: examples/index.md
+    - Basic Server: examples/basic-server.md
+    - With Authentication: examples/with-authentication.md
+    - Combined DataHub + Trino: examples/combined-trino.md
+    - Enterprise Server: examples/enterprise-server.md
   - Reference:
     - Tools API: reference/tools-api.md
     - Configuration: reference/configuration.md
     - Security: reference/security.md
   - Support:
+    - FAQ: faq.md
     - Troubleshooting: support/troubleshooting.md
     - Changelog: support/changelog.md
 
