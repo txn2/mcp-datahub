@@ -109,6 +109,86 @@ trinoTools.NewToolkit(tr, trinoTools.Config{}).RegisterAll(server)
 
 See [txn2/mcp-trino](https://github.com/txn2/mcp-trino) for the companion library.
 
+### Bidirectional Integration with QueryProvider
+
+The library supports bidirectional context injection. While mcp-trino can pull semantic context from DataHub, mcp-datahub can receive query execution context back from a query engine:
+
+```go
+import (
+    datahubTools "github.com/txn2/mcp-datahub/pkg/tools"
+    "github.com/txn2/mcp-datahub/pkg/integration"
+)
+
+// QueryProvider enables query engines to inject context into DataHub tools
+type myQueryProvider struct {
+    trinoClient *trino.Client
+}
+
+func (p *myQueryProvider) Name() string { return "trino" }
+
+func (p *myQueryProvider) ResolveTable(ctx context.Context, urn string) (*integration.TableIdentifier, error) {
+    // Map DataHub URN to Trino table (catalog.schema.table)
+    return &integration.TableIdentifier{
+        Catalog: "hive", Schema: "production", Table: "users",
+    }, nil
+}
+
+func (p *myQueryProvider) GetTableAvailability(ctx context.Context, urn string) (*integration.TableAvailability, error) {
+    // Check if table is queryable
+    return &integration.TableAvailability{Available: true}, nil
+}
+
+func (p *myQueryProvider) GetQueryExamples(ctx context.Context, urn string) ([]integration.QueryExample, error) {
+    // Return sample queries for this entity
+    return []integration.QueryExample{
+        {Name: "sample", SQL: "SELECT * FROM hive.production.users LIMIT 10"},
+    }, nil
+}
+
+// Wire it up
+toolkit := datahubTools.NewToolkit(datahubClient, config,
+    datahubTools.WithQueryProvider(&myQueryProvider{trinoClient: trino}),
+)
+```
+
+When a QueryProvider is configured, tool responses are enriched:
+- **Search results**: Include `query_context` with table availability
+- **Entity details**: Include `query_table`, `query_examples`, `query_availability`
+- **Schema**: Include `query_table` for immediate SQL usage
+- **Lineage**: Include `execution_context` mapping URNs to tables
+
+### Integration Middleware
+
+Enterprise features like access control and audit logging are enabled through middleware adapters:
+
+```go
+import (
+    datahubTools "github.com/txn2/mcp-datahub/pkg/tools"
+    "github.com/txn2/mcp-datahub/pkg/integration"
+)
+
+// Access control - filter entities by user permissions
+type myAccessFilter struct{}
+func (f *myAccessFilter) CanAccess(ctx context.Context, urn string) (bool, error) { /* ... */ }
+func (f *myAccessFilter) FilterURNs(ctx context.Context, urns []string) ([]string, error) { /* ... */ }
+
+// Audit logging - track all tool invocations
+type myAuditLogger struct{}
+func (l *myAuditLogger) LogToolCall(ctx context.Context, tool string, params map[string]any, userID string) error { /* ... */ }
+
+// Wire up with multiple integration options
+toolkit := datahubTools.NewToolkit(datahubClient, config,
+    datahubTools.WithAccessFilter(&myAccessFilter{}),
+    datahubTools.WithAuditLogger(&myAuditLogger{}, func(ctx context.Context) string {
+        return ctx.Value("user_id").(string)
+    }),
+    datahubTools.WithURNResolver(&myURNResolver{}),      // Map external IDs to URNs
+    datahubTools.WithMetadataEnricher(&myEnricher{}),    // Add custom metadata
+)
+```
+
+See the [library documentation](https://mcp-datahub.txn2.com/library/) for complete integration patterns.
+
 ## Available Tools
 
 | Tool | Description |
