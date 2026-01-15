@@ -15,6 +15,8 @@ type SearchInput struct {
 	EntityType string `json:"entity_type,omitempty" jsonschema_description:"Entity type to search. Defaults to DATASET."`
 	Limit      int    `json:"limit,omitempty" jsonschema_description:"Maximum number of results (default: 10, max: 100)"`
 	Offset     int    `json:"offset,omitempty" jsonschema_description:"Result offset for pagination"`
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
 func (t *Toolkit) registerSearchTool(server *mcp.Server, cfg *toolConfig) {
@@ -41,6 +43,12 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 		return ErrorResult("query parameter is required"), nil, nil
 	}
 
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
 	var opts []client.SearchOption
 	if input.EntityType != "" {
 		opts = append(opts, client.WithEntityType(input.EntityType))
@@ -52,7 +60,7 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 		opts = append(opts, client.WithOffset(input.Offset))
 	}
 
-	result, err := t.client.Search(ctx, input.Query, opts...)
+	result, err := datahubClient.Search(ctx, input.Query, opts...)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}
