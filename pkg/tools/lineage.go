@@ -13,6 +13,8 @@ type GetLineageInput struct {
 	URN       string `json:"urn" jsonschema_description:"The DataHub URN of the entity"`
 	Direction string `json:"direction,omitempty" jsonschema_description:"Lineage direction: UPSTREAM or DOWNSTREAM (default: DOWNSTREAM)"`
 	Depth     int    `json:"depth,omitempty" jsonschema_description:"Maximum depth of lineage traversal (default: 1, max: 5)"`
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
 func (t *Toolkit) registerGetLineageTool(server *mcp.Server, cfg *toolConfig) {
@@ -39,6 +41,12 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult("urn parameter is required"), nil, nil
 	}
 
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
 	var opts []client.LineageOption
 	if input.Direction != "" {
 		opts = append(opts, client.WithDirection(input.Direction))
@@ -47,7 +55,7 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		opts = append(opts, client.WithDepth(input.Depth))
 	}
 
-	lineage, err := t.client.GetLineage(ctx, input.URN, opts...)
+	lineage, err := datahubClient.GetLineage(ctx, input.URN, opts...)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}
