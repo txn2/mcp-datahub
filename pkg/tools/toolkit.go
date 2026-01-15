@@ -5,13 +5,16 @@ import (
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/txn2/mcp-datahub/pkg/multiserver"
 )
 
 // Toolkit provides MCP tools for DataHub operations.
 // It's designed to be composable - you can add its tools to any MCP server.
 type Toolkit struct {
-	client DataHubClient
-	config Config
+	client  DataHubClient        // Single client mode (for backwards compatibility)
+	manager *multiserver.Manager // Multi-server mode (optional)
+	config  Config
 
 	// Extensibility hooks (all optional, zero-value = no overhead)
 	middlewares     []ToolMiddleware
@@ -22,19 +25,38 @@ type Toolkit struct {
 }
 
 // NewToolkit creates a new DataHub toolkit.
+// Accepts optional ToolkitOption arguments for middleware, etc.
+// Maintains backwards compatibility - existing code works unchanged.
 func NewToolkit(c DataHubClient, cfg Config, opts ...ToolkitOption) *Toolkit {
-	t := &Toolkit{
-		client:          c,
-		config:          normalizeConfig(cfg),
+	t := newBaseToolkit(normalizeConfig(cfg))
+	t.client = c
+	applyToolkitOptions(t, opts)
+	return t
+}
+
+// NewToolkitWithManager creates a Toolkit with multi-server support.
+// Use this when you need to connect to multiple DataHub servers.
+func NewToolkitWithManager(mgr *multiserver.Manager, cfg Config, opts ...ToolkitOption) *Toolkit {
+	t := newBaseToolkit(normalizeConfig(cfg))
+	t.manager = mgr
+	applyToolkitOptions(t, opts)
+	return t
+}
+
+// newBaseToolkit creates a toolkit with common fields initialized.
+func newBaseToolkit(cfg Config) *Toolkit {
+	return &Toolkit{
+		config:          cfg,
 		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
 		registeredTools: make(map[ToolName]bool),
 	}
+}
 
+// applyToolkitOptions applies options to the toolkit.
+func applyToolkitOptions(t *Toolkit, opts []ToolkitOption) {
 	for _, opt := range opts {
 		opt(t)
 	}
-
-	return t
 }
 
 // RegisterAll adds all DataHub tools to the given MCP server.
@@ -85,6 +107,8 @@ func (t *Toolkit) registerTool(server *mcp.Server, name ToolName, cfg *toolConfi
 		t.registerListDataProductsTool(server, cfg)
 	case ToolGetDataProduct:
 		t.registerGetDataProductTool(server, cfg)
+	case ToolListConnections:
+		t.registerListConnectionsTool(server, cfg)
 	}
 
 	t.registeredTools[name] = true
@@ -157,4 +181,55 @@ func (t *Toolkit) HasMiddleware() bool {
 		}
 	}
 	return false
+}
+
+// getClient returns the DataHub client for the given connection name.
+// If connection is empty, returns the default client.
+// In single-client mode, always returns the single client.
+func (t *Toolkit) getClient(connection string) (DataHubClient, error) {
+	// Multi-server mode
+	if t.manager != nil {
+		return t.manager.Client(connection)
+	}
+
+	// Single-client mode - ignore connection parameter
+	if t.client == nil {
+		return nil, fmt.Errorf("no client configured")
+	}
+	return t.client, nil
+}
+
+// HasManager returns true if multi-server mode is enabled.
+func (t *Toolkit) HasManager() bool {
+	return t.manager != nil
+}
+
+// Manager returns the connection manager, or nil if in single-client mode.
+func (t *Toolkit) Manager() *multiserver.Manager {
+	return t.manager
+}
+
+// ConnectionInfos returns information about all configured connections.
+// Returns a single "default" connection in single-client mode.
+func (t *Toolkit) ConnectionInfos() []multiserver.ConnectionInfo {
+	if t.manager != nil {
+		return t.manager.ConnectionInfos()
+	}
+
+	// Single-client mode - return default connection info
+	return []multiserver.ConnectionInfo{
+		{
+			Name:      "default",
+			URL:       "configured via single client",
+			IsDefault: true,
+		},
+	}
+}
+
+// ConnectionCount returns the number of configured connections.
+func (t *Toolkit) ConnectionCount() int {
+	if t.manager != nil {
+		return t.manager.ConnectionCount()
+	}
+	return 1
 }
