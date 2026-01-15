@@ -1,0 +1,109 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in mcp-datahub
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us diagnose and fix the issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: mcp-datahub version
+      description: Output of `mcp-datahub --version` or the version you're using
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: datahub-version
+    attributes:
+      label: DataHub version
+      description: Version of your DataHub instance (if known)
+      placeholder: "0.13.0"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (Ubuntu/Debian)
+        - Linux (RHEL/CentOS/Fedora)
+        - Linux (Other)
+        - Windows
+        - Docker container
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: MCP Client
+      description: Which MCP client are you using?
+      options:
+        - Claude Desktop
+        - Claude Code
+        - Cursor
+        - Windsurf
+        - Custom MCP Client
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: What happened? What did you expect to happen?
+      placeholder: |
+        Expected behavior:
+        ...
+
+        Actual behavior:
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to reproduce the bug
+      placeholder: |
+        1. Configure mcp-datahub with...
+        2. Call the tool `datahub_search` with...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs/Error Messages
+      description: Any relevant error messages or logs
+      render: shell
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Your mcp-datahub configuration (redact sensitive values)
+      render: yaml
+      placeholder: |
+        DATAHUB_URL: https://datahub.example.com
+        DATAHUB_TOKEN: <redacted>
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues to ensure this bug hasn't already been reported
+          required: true
+        - label: I have verified my DataHub URL and token are correct
+          required: false
