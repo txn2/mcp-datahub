@@ -17,15 +17,21 @@ An MCP server and composable Go library that connects AI assistants to [DataHub]
 
 Install and connect to Claude Desktop, Cursor, or any MCP client:
 
+**Claude Desktop (Easiest)** - Download the `.mcpb` bundle from [releases](https://github.com/txn2/mcp-datahub/releases) and double-click to install:
+- macOS Apple Silicon: `mcp-datahub_X.X.X_darwin_arm64.mcpb`
+- macOS Intel: `mcp-datahub_X.X.X_darwin_amd64.mcpb`
+- Windows: `mcp-datahub_X.X.X_windows_amd64.mcpb`
+
+**Other Installation Methods:**
 ```bash
-# Claude Desktop (macOS/Windows) - download .mcpb bundle from releases
-# Double-click to install, or use:
+# Homebrew (macOS)
 brew install txn2/tap/mcp-datahub
 
 # Go install
 go install github.com/txn2/mcp-datahub/cmd/mcp-datahub@latest
 ```
 
+**Manual Claude Desktop Configuration** (if not using MCPB):
 ```json
 {
   "mcpServers": {
