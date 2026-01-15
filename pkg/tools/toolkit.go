@@ -6,6 +6,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/txn2/mcp-datahub/pkg/integration"
 	"github.com/txn2/mcp-datahub/pkg/multiserver"
 )
 
@@ -19,6 +20,19 @@ type Toolkit struct {
 	// Extensibility hooks (all optional, zero-value = no overhead)
 	middlewares     []ToolMiddleware
 	toolMiddlewares map[ToolName][]ToolMiddleware
+
+	// Integration interfaces (all optional, set via With* options)
+	urnResolver      integration.URNResolver
+	accessFilter     integration.AccessFilter
+	auditLogger      integration.AuditLogger
+	metadataEnricher integration.MetadataEnricher
+	getUserID        func(context.Context) string
+
+	// Query execution context provider (optional)
+	queryProvider integration.QueryProvider
+
+	// Pre-built integration middleware (built after options applied)
+	integrationMiddleware []ToolMiddleware
 
 	// Internal tracking
 	registeredTools map[ToolName]bool
@@ -57,6 +71,29 @@ func applyToolkitOptions(t *Toolkit, opts []ToolkitOption) {
 	for _, opt := range opts {
 		opt(t)
 	}
+	t.buildIntegrationMiddleware()
+}
+
+// buildIntegrationMiddleware builds middleware adapters from integration interfaces.
+func (t *Toolkit) buildIntegrationMiddleware() {
+	var mws []ToolMiddleware
+
+	// Order matters: resolve URN first, then check access
+	if t.urnResolver != nil {
+		mws = append(mws, NewURNResolverMiddleware(t.urnResolver))
+	}
+	if t.accessFilter != nil {
+		mws = append(mws, NewAccessFilterMiddleware(t.accessFilter))
+	}
+	// Enrichment happens after handler, audit logs last
+	if t.metadataEnricher != nil {
+		mws = append(mws, NewMetadataEnricherMiddleware(t.metadataEnricher))
+	}
+	if t.auditLogger != nil {
+		mws = append(mws, NewAuditLoggerMiddleware(t.auditLogger, t.getUserID))
+	}
+
+	t.integrationMiddleware = mws
 }
 
 // RegisterAll adds all DataHub tools to the given MCP server.
@@ -121,7 +158,9 @@ func (t *Toolkit) wrapHandler(
 	cfg *toolConfig,
 ) func(ctx context.Context, req *mcp.CallToolRequest, input any) (*mcp.CallToolResult, any, error) {
 	// Collect all applicable middlewares
+	// Integration middleware runs first (URN resolution, access control)
 	var allMiddlewares []ToolMiddleware
+	allMiddlewares = append(allMiddlewares, t.integrationMiddleware...)
 	allMiddlewares = append(allMiddlewares, t.middlewares...)
 	allMiddlewares = append(allMiddlewares, t.toolMiddlewares[name]...)
 	if cfg != nil {
@@ -172,6 +211,9 @@ func (t *Toolkit) Config() Config {
 
 // HasMiddleware returns true if any middleware is configured.
 func (t *Toolkit) HasMiddleware() bool {
+	if len(t.integrationMiddleware) > 0 {
+		return true
+	}
 	if len(t.middlewares) > 0 {
 		return true
 	}
@@ -181,6 +223,16 @@ func (t *Toolkit) HasMiddleware() bool {
 		}
 	}
 	return false
+}
+
+// QueryProvider returns the configured query provider, or nil if not configured.
+func (t *Toolkit) QueryProvider() integration.QueryProvider {
+	return t.queryProvider
+}
+
+// HasQueryProvider returns true if a query provider is configured.
+func (t *Toolkit) HasQueryProvider() bool {
+	return t.queryProvider != nil
 }
 
 // getClient returns the DataHub client for the given connection name.
