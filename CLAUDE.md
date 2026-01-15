@@ -26,16 +26,21 @@ This file provides guidance to Claude Code when working with this project.
 
 ```
 pkg/
-├── client/     # DataHub GraphQL client (standalone, no MCP dependency)
-├── types/      # Domain types (entities, schema, lineage, etc.)
-├── tools/      # MCP toolkit (composable tool registration)
-└── integration/# Extension interfaces for custom integrations
+├── client/      # DataHub GraphQL client (standalone, no MCP dependency)
+├── multiserver/ # Multi-server configuration and connection management
+├── types/       # Domain types (entities, schema, lineage, etc.)
+├── tools/       # MCP toolkit (composable tool registration)
+└── integration/ # Extension interfaces for custom integrations
 
 internal/
-└── server/     # Reference implementation server setup
+└── server/      # Reference implementation server setup
 
 cmd/
-└── mcp-datahub/# Reference implementation CLI binary
+└── mcp-datahub/ # Reference implementation CLI binary
+
+mcpb/
+├── manifest.json # MCPB bundle manifest for Claude Desktop
+└── build.sh      # Build script for .mcpb bundles
 ```
 
 ### Composition Pattern
@@ -85,7 +90,7 @@ export DATAHUB_TOKEN=your_token
 ./mcp-datahub
 ```
 
-## Available Tools (10 total)
+## Available Tools (11 total)
 
 | Tool | Description |
 |------|-------------|
@@ -99,6 +104,23 @@ export DATAHUB_TOKEN=your_token
 | `datahub_list_domains` | List data domains |
 | `datahub_list_data_products` | List data products |
 | `datahub_get_data_product` | Get data product details |
+| `datahub_list_connections` | List configured DataHub server connections |
+
+## Multi-Server Configuration
+
+The reference implementation supports connecting to multiple DataHub instances:
+
+```bash
+# Primary server
+export DATAHUB_URL=https://prod.datahub.example.com/api/graphql
+export DATAHUB_TOKEN=prod-token
+export DATAHUB_CONNECTION_NAME=prod
+
+# Additional servers (JSON)
+export DATAHUB_ADDITIONAL_SERVERS='{"staging":{"url":"https://staging.datahub.example.com/api/graphql","token":"staging-token"}}'
+```
+
+All tools accept an optional `connection` parameter to target a specific server.
 
 ## DataHub API Compatibility
 
