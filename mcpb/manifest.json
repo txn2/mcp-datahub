@@ -1,0 +1,128 @@
+{
+  "manifest_version": "0.3",
+  "name": "mcp-datahub",
+  "display_name": "DataHub MCP Server",
+  "icon": "icon.png",
+  "version": "0.0.0",
+  "description": "Discover and explore data catalog metadata via the Model Context Protocol (MCP).",
+  "long_description": "mcp-datahub is a Model Context Protocol server for DataHub, enabling AI assistants like Claude to explore data catalogs, discover datasets, understand data lineage, and access metadata. Search for data assets, retrieve schema information, explore glossary terms, and navigate data products - all through natural language conversations with your AI assistant.",
+  "author": {
+    "name": "Craig Johnston",
+    "email": "cj@imti.co",
+    "url": "https://imti.co"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/txn2/mcp-datahub"
+  },
+  "homepage": "https://github.com/txn2/mcp-datahub",
+  "documentation": "https://github.com/txn2/mcp-datahub#readme",
+  "license": "Apache-2.0",
+  "keywords": [
+    "datahub",
+    "data-catalog",
+    "metadata",
+    "data-governance",
+    "data-lineage",
+    "data-discovery",
+    "mcp"
+  ],
+  "server": {
+    "type": "binary",
+    "entry_point": "mcp-datahub",
+    "mcp_config": {
+      "command": "${__dirname}/mcp-datahub",
+      "args": [],
+      "env": {
+        "DATAHUB_CONNECTION_NAME": "${user_config.datahub_connection_name}",
+        "DATAHUB_URL": "${user_config.datahub_url}",
+        "DATAHUB_TOKEN": "${user_config.datahub_token}",
+        "DATAHUB_ADDITIONAL_SERVERS": "${user_config.datahub_additional_servers}"
+      },
+      "platform_overrides": {
+        "win32": {
+          "command": "${__dirname}/mcp-datahub.exe"
+        }
+      }
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=1.0.0",
+    "platforms": ["darwin", "win32"]
+  },
+  "tools": [
+    {
+      "name": "datahub_search",
+      "description": "Search for datasets, dashboards, pipelines, and other assets in the DataHub catalog"
+    },
+    {
+      "name": "datahub_get_entity",
+      "description": "Get detailed metadata for a DataHub entity by its URN"
+    },
+    {
+      "name": "datahub_get_schema",
+      "description": "Get the schema (fields, types, descriptions) for a dataset"
+    },
+    {
+      "name": "datahub_get_lineage",
+      "description": "Get upstream or downstream lineage for an entity"
+    },
+    {
+      "name": "datahub_get_queries",
+      "description": "Get SQL queries associated with a dataset"
+    },
+    {
+      "name": "datahub_get_glossary_term",
+      "description": "Get a glossary term definition and its related assets"
+    },
+    {
+      "name": "datahub_list_tags",
+      "description": "List available tags in the DataHub catalog"
+    },
+    {
+      "name": "datahub_list_domains",
+      "description": "List data domains in the DataHub catalog"
+    },
+    {
+      "name": "datahub_list_data_products",
+      "description": "List data products in the DataHub catalog"
+    },
+    {
+      "name": "datahub_get_data_product",
+      "description": "Get detailed information about a data product including its assets, owners, and domain"
+    },
+    {
+      "name": "datahub_list_connections",
+      "description": "List all configured DataHub server connections for multi-server environments"
+    }
+  ],
+  "user_config": {
+    "datahub_connection_name": {
+      "type": "string",
+      "title": "Connection Name",
+      "description": "Display name for this connection (e.g., 'production', 'staging')",
+      "required": false,
+      "default": "datahub"
+    },
+    "datahub_url": {
+      "type": "string",
+      "title": "DataHub URL",
+      "description": "DataHub GraphQL API URL (e.g., https://datahub.example.com/api/graphql)",
+      "required": true
+    },
+    "datahub_token": {
+      "type": "string",
+      "title": "Access Token",
+      "description": "DataHub personal access token for authentication",
+      "required": true,
+      "sensitive": true
+    },
+    "datahub_additional_servers": {
+      "type": "string",
+      "title": "Additional Servers (JSON)",
+      "description": "Optional: Add more DataHub servers as JSON. Example: {\"staging\": {\"url\": \"https://staging.datahub.example.com/api/graphql\", \"token\": \"token\"}}",
+      "required": false,
+      "default": ""
+    }
+  }
+}

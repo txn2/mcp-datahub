@@ -6,12 +6,19 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// ListDomainsInput is the input for the list_domains tool (empty).
-type ListDomainsInput struct{}
+// ListDomainsInput is the input for the list_domains tool.
+type ListDomainsInput struct {
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
+}
 
 func (t *Toolkit) registerListDomainsTool(server *mcp.Server, cfg *toolConfig) {
-	baseHandler := func(ctx context.Context, req *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
-		return t.handleListDomains(ctx, req)
+	baseHandler := func(ctx context.Context, req *mcp.CallToolRequest, input any) (*mcp.CallToolResult, any, error) {
+		domainsInput, ok := input.(ListDomainsInput)
+		if !ok {
+			return ErrorResult("internal error: invalid input type"), nil, nil
+		}
+		return t.handleListDomains(ctx, req, domainsInput)
 	}
 
 	wrappedHandler := t.wrapHandler(ToolListDomains, baseHandler, cfg)
@@ -24,8 +31,14 @@ func (t *Toolkit) registerListDomainsTool(server *mcp.Server, cfg *toolConfig) {
 	})
 }
 
-func (t *Toolkit) handleListDomains(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, any, error) {
-	domains, err := t.client.ListDomains(ctx)
+func (t *Toolkit) handleListDomains(ctx context.Context, _ *mcp.CallToolRequest, input ListDomainsInput) (*mcp.CallToolResult, any, error) {
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
+	domains, err := datahubClient.ListDomains(ctx)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}

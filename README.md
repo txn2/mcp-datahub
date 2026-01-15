@@ -17,6 +17,12 @@ An MCP server and composable Go library that connects AI assistants to [DataHub]
 
 Install and connect to Claude Desktop, Cursor, or any MCP client:
 
+**Claude Desktop (Easiest)** - Download the `.mcpb` bundle from [releases](https://github.com/txn2/mcp-datahub/releases) and double-click to install:
+- macOS Apple Silicon: `mcp-datahub_X.X.X_darwin_arm64.mcpb`
+- macOS Intel: `mcp-datahub_X.X.X_darwin_amd64.mcpb`
+- Windows: `mcp-datahub_X.X.X_windows_amd64.mcpb`
+
+**Other Installation Methods:**
 ```bash
 # Homebrew (macOS)
 brew install txn2/tap/mcp-datahub
@@ -25,6 +31,7 @@ brew install txn2/tap/mcp-datahub
 go install github.com/txn2/mcp-datahub/cmd/mcp-datahub@latest
 ```
 
+**Manual Claude Desktop Configuration** (if not using MCPB):
 ```json
 {
   "mcpServers": {
@@ -38,6 +45,22 @@ go install github.com/txn2/mcp-datahub/cmd/mcp-datahub@latest
   }
 }
 ```
+
+#### Multi-Server Configuration
+
+Connect to multiple DataHub instances simultaneously:
+
+```bash
+# Primary server
+export DATAHUB_URL=https://prod.datahub.example.com/api/graphql
+export DATAHUB_TOKEN=prod-token
+export DATAHUB_CONNECTION_NAME=prod
+
+# Additional servers (JSON)
+export DATAHUB_ADDITIONAL_SERVERS='{"staging":{"url":"https://staging.datahub.example.com/api/graphql","token":"staging-token"}}'
+```
+
+Use `datahub_list_connections` to discover available connections, then pass the `connection` parameter to any tool.
 
 ### 2. Composable Go Library
 
@@ -100,6 +123,7 @@ See [txn2/mcp-trino](https://github.com/txn2/mcp-trino) for the companion librar
 | `datahub_list_domains` | List data domains |
 | `datahub_list_data_products` | List data products |
 | `datahub_get_data_product` | Get data product details (owners, domain, properties) |
+| `datahub_list_connections` | List configured DataHub server connections (multi-server mode) |
 
 See the [tools reference](https://mcp-datahub.txn2.com/server/tools/) for detailed documentation.
 
@@ -107,11 +131,13 @@ See the [tools reference](https://mcp-datahub.txn2.com/server/tools/) for detail
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATAHUB_URL` | DataHub GMS URL | (required) |
+| `DATAHUB_URL` | DataHub GraphQL API URL | (required) |
 | `DATAHUB_TOKEN` | API token | (required) |
 | `DATAHUB_TIMEOUT` | Request timeout (seconds) | `30` |
 | `DATAHUB_DEFAULT_LIMIT` | Default search limit | `10` |
 | `DATAHUB_MAX_LIMIT` | Maximum limit | `100` |
+| `DATAHUB_CONNECTION_NAME` | Display name for primary connection | `datahub` |
+| `DATAHUB_ADDITIONAL_SERVERS` | JSON map of additional servers | (optional) |
 
 See [configuration reference](https://mcp-datahub.txn2.com/server/configuration/) for all options.
 

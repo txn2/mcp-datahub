@@ -9,6 +9,8 @@ import (
 // GetQueriesInput is the input for the get_queries tool.
 type GetQueriesInput struct {
 	URN string `json:"urn" jsonschema_description:"The DataHub URN of the dataset"`
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
 func (t *Toolkit) registerGetQueriesTool(server *mcp.Server, cfg *toolConfig) {
@@ -35,7 +37,13 @@ func (t *Toolkit) handleGetQueries(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult("urn parameter is required"), nil, nil
 	}
 
-	queries, err := t.client.GetQueries(ctx, input.URN)
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
+	queries, err := datahubClient.GetQueries(ctx, input.URN)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}

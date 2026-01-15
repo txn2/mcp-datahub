@@ -47,7 +47,7 @@ func TestHandleListDomains(t *testing.T) {
 			}
 
 			toolkit := NewToolkit(mock, DefaultConfig())
-			result, _, _ := toolkit.handleListDomains(context.Background(), nil)
+			result, _, _ := toolkit.handleListDomains(context.Background(), nil, ListDomainsInput{})
 
 			if tt.wantErr {
 				if !result.IsError {

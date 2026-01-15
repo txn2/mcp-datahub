@@ -9,6 +9,8 @@ import (
 // ListTagsInput is the input for the list_tags tool.
 type ListTagsInput struct {
 	Filter string `json:"filter,omitempty" jsonschema_description:"Optional filter string to match tag names"`
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
 func (t *Toolkit) registerListTagsTool(server *mcp.Server, cfg *toolConfig) {
@@ -31,7 +33,13 @@ func (t *Toolkit) registerListTagsTool(server *mcp.Server, cfg *toolConfig) {
 }
 
 func (t *Toolkit) handleListTags(ctx context.Context, _ *mcp.CallToolRequest, input ListTagsInput) (*mcp.CallToolResult, any, error) {
-	tags, err := t.client.ListTags(ctx, input.Filter)
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
+	tags, err := datahubClient.ListTags(ctx, input.Filter)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}

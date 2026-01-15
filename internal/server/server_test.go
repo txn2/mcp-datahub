@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	"github.com/txn2/mcp-datahub/pkg/client"
+	"github.com/txn2/mcp-datahub/pkg/multiserver"
 )
 
 func TestDefaultOptions(t *testing.T) {
 	opts := DefaultOptions()
 
-	if opts.ClientConfig != nil {
-		t.Error("DefaultOptions() ClientConfig should be nil")
+	if opts.MultiServerConfig != nil {
+		t.Error("DefaultOptions() MultiServerConfig should be nil")
 	}
 	if opts.ToolkitConfig.DefaultLimit != 10 {
 		t.Errorf("DefaultOptions() ToolkitConfig.DefaultLimit = %d, want 10", opts.ToolkitConfig.DefaultLimit)
@@ -19,16 +20,20 @@ func TestDefaultOptions(t *testing.T) {
 }
 
 func TestNewWithProvidedConfig(t *testing.T) {
-	cfg := &client.Config{
-		URL:   "https://test.datahub.io",
-		Token: "test-token",
+	cfg := &multiserver.Config{
+		Default: "datahub",
+		Primary: client.Config{
+			URL:   "https://test.datahub.io",
+			Token: "test-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{},
 	}
 
 	opts := Options{
-		ClientConfig: cfg,
+		MultiServerConfig: cfg,
 	}
 
-	server, datahubClient, err := New(opts)
+	server, mgr, err := New(opts)
 	if err != nil {
 		t.Fatalf("New() unexpected error: %v", err)
 	}
@@ -36,13 +41,18 @@ func TestNewWithProvidedConfig(t *testing.T) {
 	if server == nil {
 		t.Error("New() returned nil server")
 	}
-	if datahubClient == nil {
-		t.Error("New() returned nil client")
+	if mgr == nil {
+		t.Error("New() returned nil manager")
+	}
+
+	// Check that we have the expected connection
+	if !mgr.HasConnection("datahub") {
+		t.Error("Manager should have 'datahub' connection")
 	}
 
 	// Clean up
-	if datahubClient != nil {
-		if err := datahubClient.Close(); err != nil {
+	if mgr != nil {
+		if err := mgr.Close(); err != nil {
 			t.Errorf("Close() error: %v", err)
 		}
 	}
@@ -97,7 +107,7 @@ func TestNewWithMissingConfig(t *testing.T) {
 	})
 
 	opts := DefaultOptions()
-	server, datahubClient, err := New(opts)
+	server, mgr, err := New(opts)
 
 	// Should not error - server starts even without config
 	if err != nil {
@@ -107,9 +117,13 @@ func TestNewWithMissingConfig(t *testing.T) {
 	if server == nil {
 		t.Error("New() returned nil server even in unconfigured mode")
 	}
-	if datahubClient != nil {
-		t.Error("New() should return nil client when unconfigured")
-		if err := datahubClient.Close(); err != nil {
+	if mgr == nil {
+		t.Error("New() returned nil manager even in unconfigured mode")
+	}
+
+	// Manager should still be valid, just with no valid client configs
+	if mgr != nil {
+		if err := mgr.Close(); err != nil {
 			t.Errorf("Close() error: %v", err)
 		}
 	}

@@ -6,12 +6,19 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// ListDataProductsInput is the input for the list_data_products tool (empty).
-type ListDataProductsInput struct{}
+// ListDataProductsInput is the input for the list_data_products tool.
+type ListDataProductsInput struct {
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
+}
 
 func (t *Toolkit) registerListDataProductsTool(server *mcp.Server, cfg *toolConfig) {
-	baseHandler := func(ctx context.Context, req *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
-		return t.handleListDataProducts(ctx, req)
+	baseHandler := func(ctx context.Context, req *mcp.CallToolRequest, input any) (*mcp.CallToolResult, any, error) {
+		productsInput, ok := input.(ListDataProductsInput)
+		if !ok {
+			return ErrorResult("internal error: invalid input type"), nil, nil
+		}
+		return t.handleListDataProducts(ctx, req, productsInput)
 	}
 
 	wrappedHandler := t.wrapHandler(ToolListDataProducts, baseHandler, cfg)
@@ -24,8 +31,16 @@ func (t *Toolkit) registerListDataProductsTool(server *mcp.Server, cfg *toolConf
 	})
 }
 
-func (t *Toolkit) handleListDataProducts(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, any, error) {
-	products, err := t.client.ListDataProducts(ctx)
+func (t *Toolkit) handleListDataProducts(
+	ctx context.Context, _ *mcp.CallToolRequest, input ListDataProductsInput,
+) (*mcp.CallToolResult, any, error) {
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
+	products, err := datahubClient.ListDataProducts(ctx)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}
@@ -41,6 +56,8 @@ func (t *Toolkit) handleListDataProducts(ctx context.Context, _ *mcp.CallToolReq
 // GetDataProductInput is the input for the get_data_product tool.
 type GetDataProductInput struct {
 	URN string `json:"urn" jsonschema_description:"The DataHub URN of the data product"`
+	// Connection is the named connection to use. Empty uses the default connection.
+	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
 func (t *Toolkit) registerGetDataProductTool(server *mcp.Server, cfg *toolConfig) {
@@ -69,7 +86,13 @@ func (t *Toolkit) handleGetDataProduct(
 		return ErrorResult("urn parameter is required"), nil, nil
 	}
 
-	product, err := t.client.GetDataProduct(ctx, input.URN)
+	// Get client for the specified connection
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
+	product, err := datahubClient.GetDataProduct(ctx, input.URN)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}

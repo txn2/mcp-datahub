@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -21,12 +20,7 @@ var (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-}
-
-func run() error {
+	// Setup context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -39,40 +33,48 @@ func run() error {
 		cancel()
 	}()
 
-	// Create server with default options
+	// Create server with default options (from environment)
 	opts := server.DefaultOptions()
-	mcpServer, datahubClient, err := server.New(opts)
+	mcpServer, mgr, err := server.New(opts)
 	if err != nil {
-		return fmt.Errorf("failed to create server: %w", err)
+		log.Fatalf("Failed to create server: %v", err)
 	}
-
-	// Clean up client on exit
-	if datahubClient != nil {
-		defer func() {
-			if err := datahubClient.Close(); err != nil {
-				log.Printf("Error closing client: %v", err)
-			}
-		}()
-
-		// Test connection
-		if err := datahubClient.Ping(ctx); err != nil {
-			log.Printf("Warning: DataHub connection test failed: %v", err)
-		} else {
-			log.Printf("mcp-datahub %s (commit: %s, built: %s)", version, commit, buildTime)
-			log.Printf("Connected to DataHub at %s", datahubClient.Config().URL)
+	defer func() {
+		if closeErr := mgr.Close(); closeErr != nil {
+			log.Printf("Error closing manager: %v", closeErr)
 		}
-	} else {
-		log.Printf("mcp-datahub %s (commit: %s, built: %s)", version, commit, buildTime)
-		log.Println("Warning: DataHub not configured - tools will return configuration errors")
+	}()
+
+	// Test connection to default server
+	defaultClient, err := mgr.Client("")
+	if err != nil {
+		log.Printf("Warning: Could not get default client: %v", err)
+	} else if err := defaultClient.Ping(ctx); err != nil {
+		log.Printf("Warning: Could not ping DataHub server: %v", err)
 	}
 
-	// Run MCP server with stdio transport
+	// Log startup info
+	infos := mgr.ConnectionInfos()
+	var defaultURL string
+	for _, info := range infos {
+		if info.IsDefault {
+			defaultURL = info.URL
+			break
+		}
+	}
+	log.Printf("mcp-datahub %s (commit: %s, built: %s)", version, commit, buildTime)
+	log.Printf("Starting with %d connection(s), default: %s",
+		mgr.ConnectionCount(),
+		defaultURL,
+	)
+
+	// Run server with stdio transport
 	if err := mcpServer.Run(ctx, &mcp.StdioTransport{}); err != nil {
 		if ctx.Err() != nil {
+			// Context canceled, normal shutdown
 			log.Println("Server stopped")
-			return nil
+			return
 		}
-		return fmt.Errorf("server error: %w", err)
+		log.Fatalf("Server error: %v", err)
 	}
-	return nil
 }
