@@ -48,6 +48,25 @@ func (t *Toolkit) handleGetSchema(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult(err.Error()), nil, nil
 	}
 
+	// Build response - include table resolution if provider configured
+	if t.queryProvider != nil {
+		response := map[string]any{
+			"schema": schema,
+		}
+
+		// Add table resolution
+		if table, tableErr := t.queryProvider.ResolveTable(ctx, input.URN); tableErr == nil && table != nil {
+			response["query_table"] = table
+		}
+
+		jsonResult, jsonErr := JSONResult(response)
+		if jsonErr != nil {
+			return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
+		}
+		return jsonResult, nil, nil
+	}
+
+	// No query provider - return schema only
 	jsonResult, err := JSONResult(schema)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil

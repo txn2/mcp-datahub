@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -60,10 +61,72 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult(err.Error()), nil, nil
 	}
 
+	// Build response - include execution context if provider configured
+	if t.queryProvider != nil {
+		response := map[string]any{
+			"lineage": lineage,
+		}
+
+		// Collect all URNs from lineage
+		urns := collectLineageURNs(lineage)
+
+		// Get execution context for lineage bridge
+		if len(urns) > 0 {
+			if execCtx, execErr := t.queryProvider.GetExecutionContext(ctx, urns); execErr == nil && execCtx != nil {
+				response["execution_context"] = execCtx
+			}
+		}
+
+		jsonResult, jsonErr := JSONResult(response)
+		if jsonErr != nil {
+			return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
+		}
+		return jsonResult, nil, nil
+	}
+
+	// No query provider - return lineage only
 	jsonResult, err := JSONResult(lineage)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
 	return jsonResult, nil, nil
+}
+
+// collectLineageURNs extracts all URNs from a lineage result.
+func collectLineageURNs(lineage any) []string {
+	var urns []string
+
+	// Use type switch to handle different lineage result structures
+	switch v := lineage.(type) {
+	case map[string]any:
+		// Check for start URN
+		if start, ok := v["start"].(string); ok {
+			urns = append(urns, start)
+		}
+		// Check for nodes array
+		if nodes, ok := v["nodes"].([]any); ok {
+			for _, n := range nodes {
+				if node, ok := n.(map[string]any); ok {
+					if urn, ok := node["urn"].(string); ok {
+						urns = append(urns, urn)
+					}
+				}
+			}
+		}
+	default:
+		// For typed structs, we need reflection or specific type handling
+		// For now, handle via JSON roundtrip
+		data, err := json.Marshal(lineage)
+		if err != nil {
+			return urns
+		}
+		var m map[string]any
+		if err := json.Unmarshal(data, &m); err != nil {
+			return urns
+		}
+		return collectLineageURNs(m)
+	}
+
+	return urns
 }
