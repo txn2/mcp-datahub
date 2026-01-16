@@ -13,25 +13,6 @@ func TestWithEntityType(t *testing.T) {
 	}
 }
 
-func TestWithEntityTypes(t *testing.T) {
-	opts := &searchOptions{}
-	WithEntityTypes("DATASET", "DASHBOARD")(opts)
-
-	// WithEntityTypes only uses the first type
-	if opts.entityType != "DATASET" {
-		t.Errorf("WithEntityTypes() = %s, want DATASET", opts.entityType)
-	}
-}
-
-func TestWithEntityTypesEmpty(t *testing.T) {
-	opts := &searchOptions{}
-	WithEntityTypes()(opts)
-
-	if opts.entityType != "" {
-		t.Errorf("WithEntityTypes() with no args should not set entityType")
-	}
-}
-
 func TestWithLimit(t *testing.T) {
 	opts := &searchOptions{}
 	WithLimit(50)(opts)
@@ -84,6 +65,33 @@ func TestLineageOptions(t *testing.T) {
 			},
 			checkFunc: func(o *lineageOptions) bool {
 				return o.direction == LineageDirectionDownstream
+			},
+		},
+		{
+			name: "direction lowercase upstream normalized",
+			applyOpts: func(o *lineageOptions) {
+				WithDirection("upstream")(o)
+			},
+			checkFunc: func(o *lineageOptions) bool {
+				return o.direction == LineageDirectionUpstream
+			},
+		},
+		{
+			name: "direction lowercase downstream normalized",
+			applyOpts: func(o *lineageOptions) {
+				WithDirection("downstream")(o)
+			},
+			checkFunc: func(o *lineageOptions) bool {
+				return o.direction == LineageDirectionDownstream
+			},
+		},
+		{
+			name: "direction mixed case normalized",
+			applyOpts: func(o *lineageOptions) {
+				WithDirection("Upstream")(o)
+			},
+			checkFunc: func(o *lineageOptions) bool {
+				return o.direction == LineageDirectionUpstream
 			},
 		},
 		{
