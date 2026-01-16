@@ -1,5 +1,7 @@
 package client
 
+import "strings"
+
 // SearchOption configures search behavior.
 type SearchOption func(*searchOptions)
 
@@ -16,16 +18,6 @@ type searchOptions struct {
 func WithEntityType(entityType string) SearchOption {
 	return func(o *searchOptions) {
 		o.entityType = entityType
-	}
-}
-
-// WithEntityTypes is an alias for WithEntityType (uses first type).
-// Deprecated: Use WithEntityType instead.
-func WithEntityTypes(types ...string) SearchOption {
-	return func(o *searchOptions) {
-		if len(types) > 0 {
-			o.entityType = types[0]
-		}
 	}
 }
 
@@ -59,9 +51,10 @@ type lineageOptions struct {
 }
 
 // WithDirection sets the lineage direction (UPSTREAM or DOWNSTREAM).
+// The direction is normalized to uppercase.
 func WithDirection(dir string) LineageOption {
 	return func(o *lineageOptions) {
-		o.direction = dir
+		o.direction = strings.ToUpper(dir)
 	}
 }
 
