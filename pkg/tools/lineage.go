@@ -30,8 +30,10 @@ func (t *Toolkit) registerGetLineageTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolGetLineage, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolGetLineage),
-		Description: "Get upstream or downstream lineage for an entity",
+		Name: string(ToolGetLineage),
+		Description: "Get upstream or downstream lineage for a DataHub entity. " +
+			"When a QueryProvider is configured, includes execution_context " +
+			"mapping URNs to query engine tables.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetLineageInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
