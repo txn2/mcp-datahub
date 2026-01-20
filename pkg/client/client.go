@@ -251,6 +251,34 @@ func (c *Client) Search(ctx context.Context, query string, opts ...SearchOption)
 						Name        string `json:"name"`
 						Description string `json:"description"`
 					} `json:"properties"`
+					Ownership struct {
+						Owners []struct {
+							Owner struct {
+								URN      string `json:"urn"`
+								Username string `json:"username"`
+								Name     string `json:"name"`
+							} `json:"owner"`
+							Type string `json:"type"`
+						} `json:"owners"`
+					} `json:"ownership"`
+					Tags struct {
+						Tags []struct {
+							Tag struct {
+								URN         string `json:"urn"`
+								Name        string `json:"name"`
+								Description string `json:"description"`
+							} `json:"tag"`
+						} `json:"tags"`
+					} `json:"tags"`
+					Domain struct {
+						Domain struct {
+							URN        string `json:"urn"`
+							Properties struct {
+								Name        string `json:"name"`
+								Description string `json:"description"`
+							} `json:"properties"`
+						} `json:"domain"`
+					} `json:"domain"`
 				} `json:"entity"`
 				MatchedFields []struct {
 					Name  string `json:"name"`
@@ -289,6 +317,37 @@ func (c *Client) Search(ctx context.Context, query string, opts ...SearchOption)
 			Platform:    sr.Entity.Platform.Name,
 		}
 
+		// Parse ownership
+		for _, o := range sr.Entity.Ownership.Owners {
+			ownerName := o.Owner.Username
+			if o.Owner.Name != "" {
+				ownerName = o.Owner.Name
+			}
+			entity.Owners = append(entity.Owners, types.Owner{
+				URN:  o.Owner.URN,
+				Name: ownerName,
+				Type: types.OwnershipType(o.Type),
+			})
+		}
+
+		// Parse tags
+		for _, t := range sr.Entity.Tags.Tags {
+			entity.Tags = append(entity.Tags, types.Tag{
+				URN:         t.Tag.URN,
+				Name:        t.Tag.Name,
+				Description: t.Tag.Description,
+			})
+		}
+
+		// Parse domain
+		if sr.Entity.Domain.Domain.URN != "" {
+			entity.Domain = &types.Domain{
+				URN:         sr.Entity.Domain.Domain.URN,
+				Name:        sr.Entity.Domain.Domain.Properties.Name,
+				Description: sr.Entity.Domain.Domain.Properties.Description,
+			}
+		}
+
 		for _, mf := range sr.MatchedFields {
 			entity.MatchedFields = append(entity.MatchedFields, types.MatchedField{
 				Name:  mf.Name,
@@ -318,15 +377,63 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 				Name string `json:"name"`
 			} `json:"platform"`
 			Properties struct {
-				Name        string `json:"name"`
-				Description string `json:"description"`
+				Name             string `json:"name"`
+				Description      string `json:"description"`
+				CustomProperties []struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				} `json:"customProperties"`
 			} `json:"properties"`
 			SubTypes struct {
 				TypeNames []string `json:"typeNames"`
 			} `json:"subTypes"`
+			Ownership struct {
+				Owners []struct {
+					Owner struct {
+						URN      string `json:"urn"`
+						Username string `json:"username"`
+						Name     string `json:"name"`
+						Info     struct {
+							DisplayName string `json:"displayName"`
+							Email       string `json:"email"`
+						} `json:"info"`
+					} `json:"owner"`
+					Type string `json:"type"`
+				} `json:"owners"`
+			} `json:"ownership"`
+			Tags struct {
+				Tags []struct {
+					Tag struct {
+						URN         string `json:"urn"`
+						Name        string `json:"name"`
+						Description string `json:"description"`
+					} `json:"tag"`
+				} `json:"tags"`
+			} `json:"tags"`
+			GlossaryTerms struct {
+				Terms []struct {
+					Term struct {
+						URN        string `json:"urn"`
+						Properties struct {
+							Name        string `json:"name"`
+							Description string `json:"description"`
+						} `json:"properties"`
+					} `json:"term"`
+				} `json:"terms"`
+			} `json:"glossaryTerms"`
+			Domain struct {
+				Domain struct {
+					URN        string `json:"urn"`
+					Properties struct {
+						Name        string `json:"name"`
+						Description string `json:"description"`
+					} `json:"properties"`
+				} `json:"domain"`
+			} `json:"domain"`
 			Deprecation struct {
 				Deprecated       bool   `json:"deprecated"`
 				Note             string `json:"note"`
+				Actor            string `json:"actor"`
 				DecommissionTime int64  `json:"decommissionTime"`
 			} `json:"deprecation"`
 		} `json:"entity"`
@@ -355,11 +462,63 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 		entity.Description = response.Entity.Properties.Description
 	}
 
+	// Parse ownership
+	for _, o := range response.Entity.Ownership.Owners {
+		name := o.Owner.Username
+		if o.Owner.Info.DisplayName != "" {
+			name = o.Owner.Info.DisplayName
+		} else if o.Owner.Name != "" {
+			name = o.Owner.Name
+		}
+		entity.Owners = append(entity.Owners, types.Owner{
+			URN:   o.Owner.URN,
+			Name:  name,
+			Email: o.Owner.Info.Email,
+			Type:  types.OwnershipType(o.Type),
+		})
+	}
+
+	// Parse tags
+	for _, t := range response.Entity.Tags.Tags {
+		entity.Tags = append(entity.Tags, types.Tag{
+			URN:         t.Tag.URN,
+			Name:        t.Tag.Name,
+			Description: t.Tag.Description,
+		})
+	}
+
+	// Parse glossary terms
+	for _, gt := range response.Entity.GlossaryTerms.Terms {
+		entity.GlossaryTerms = append(entity.GlossaryTerms, types.GlossaryTerm{
+			URN:         gt.Term.URN,
+			Name:        gt.Term.Properties.Name,
+			Description: gt.Term.Properties.Description,
+		})
+	}
+
+	// Parse domain
+	if response.Entity.Domain.Domain.URN != "" {
+		entity.Domain = &types.Domain{
+			URN:         response.Entity.Domain.Domain.URN,
+			Name:        response.Entity.Domain.Domain.Properties.Name,
+			Description: response.Entity.Domain.Domain.Properties.Description,
+		}
+	}
+
 	if response.Entity.Deprecation.Deprecated {
 		entity.Deprecation = &types.Deprecation{
 			Deprecated:       response.Entity.Deprecation.Deprecated,
 			Note:             response.Entity.Deprecation.Note,
+			Actor:            response.Entity.Deprecation.Actor,
 			DecommissionTime: response.Entity.Deprecation.DecommissionTime,
+		}
+	}
+
+	// Parse custom properties
+	if len(response.Entity.Properties.CustomProperties) > 0 {
+		entity.Properties = make(map[string]any)
+		for _, cp := range response.Entity.Properties.CustomProperties {
+			entity.Properties[cp.Key] = cp.Value
 		}
 	}
 
@@ -375,18 +534,49 @@ func (c *Client) GetSchema(ctx context.Context, urn string) (*types.SchemaMetada
 	var response struct {
 		Dataset struct {
 			SchemaMetadata struct {
-				Name        string   `json:"name"`
-				Version     int64    `json:"version"`
-				Hash        string   `json:"hash"`
-				PrimaryKeys []string `json:"primaryKeys"`
-				Fields      []struct {
+				Name           string   `json:"name"`
+				Version        int64    `json:"version"`
+				Hash           string   `json:"hash"`
+				PrimaryKeys    []string `json:"primaryKeys"`
+				PlatformSchema struct {
+					Schema string `json:"schema"`
+				} `json:"platformSchema"`
+				Fields []struct {
 					FieldPath      string `json:"fieldPath"`
 					Type           string `json:"type"`
 					NativeDataType string `json:"nativeDataType"`
 					Description    string `json:"description"`
 					Nullable       bool   `json:"nullable"`
 					IsPartOfKey    bool   `json:"isPartOfKey"`
+					Tags           struct {
+						Tags []struct {
+							Tag struct {
+								URN  string `json:"urn"`
+								Name string `json:"name"`
+							} `json:"tag"`
+						} `json:"tags"`
+					} `json:"tags"`
+					GlossaryTerms struct {
+						Terms []struct {
+							Term struct {
+								URN  string `json:"urn"`
+								Name string `json:"name"`
+							} `json:"term"`
+						} `json:"terms"`
+					} `json:"glossaryTerms"`
 				} `json:"fields"`
+				ForeignKeys []struct {
+					Name         string `json:"name"`
+					SourceFields []struct {
+						FieldPath string `json:"fieldPath"`
+					} `json:"sourceFields"`
+					ForeignDataset struct {
+						URN string `json:"urn"`
+					} `json:"foreignDataset"`
+					ForeignFields []struct {
+						FieldPath string `json:"fieldPath"`
+					} `json:"foreignFields"`
+				} `json:"foreignKeys"`
 			} `json:"schemaMetadata"`
 		} `json:"dataset"`
 	}
@@ -396,21 +586,55 @@ func (c *Client) GetSchema(ctx context.Context, urn string) (*types.SchemaMetada
 	}
 
 	schema := &types.SchemaMetadata{
-		Name:        response.Dataset.SchemaMetadata.Name,
-		Version:     response.Dataset.SchemaMetadata.Version,
-		Hash:        response.Dataset.SchemaMetadata.Hash,
-		PrimaryKeys: response.Dataset.SchemaMetadata.PrimaryKeys,
+		Name:           response.Dataset.SchemaMetadata.Name,
+		Version:        response.Dataset.SchemaMetadata.Version,
+		Hash:           response.Dataset.SchemaMetadata.Hash,
+		PrimaryKeys:    response.Dataset.SchemaMetadata.PrimaryKeys,
+		PlatformSchema: response.Dataset.SchemaMetadata.PlatformSchema.Schema,
 	}
 
 	for _, f := range response.Dataset.SchemaMetadata.Fields {
-		schema.Fields = append(schema.Fields, types.SchemaField{
+		field := types.SchemaField{
 			FieldPath:      f.FieldPath,
 			Type:           f.Type,
 			NativeType:     f.NativeDataType,
 			Description:    f.Description,
 			Nullable:       f.Nullable,
 			IsPartitionKey: f.IsPartOfKey,
-		})
+		}
+
+		// Parse field tags
+		for _, t := range f.Tags.Tags {
+			field.Tags = append(field.Tags, types.Tag{
+				URN:  t.Tag.URN,
+				Name: t.Tag.Name,
+			})
+		}
+
+		// Parse field glossary terms
+		for _, gt := range f.GlossaryTerms.Terms {
+			field.GlossaryTerms = append(field.GlossaryTerms, types.GlossaryTerm{
+				URN:  gt.Term.URN,
+				Name: gt.Term.Name,
+			})
+		}
+
+		schema.Fields = append(schema.Fields, field)
+	}
+
+	// Parse foreign keys
+	for _, fk := range response.Dataset.SchemaMetadata.ForeignKeys {
+		foreignKey := types.ForeignKey{
+			Name:           fk.Name,
+			ForeignDataset: fk.ForeignDataset.URN,
+		}
+		for _, sf := range fk.SourceFields {
+			foreignKey.SourceFields = append(foreignKey.SourceFields, sf.FieldPath)
+		}
+		for _, ff := range fk.ForeignFields {
+			foreignKey.ForeignFields = append(foreignKey.ForeignFields, ff.FieldPath)
+		}
+		schema.ForeignKeys = append(schema.ForeignKeys, foreignKey)
 	}
 
 	return schema, nil
@@ -433,6 +657,7 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 	variables := map[string]any{
 		"urn":       urn,
 		"direction": options.direction,
+		"depth":     options.depth,
 	}
 
 	var response struct {
@@ -448,6 +673,11 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 					} `json:"platform"`
 				} `json:"entity"`
 				Degree int `json:"degree"`
+				Paths  []struct {
+					Path []struct {
+						URN string `json:"urn"`
+					} `json:"path"`
+				} `json:"paths"`
 			} `json:"searchResults"`
 		} `json:"searchAcrossLineage"`
 	}
@@ -462,6 +692,10 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 		Depth:     options.depth,
 	}
 
+	// Build nodes and edges
+	nodesByDegree := make(map[int][]string)
+	edgeSet := make(map[string]bool) // Track unique edges
+
 	for _, sr := range response.SearchAcrossLineage.SearchResults {
 		result.Nodes = append(result.Nodes, types.LineageNode{
 			URN:         sr.Entity.URN,
@@ -471,6 +705,43 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 			Platform:    sr.Entity.Platform.Name,
 			Level:       sr.Degree,
 		})
+		nodesByDegree[sr.Degree] = append(nodesByDegree[sr.Degree], sr.Entity.URN)
+
+		// Build edges from paths if available
+		for _, pathGroup := range sr.Paths {
+			if len(pathGroup.Path) > 1 {
+				for i := 0; i < len(pathGroup.Path)-1; i++ {
+					edgeKey := pathGroup.Path[i].URN + "->" + pathGroup.Path[i+1].URN
+					if !edgeSet[edgeKey] {
+						edgeSet[edgeKey] = true
+						result.Edges = append(result.Edges, types.LineageEdge{
+							Source: pathGroup.Path[i].URN,
+							Target: pathGroup.Path[i+1].URN,
+						})
+					}
+				}
+			}
+		}
+	}
+
+	// If no paths were provided, infer edges from degree
+	// For upstream: nodes at degree N connect to nodes at degree N-1
+	// For downstream: nodes at degree N connect to nodes at degree N+1
+	if len(result.Edges) == 0 && len(result.Nodes) > 0 {
+		// Add edge from start node to degree 1 nodes
+		for _, nodeURN := range nodesByDegree[1] {
+			if options.direction == LineageDirectionUpstream {
+				result.Edges = append(result.Edges, types.LineageEdge{
+					Source: nodeURN,
+					Target: urn,
+				})
+			} else {
+				result.Edges = append(result.Edges, types.LineageEdge{
+					Source: urn,
+					Target: nodeURN,
+				})
+			}
+		}
 	}
 
 	return result, nil
@@ -529,9 +800,30 @@ func (c *Client) GetGlossaryTerm(ctx context.Context, urn string) (*types.Glossa
 			Name             string `json:"name"`
 			HierarchicalName string `json:"hierarchicalName"`
 			Properties       struct {
-				Name        string `json:"name"`
-				Description string `json:"description"`
+				Name             string `json:"name"`
+				Description      string `json:"description"`
+				CustomProperties []struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				} `json:"customProperties"`
 			} `json:"properties"`
+			ParentNodes struct {
+				Nodes []struct {
+					URN        string `json:"urn"`
+					Properties struct {
+						Name string `json:"name"`
+					} `json:"properties"`
+				} `json:"nodes"`
+			} `json:"parentNodes"`
+			Ownership struct {
+				Owners []struct {
+					Owner struct {
+						URN      string `json:"urn"`
+						Username string `json:"username"`
+					} `json:"owner"`
+					Type string `json:"type"`
+				} `json:"owners"`
+			} `json:"ownership"`
 		} `json:"glossaryTerm"`
 	}
 
@@ -551,6 +843,28 @@ func (c *Client) GetGlossaryTerm(ctx context.Context, urn string) (*types.Glossa
 
 	if response.GlossaryTerm.Properties.Name != "" {
 		term.Name = response.GlossaryTerm.Properties.Name
+	}
+
+	// Parse parent node (take the first one if multiple)
+	if len(response.GlossaryTerm.ParentNodes.Nodes) > 0 {
+		term.ParentNode = response.GlossaryTerm.ParentNodes.Nodes[0].URN
+	}
+
+	// Parse ownership
+	for _, o := range response.GlossaryTerm.Ownership.Owners {
+		term.Owners = append(term.Owners, types.Owner{
+			URN:  o.Owner.URN,
+			Name: o.Owner.Username,
+			Type: types.OwnershipType(o.Type),
+		})
+	}
+
+	// Parse custom properties
+	if len(response.GlossaryTerm.Properties.CustomProperties) > 0 {
+		term.Properties = make(map[string]string)
+		for _, cp := range response.GlossaryTerm.Properties.CustomProperties {
+			term.Properties[cp.Key] = cp.Value
+		}
 	}
 
 	return term, nil
@@ -624,6 +938,15 @@ func (c *Client) ListDomains(ctx context.Context) ([]types.Domain, error) {
 					Name        string `json:"name"`
 					Description string `json:"description"`
 				} `json:"properties"`
+				Ownership struct {
+					Owners []struct {
+						Owner struct {
+							URN      string `json:"urn"`
+							Username string `json:"username"`
+						} `json:"owner"`
+						Type string `json:"type"`
+					} `json:"owners"`
+				} `json:"ownership"`
 				Entities struct {
 					Total int `json:"total"`
 				} `json:"entities"`
@@ -637,12 +960,23 @@ func (c *Client) ListDomains(ctx context.Context) ([]types.Domain, error) {
 
 	domains := make([]types.Domain, 0, len(response.ListDomains.Domains))
 	for _, d := range response.ListDomains.Domains {
-		domains = append(domains, types.Domain{
+		domain := types.Domain{
 			URN:         d.URN,
 			Name:        d.Properties.Name,
 			Description: d.Properties.Description,
 			EntityCount: d.Entities.Total,
-		})
+		}
+
+		// Parse ownership
+		for _, o := range d.Ownership.Owners {
+			domain.Owners = append(domain.Owners, types.Owner{
+				URN:  o.Owner.URN,
+				Name: o.Owner.Username,
+				Type: types.OwnershipType(o.Type),
+			})
+		}
+
+		domains = append(domains, domain)
 	}
 
 	return domains, nil
