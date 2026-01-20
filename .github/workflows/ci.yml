@@ -33,7 +33,10 @@ jobs:
       - run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
       - uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out
+          fail_ci_if_error: false
+          verbose: true
 
   build:
     name: Build
