@@ -6,6 +6,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/txn2/mcp-datahub/pkg/client"
+	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
 // SearchInput is the input for the search tool.
@@ -40,17 +41,8 @@ func (t *Toolkit) registerSearchTool(server *mcp.Server, cfg *toolConfig) {
 	})
 }
 
-func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, input SearchInput) (*mcp.CallToolResult, any, error) {
-	if input.Query == "" {
-		return ErrorResult("query parameter is required"), nil, nil
-	}
-
-	// Get client for the specified connection
-	datahubClient, err := t.getClient(input.Connection)
-	if err != nil {
-		return ErrorResult("Connection error: " + err.Error()), nil, nil
-	}
-
+// buildSearchOptions constructs SearchOptions from input parameters.
+func buildSearchOptions(input SearchInput) []client.SearchOption {
 	var opts []client.SearchOption
 	if input.EntityType != "" {
 		opts = append(opts, client.WithEntityType(input.EntityType))
@@ -61,45 +53,68 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 	if input.Offset > 0 {
 		opts = append(opts, client.WithOffset(input.Offset))
 	}
+	return opts
+}
 
-	result, err := datahubClient.Search(ctx, input.Query, opts...)
+func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, input SearchInput) (*mcp.CallToolResult, any, error) {
+	if input.Query == "" {
+		return ErrorResult("query parameter is required"), nil, nil
+	}
+
+	datahubClient, err := t.getClient(input.Connection)
+	if err != nil {
+		return ErrorResult("Connection error: " + err.Error()), nil, nil
+	}
+
+	result, err := datahubClient.Search(ctx, input.Query, buildSearchOptions(input)...)
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}
 
-	// Enrich with query availability if provider configured
-	if t.queryProvider != nil && len(result.Entities) > 0 {
-		queryContext := make(map[string]any)
-		for _, entity := range result.Entities {
-			avail, availErr := t.queryProvider.GetTableAvailability(ctx, entity.URN)
-			if availErr == nil && avail != nil {
-				entityCtx := map[string]any{
-					"available": avail.Available,
-				}
-				if avail.Table != nil {
-					entityCtx["table"] = avail.Table.String()
-				}
-				queryContext[entity.URN] = entityCtx
-			}
-		}
+	return t.formatSearchResult(ctx, result)
+}
 
-		if len(queryContext) > 0 {
-			response := map[string]any{
-				"result":        result,
-				"query_context": queryContext,
-			}
-			jsonResult, jsonErr := JSONResult(response)
-			if jsonErr != nil {
-				return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
-			}
-			return jsonResult, nil, nil
+// formatSearchResult formats search results, enriching with query context if available.
+func (t *Toolkit) formatSearchResult(ctx context.Context, result *types.SearchResult) (*mcp.CallToolResult, any, error) {
+	queryContext := t.buildQueryContext(ctx, result)
+
+	if len(queryContext) > 0 {
+		response := map[string]any{
+			"result":        result,
+			"query_context": queryContext,
 		}
+		return formatJSONResult(response)
 	}
 
-	jsonResult, err := JSONResult(result)
+	return formatJSONResult(result)
+}
+
+// buildQueryContext builds query availability context for search results.
+func (t *Toolkit) buildQueryContext(ctx context.Context, result *types.SearchResult) map[string]any {
+	if t.queryProvider == nil || len(result.Entities) == 0 {
+		return nil
+	}
+
+	queryContext := make(map[string]any)
+	for _, entity := range result.Entities {
+		avail, err := t.queryProvider.GetTableAvailability(ctx, entity.URN)
+		if err != nil || avail == nil {
+			continue
+		}
+		entityCtx := map[string]any{"available": avail.Available}
+		if avail.Table != nil {
+			entityCtx["table"] = avail.Table.String()
+		}
+		queryContext[entity.URN] = entityCtx
+	}
+	return queryContext
+}
+
+// formatJSONResult is a helper to format and return JSON results.
+func formatJSONResult(data any) (*mcp.CallToolResult, any, error) {
+	jsonResult, err := JSONResult(data)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-
 	return jsonResult, nil, nil
 }

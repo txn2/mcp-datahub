@@ -29,6 +29,9 @@ type Entity struct {
 	// Platform is the data platform (for datasets).
 	Platform string `json:"platform,omitempty"`
 
+	// SubTypes contains sub-type classifications (e.g., "table", "view" for datasets).
+	SubTypes []string `json:"sub_types,omitempty"`
+
 	// Deprecation contains deprecation info if the entity is deprecated.
 	Deprecation *Deprecation `json:"deprecation,omitempty"`
 
