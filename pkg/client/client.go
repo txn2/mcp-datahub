@@ -505,6 +505,11 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 		}
 	}
 
+	// Parse subTypes
+	if len(response.Entity.SubTypes.TypeNames) > 0 {
+		entity.SubTypes = response.Entity.SubTypes.TypeNames
+	}
+
 	if response.Entity.Deprecation.Deprecated {
 		entity.Deprecation = &types.Deprecation{
 			Deprecated:       response.Entity.Deprecation.Deprecated,
