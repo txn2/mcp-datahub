@@ -164,6 +164,7 @@ query getEntity($urn: String!) {
       deprecation {
         deprecated
         note
+        actor
         decommissionTime
       }
       properties {
@@ -261,11 +262,12 @@ query getSchema($urn: String!) {
 
 	// GetLineageQuery retrieves lineage for an entity.
 	GetLineageQuery = `
-query getLineage($urn: String!, $direction: LineageDirection!) {
+query getLineage($urn: String!, $direction: LineageDirection!, $depth: Int) {
   searchAcrossLineage(
     input: {
       urn: $urn
       direction: $direction
+      maxHops: $depth
     }
   ) {
     searchResults {
@@ -291,6 +293,11 @@ query getLineage($urn: String!, $direction: LineageDirection!) {
         }
       }
       degree
+      paths {
+        path {
+          urn
+        }
+      }
     }
   }
 }
