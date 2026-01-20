@@ -10,10 +10,9 @@ import (
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
-// TestToolsViaServer tests tools by actually invoking them through the MCP server.
-// This covers the registration code paths including the type assertion branches.
-func TestToolsViaServer(t *testing.T) {
-	mock := &mockClient{
+// createTestMockClient returns a mock client with all methods stubbed.
+func createTestMockClient() *mockClient {
+	return &mockClient{
 		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{Total: 1, Entities: []types.SearchEntity{{URN: "urn:li:dataset:test"}}}, nil
 		},
@@ -45,149 +44,67 @@ func TestToolsViaServer(t *testing.T) {
 			return &types.DataProduct{URN: urn, Name: "test"}, nil
 		},
 	}
+}
+
+// setupTestServer creates and starts a test MCP server with the toolkit registered.
+func setupTestServer(t *testing.T, mock *mockClient) *mcp.ClientSession {
+	t.Helper()
 
 	toolkit := NewToolkit(mock, DefaultConfig())
-
 	impl := &mcp.Implementation{Name: "test-server", Version: "1.0.0"}
 	server := mcp.NewServer(impl, nil)
-
-	// Register all tools
 	toolkit.RegisterAll(server)
 
-	// Create in-memory transports
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
-
-	// Create client
 	mcpClient := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "1.0.0"}, nil)
 
-	// Run server in background
 	go func() {
 		_ = server.Run(context.Background(), serverTransport)
 	}()
 
-	// Connect client
 	session, err := mcpClient.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
 		t.Fatalf("Failed to connect client: %v", err)
 	}
 
-	// Test calling search tool
-	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolSearch),
-		Arguments: map[string]any{"query": "test"},
-	})
-	if err != nil {
-		t.Errorf("CallTool(search) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(search) returned nil result")
+	return session
+}
+
+// TestToolsViaServer tests tools by actually invoking them through the MCP server.
+// This covers the registration code paths including the type assertion branches.
+func TestToolsViaServer(t *testing.T) {
+	mock := createTestMockClient()
+	session := setupTestServer(t, mock)
+
+	tests := []struct {
+		name      string
+		toolName  ToolName
+		arguments map[string]any
+	}{
+		{"search", ToolSearch, map[string]any{"query": "test"}},
+		{"get_entity", ToolGetEntity, map[string]any{"urn": "urn:li:dataset:test"}},
+		{"list_domains", ToolListDomains, map[string]any{}},
+		{"list_tags", ToolListTags, map[string]any{}},
+		{"get_schema", ToolGetSchema, map[string]any{"urn": "urn:li:dataset:test"}},
+		{"get_lineage", ToolGetLineage, map[string]any{"urn": "urn:li:dataset:test"}},
+		{"get_queries", ToolGetQueries, map[string]any{"urn": "urn:li:dataset:test"}},
+		{"get_glossary_term", ToolGetGlossaryTerm, map[string]any{"urn": "urn:li:glossaryTerm:test"}},
+		{"list_data_products", ToolListDataProducts, map[string]any{}},
+		{"get_data_product", ToolGetDataProduct, map[string]any{"urn": "urn:li:dataProduct:test"}},
 	}
 
-	// Test calling get_entity tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolGetEntity),
-		Arguments: map[string]any{"urn": "urn:li:dataset:test"},
-	})
-	if err != nil {
-		t.Errorf("CallTool(get_entity) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(get_entity) returned nil result")
-	}
-
-	// Test calling list_domains tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolListDomains),
-		Arguments: map[string]any{},
-	})
-	if err != nil {
-		t.Errorf("CallTool(list_domains) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(list_domains) returned nil result")
-	}
-
-	// Test calling list_tags tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolListTags),
-		Arguments: map[string]any{},
-	})
-	if err != nil {
-		t.Errorf("CallTool(list_tags) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(list_tags) returned nil result")
-	}
-
-	// Test calling get_schema tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolGetSchema),
-		Arguments: map[string]any{"urn": "urn:li:dataset:test"},
-	})
-	if err != nil {
-		t.Errorf("CallTool(get_schema) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(get_schema) returned nil result")
-	}
-
-	// Test calling get_lineage tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolGetLineage),
-		Arguments: map[string]any{"urn": "urn:li:dataset:test"},
-	})
-	if err != nil {
-		t.Errorf("CallTool(get_lineage) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(get_lineage) returned nil result")
-	}
-
-	// Test calling get_queries tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolGetQueries),
-		Arguments: map[string]any{"urn": "urn:li:dataset:test"},
-	})
-	if err != nil {
-		t.Errorf("CallTool(get_queries) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(get_queries) returned nil result")
-	}
-
-	// Test calling get_glossary_term tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolGetGlossaryTerm),
-		Arguments: map[string]any{"urn": "urn:li:glossaryTerm:test"},
-	})
-	if err != nil {
-		t.Errorf("CallTool(get_glossary_term) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(get_glossary_term) returned nil result")
-	}
-
-	// Test calling list_data_products tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolListDataProducts),
-		Arguments: map[string]any{},
-	})
-	if err != nil {
-		t.Errorf("CallTool(list_data_products) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(list_data_products) returned nil result")
-	}
-
-	// Test calling get_data_product tool
-	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      string(ToolGetDataProduct),
-		Arguments: map[string]any{"urn": "urn:li:dataProduct:test"},
-	})
-	if err != nil {
-		t.Errorf("CallTool(get_data_product) error: %v", err)
-	}
-	if result == nil {
-		t.Error("CallTool(get_data_product) returned nil result")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+				Name:      string(tt.toolName),
+				Arguments: tt.arguments,
+			})
+			if err != nil {
+				t.Errorf("CallTool(%s) error: %v", tt.name, err)
+			}
+			if result == nil {
+				t.Errorf("CallTool(%s) returned nil result", tt.name)
+			}
+		})
 	}
 }
