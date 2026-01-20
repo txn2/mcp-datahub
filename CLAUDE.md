@@ -69,14 +69,21 @@ trinoTools.NewToolkit(trinoClient, config).RegisterAll(server)
 2. **Test Coverage**: Project must maintain >80% unit test coverage. Use table-driven tests.
 
 3. **Testing Definition**: When asked to "test", run the full CI suite:
-   - Unit tests with race detection
-   - Linting (golangci-lint)
-   - Security scanning (gosec, govulncheck)
+   - Unit tests with race detection: `go test -race ./...`
+   - Linting: `golangci-lint run`
+   - Security scanning: `gosec ./...` and `govulncheck ./...`
+   - Cyclomatic complexity: `gocyclo -over 15 .` (must have no output)
    - All CI checks must pass locally
 
 4. **Human Review Required**: A human must review every line before commit.
 
-5. **Go Report Card**: MUST maintain 100% across all categories.
+5. **Go Report Card**: MUST maintain 100% across ALL categories including:
+   - go vet
+   - gofmt
+   - gocyclo (no functions with complexity > 15)
+   - ineffassign
+   - license
+   - misspell
 
 ## Building and Running
 
