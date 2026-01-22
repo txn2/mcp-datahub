@@ -261,13 +261,14 @@ query getSchema($urn: String!) {
 `
 
 	// GetLineageQuery retrieves lineage for an entity.
+	// Note: maxHops parameter was removed from DataHub's SearchAcrossLineageInput.
+	// Depth filtering should be done client-side using the returned degree values.
 	GetLineageQuery = `
-query getLineage($urn: String!, $direction: LineageDirection!, $depth: Int) {
+query getLineage($urn: String!, $direction: LineageDirection!) {
   searchAcrossLineage(
     input: {
       urn: $urn
       direction: $direction
-      maxHops: $depth
     }
   ) {
     searchResults {
