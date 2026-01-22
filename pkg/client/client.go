@@ -662,7 +662,6 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 	variables := map[string]any{
 		"urn":       urn,
 		"direction": options.direction,
-		"depth":     options.depth,
 	}
 
 	var response struct {
@@ -697,11 +696,15 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 		Depth:     options.depth,
 	}
 
-	// Build nodes and edges
+	// Build nodes and edges (filter by depth client-side since maxHops is not supported)
 	nodesByDegree := make(map[int][]string)
 	edgeSet := make(map[string]bool) // Track unique edges
 
 	for _, sr := range response.SearchAcrossLineage.SearchResults {
+		// Filter by depth client-side
+		if sr.Degree > options.depth {
+			continue
+		}
 		result.Nodes = append(result.Nodes, types.LineageNode{
 			URN:         sr.Entity.URN,
 			Type:        sr.Entity.Type,
@@ -712,10 +715,15 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 		})
 		nodesByDegree[sr.Degree] = append(nodesByDegree[sr.Degree], sr.Entity.URN)
 
-		// Build edges from paths if available
+		// Build edges from paths if available (only within depth limit)
 		for _, pathGroup := range sr.Paths {
 			if len(pathGroup.Path) > 1 {
-				for i := 0; i < len(pathGroup.Path)-1; i++ {
+				// Only include edges where both nodes are within depth
+				maxPathIdx := options.depth
+				if maxPathIdx > len(pathGroup.Path)-1 {
+					maxPathIdx = len(pathGroup.Path) - 1
+				}
+				for i := 0; i < maxPathIdx; i++ {
 					edgeKey := pathGroup.Path[i].URN + "->" + pathGroup.Path[i+1].URN
 					if !edgeSet[edgeKey] {
 						edgeSet[edgeKey] = true
