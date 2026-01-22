@@ -636,6 +636,433 @@ func TestClientGetLineage(t *testing.T) {
 	}
 }
 
+func TestClientGetLineageDepthFiltering(t *testing.T) {
+	// Server returns nodes at various depths; client-side filtering should respect depth option
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"searchAcrossLineage": map[string]interface{}{
+					"searchResults": []map[string]interface{}{
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:level1",
+								"type": "DATASET",
+								"name": "level1_table",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 1,
+						},
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:level2",
+								"type": "DATASET",
+								"name": "level2_table",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 2,
+						},
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:level3",
+								"type": "DATASET",
+								"name": "level3_table",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 3,
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	tests := []struct {
+		name          string
+		depth         int
+		expectedNodes int
+	}{
+		{
+			name:          "depth 1 filters to only level 1",
+			depth:         1,
+			expectedNodes: 1,
+		},
+		{
+			name:          "depth 2 filters to levels 1 and 2",
+			depth:         2,
+			expectedNodes: 2,
+		},
+		{
+			name:          "depth 3 includes all levels",
+			depth:         3,
+			expectedNodes: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := client.GetLineage(context.Background(), "urn:li:dataset:test", WithDepth(tt.depth))
+			if err != nil {
+				t.Errorf("GetLineage() unexpected error: %v", err)
+				return
+			}
+
+			if len(result.Nodes) != tt.expectedNodes {
+				t.Errorf("GetLineage() Nodes count = %d, want %d", len(result.Nodes), tt.expectedNodes)
+			}
+
+			// Verify no node exceeds the requested depth
+			for _, node := range result.Nodes {
+				if node.Level > tt.depth {
+					t.Errorf("GetLineage() returned node at level %d, but depth was %d", node.Level, tt.depth)
+				}
+			}
+		})
+	}
+}
+
+func TestClientGetLineageEdgeFilteringWithPaths(t *testing.T) {
+	// Server returns paths that extend beyond requested depth; edges should be filtered
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"searchAcrossLineage": map[string]interface{}{
+					"searchResults": []map[string]interface{}{
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:level1",
+								"type": "DATASET",
+								"name": "level1_table",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 1,
+							"paths": []map[string]interface{}{
+								{
+									"path": []map[string]interface{}{
+										{"urn": "urn:li:dataset:start"},
+										{"urn": "urn:li:dataset:level1"},
+										{"urn": "urn:li:dataset:level2"},
+										{"urn": "urn:li:dataset:level3"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	// With depth=2, should only include edges for path indices 0->1 and 1->2
+	result, err := client.GetLineage(context.Background(), "urn:li:dataset:start", WithDepth(2))
+	if err != nil {
+		t.Errorf("GetLineage() unexpected error: %v", err)
+		return
+	}
+
+	// Should have 2 edges: start->level1, level1->level2
+	if len(result.Edges) != 2 {
+		t.Errorf("GetLineage() Edges count = %d, want 2", len(result.Edges))
+	}
+
+	// Verify no edge goes to level3
+	for _, edge := range result.Edges {
+		if edge.Target == "urn:li:dataset:level3" || edge.Source == "urn:li:dataset:level3" {
+			t.Errorf("GetLineage() edge should not include level3 with depth=2: %+v", edge)
+		}
+	}
+}
+
+func TestClientGetLineageOptions(t *testing.T) {
+	var receivedVars map[string]interface{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Variables map[string]interface{} `json:"variables"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("failed to decode request: %v", err)
+		}
+		receivedVars = req.Variables
+
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"searchAcrossLineage": map[string]interface{}{
+					"searchResults": []map[string]interface{}{},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	// Test with options
+	_, err = client.GetLineage(context.Background(), "urn:li:dataset:test",
+		WithDirection("UPSTREAM"),
+		WithDepth(3),
+	)
+	if err != nil {
+		t.Errorf("GetLineage() unexpected error: %v", err)
+		return
+	}
+
+	// Verify URN and direction were sent to server (depth is handled client-side)
+	if receivedVars["urn"] != "urn:li:dataset:test" {
+		t.Errorf("GetLineage() urn = %v, want urn:li:dataset:test", receivedVars["urn"])
+	}
+	if receivedVars["direction"] != "UPSTREAM" {
+		t.Errorf("GetLineage() direction = %v, want UPSTREAM", receivedVars["direction"])
+	}
+}
+
+func TestClientGetLineageEdgeInference(t *testing.T) {
+	// When no paths are provided, edges should be inferred from degree
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"searchAcrossLineage": map[string]interface{}{
+					"searchResults": []map[string]interface{}{
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:downstream1",
+								"type": "DATASET",
+								"name": "downstream1",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 1,
+							// No paths provided
+						},
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:downstream2",
+								"type": "DATASET",
+								"name": "downstream2",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 1,
+							// No paths provided
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := client.GetLineage(context.Background(), "urn:li:dataset:start")
+	if err != nil {
+		t.Errorf("GetLineage() unexpected error: %v", err)
+		return
+	}
+
+	// Should have 2 nodes
+	if len(result.Nodes) != 2 {
+		t.Errorf("GetLineage() Nodes count = %d, want 2", len(result.Nodes))
+	}
+
+	// Should infer 2 edges from start to each degree-1 node (downstream direction)
+	if len(result.Edges) != 2 {
+		t.Errorf("GetLineage() Edges count = %d, want 2", len(result.Edges))
+	}
+
+	// Verify edges go from start to downstream nodes
+	for _, edge := range result.Edges {
+		if edge.Source != "urn:li:dataset:start" {
+			t.Errorf("GetLineage() edge source = %s, want urn:li:dataset:start", edge.Source)
+		}
+	}
+}
+
+func TestClientGetLineageUpstreamEdgeInference(t *testing.T) {
+	// Test edge inference for upstream direction
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"searchAcrossLineage": map[string]interface{}{
+					"searchResults": []map[string]interface{}{
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:upstream1",
+								"type": "DATASET",
+								"name": "upstream1",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 1,
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := client.GetLineage(context.Background(), "urn:li:dataset:current", WithDirection("UPSTREAM"))
+	if err != nil {
+		t.Errorf("GetLineage() unexpected error: %v", err)
+		return
+	}
+
+	// Should have 1 edge from upstream to current (reversed for upstream)
+	if len(result.Edges) != 1 {
+		t.Errorf("GetLineage() Edges count = %d, want 1", len(result.Edges))
+		return
+	}
+
+	// For upstream direction, edge should be from upstream node to the start node
+	if result.Edges[0].Source != "urn:li:dataset:upstream1" {
+		t.Errorf("GetLineage() edge source = %s, want urn:li:dataset:upstream1", result.Edges[0].Source)
+	}
+	if result.Edges[0].Target != "urn:li:dataset:current" {
+		t.Errorf("GetLineage() edge target = %s, want urn:li:dataset:current", result.Edges[0].Target)
+	}
+}
+
+func TestClientGetLineageMaxDepthClamping(t *testing.T) {
+	var receivedDepthUsed int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Return nodes at various depths to verify clamping
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"searchAcrossLineage": map[string]interface{}{
+					"searchResults": []map[string]interface{}{
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:level1",
+								"type": "DATASET",
+								"name": "level1",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 1,
+						},
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:level5",
+								"type": "DATASET",
+								"name": "level5",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 5,
+						},
+						{
+							"entity": map[string]interface{}{
+								"urn":  "urn:li:dataset:level10",
+								"type": "DATASET",
+								"name": "level10",
+								"platform": map[string]interface{}{
+									"name": "snowflake",
+								},
+							},
+							"degree": 10,
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	// Create client with MaxLineageDepth of 5
+	client, err := New(Config{
+		URL:             server.URL,
+		Token:           "test-token",
+		RetryMax:        0,
+		MaxLineageDepth: 5,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	// Request depth 100 which should be clamped to MaxLineageDepth (5)
+	result, err := client.GetLineage(context.Background(), "urn:li:dataset:test", WithDepth(100))
+	if err != nil {
+		t.Errorf("GetLineage() unexpected error: %v", err)
+		return
+	}
+
+	// Should only include nodes at depth <= 5 (level1 and level5)
+	if len(result.Nodes) != 2 {
+		t.Errorf("GetLineage() with clamped depth: Nodes count = %d, want 2", len(result.Nodes))
+	}
+
+	// Verify result depth is clamped
+	if result.Depth != 5 {
+		t.Errorf("GetLineage() Depth = %d, want 5 (clamped)", result.Depth)
+	}
+
+	// Verify no node exceeds depth 5
+	for _, node := range result.Nodes {
+		if node.Level > 5 {
+			t.Errorf("GetLineage() returned node at level %d, but max depth is 5", node.Level)
+		}
+	}
+
+	_ = receivedDepthUsed // silence unused variable warning
+}
+
 func TestClientGetQueries(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(t, w, map[string]interface{}{
