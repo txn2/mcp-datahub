@@ -1883,3 +1883,29 @@ func TestClientGetSchemasPartialResults(t *testing.T) {
 		t.Errorf("GetSchemas() result count = %d, want 1", len(result))
 	}
 }
+
+func TestClientGetSchemasError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(t, w, map[string]interface{}{
+			"errors": []map[string]interface{}{
+				{"message": "Internal server error"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	_, err = client.GetSchemas(context.Background(), []string{"urn:li:dataset:test"})
+	if err == nil {
+		t.Error("GetSchemas() expected error for server failure")
+	}
+}
