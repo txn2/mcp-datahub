@@ -9,6 +9,7 @@ const (
 	ToolGetEntity        ToolName = "datahub_get_entity"
 	ToolGetSchema        ToolName = "datahub_get_schema"
 	ToolGetLineage       ToolName = "datahub_get_lineage"
+	ToolGetColumnLineage ToolName = "datahub_get_column_lineage"
 	ToolGetQueries       ToolName = "datahub_get_queries"
 	ToolGetGlossaryTerm  ToolName = "datahub_get_glossary_term"
 	ToolListTags         ToolName = "datahub_list_tags"
@@ -25,6 +26,7 @@ func AllTools() []ToolName {
 		ToolGetEntity,
 		ToolGetSchema,
 		ToolGetLineage,
+		ToolGetColumnLineage,
 		ToolGetQueries,
 		ToolGetGlossaryTerm,
 		ToolListTags,
