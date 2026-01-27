@@ -123,12 +123,14 @@ const (
     ToolGetEntity        ToolName = "datahub_get_entity"
     ToolGetSchema        ToolName = "datahub_get_schema"
     ToolGetLineage       ToolName = "datahub_get_lineage"
+    ToolGetColumnLineage ToolName = "datahub_get_column_lineage"
     ToolGetQueries       ToolName = "datahub_get_queries"
     ToolGetGlossaryTerm  ToolName = "datahub_get_glossary_term"
     ToolListTags         ToolName = "datahub_list_tags"
     ToolListDomains      ToolName = "datahub_list_domains"
     ToolListDataProducts ToolName = "datahub_list_data_products"
     ToolGetDataProduct   ToolName = "datahub_get_data_product"
+    ToolListConnections  ToolName = "datahub_list_connections"
 )
 ```
 
@@ -378,7 +380,9 @@ type Config struct {
 | `Search(ctx, query, entityType, limit, offset)` | Search for entities |
 | `GetEntity(ctx, urn)` | Get entity by URN |
 | `GetSchema(ctx, urn)` | Get dataset schema |
+| `GetSchemas(ctx, urns)` | Get multiple dataset schemas (batch) |
 | `GetLineage(ctx, urn, direction, depth)` | Get entity lineage |
+| `GetColumnLineage(ctx, urn)` | Get column-level lineage mappings |
 | `GetQueries(ctx, urn)` | Get associated queries |
 | `GetGlossaryTerm(ctx, urn)` | Get glossary term details |
 | `ListTags(ctx, filter)` | List tags |
