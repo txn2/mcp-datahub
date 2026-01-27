@@ -170,11 +170,48 @@ DataHub collects lineage from multiple sources:
 
 ## Querying Lineage
 
-### Basic Lineage Query
+### Table-Level Lineage Query
 
 ```
 datahub_get_lineage urn="urn:li:dataset:..." direction="BOTH" depth=2
 ```
+
+### Column-Level Lineage Query
+
+```
+datahub_get_column_lineage urn="urn:li:dataset:..."
+```
+
+Column-level lineage returns fine-grained mappings:
+
+```json
+{
+  "dataset_urn": "urn:li:dataset:(platform,db.schema.target,PROD)",
+  "mappings": [
+    {
+      "downstream_column": "id",
+      "upstream_dataset": "urn:li:dataset:(platform,db.schema.source,PROD)",
+      "upstream_column": "customer_id",
+      "transform": "IDENTITY"
+    },
+    {
+      "downstream_column": "full_name",
+      "upstream_dataset": "urn:li:dataset:(platform,db.schema.source,PROD)",
+      "upstream_column": "first_name",
+      "transform": "TRANSFORM",
+      "confidence_score": 0.9
+    }
+  ]
+}
+```
+
+**Transform Types:**
+
+| Transform | Description |
+|-----------|-------------|
+| IDENTITY | Column copied directly |
+| AGGREGATE | Column derived from aggregation |
+| TRANSFORM | Column has been computed or transformed |
 
 ### Response Structure
 
