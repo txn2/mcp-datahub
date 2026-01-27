@@ -538,51 +538,7 @@ func (c *Client) GetSchema(ctx context.Context, urn string) (*types.SchemaMetada
 
 	var response struct {
 		Dataset struct {
-			SchemaMetadata struct {
-				Name           string   `json:"name"`
-				Version        int64    `json:"version"`
-				Hash           string   `json:"hash"`
-				PrimaryKeys    []string `json:"primaryKeys"`
-				PlatformSchema struct {
-					Schema string `json:"schema"`
-				} `json:"platformSchema"`
-				Fields []struct {
-					FieldPath      string `json:"fieldPath"`
-					Type           string `json:"type"`
-					NativeDataType string `json:"nativeDataType"`
-					Description    string `json:"description"`
-					Nullable       bool   `json:"nullable"`
-					IsPartOfKey    bool   `json:"isPartOfKey"`
-					Tags           struct {
-						Tags []struct {
-							Tag struct {
-								URN  string `json:"urn"`
-								Name string `json:"name"`
-							} `json:"tag"`
-						} `json:"tags"`
-					} `json:"tags"`
-					GlossaryTerms struct {
-						Terms []struct {
-							Term struct {
-								URN  string `json:"urn"`
-								Name string `json:"name"`
-							} `json:"term"`
-						} `json:"terms"`
-					} `json:"glossaryTerms"`
-				} `json:"fields"`
-				ForeignKeys []struct {
-					Name         string `json:"name"`
-					SourceFields []struct {
-						FieldPath string `json:"fieldPath"`
-					} `json:"sourceFields"`
-					ForeignDataset struct {
-						URN string `json:"urn"`
-					} `json:"foreignDataset"`
-					ForeignFields []struct {
-						FieldPath string `json:"fieldPath"`
-					} `json:"foreignFields"`
-				} `json:"foreignKeys"`
-			} `json:"schemaMetadata"`
+			SchemaMetadata rawSchemaMetadata `json:"schemaMetadata"`
 		} `json:"dataset"`
 	}
 
@@ -590,59 +546,7 @@ func (c *Client) GetSchema(ctx context.Context, urn string) (*types.SchemaMetada
 		return nil, fmt.Errorf("GetSchema(%s): %w", urn, err)
 	}
 
-	schema := &types.SchemaMetadata{
-		Name:           response.Dataset.SchemaMetadata.Name,
-		Version:        response.Dataset.SchemaMetadata.Version,
-		Hash:           response.Dataset.SchemaMetadata.Hash,
-		PrimaryKeys:    response.Dataset.SchemaMetadata.PrimaryKeys,
-		PlatformSchema: response.Dataset.SchemaMetadata.PlatformSchema.Schema,
-	}
-
-	for _, f := range response.Dataset.SchemaMetadata.Fields {
-		field := types.SchemaField{
-			FieldPath:      f.FieldPath,
-			Type:           f.Type,
-			NativeType:     f.NativeDataType,
-			Description:    f.Description,
-			Nullable:       f.Nullable,
-			IsPartitionKey: f.IsPartOfKey,
-		}
-
-		// Parse field tags
-		for _, t := range f.Tags.Tags {
-			field.Tags = append(field.Tags, types.Tag{
-				URN:  t.Tag.URN,
-				Name: t.Tag.Name,
-			})
-		}
-
-		// Parse field glossary terms
-		for _, gt := range f.GlossaryTerms.Terms {
-			field.GlossaryTerms = append(field.GlossaryTerms, types.GlossaryTerm{
-				URN:  gt.Term.URN,
-				Name: gt.Term.Name,
-			})
-		}
-
-		schema.Fields = append(schema.Fields, field)
-	}
-
-	// Parse foreign keys
-	for _, fk := range response.Dataset.SchemaMetadata.ForeignKeys {
-		foreignKey := types.ForeignKey{
-			Name:           fk.Name,
-			ForeignDataset: fk.ForeignDataset.URN,
-		}
-		for _, sf := range fk.SourceFields {
-			foreignKey.SourceFields = append(foreignKey.SourceFields, sf.FieldPath)
-		}
-		for _, ff := range fk.ForeignFields {
-			foreignKey.ForeignFields = append(foreignKey.ForeignFields, ff.FieldPath)
-		}
-		schema.ForeignKeys = append(schema.ForeignKeys, foreignKey)
-	}
-
-	return schema, nil
+	return parseSchemaMetadata(response.Dataset.SchemaMetadata), nil
 }
 
 // GetLineage retrieves lineage for an entity.
@@ -1184,4 +1088,93 @@ func (c *Client) GetDataProduct(ctx context.Context, urn string) (*types.DataPro
 	}
 
 	return product, nil
+}
+
+// GetColumnLineage retrieves fine-grained column-level lineage for a dataset.
+// Returns empty result if fine-grained lineage is not available for the dataset.
+func (c *Client) GetColumnLineage(ctx context.Context, urn string) (*types.ColumnLineage, error) {
+	variables := map[string]any{
+		"urn": urn,
+	}
+
+	var response struct {
+		Dataset struct {
+			FineGrainedLineages []struct {
+				Upstreams []struct {
+					Path    string `json:"path"`
+					Dataset string `json:"dataset"`
+				} `json:"upstreams"`
+				Downstreams []struct {
+					Path string `json:"path"`
+				} `json:"downstreams"`
+				TransformOperation string  `json:"transformOperation"`
+				ConfidenceScore    float64 `json:"confidenceScore"`
+				Query              string  `json:"query"`
+			} `json:"fineGrainedLineages"`
+		} `json:"dataset"`
+	}
+
+	if err := c.Execute(ctx, GetColumnLineageQuery, variables, &response); err != nil {
+		// Return empty result if fine-grained lineage is not available
+		return &types.ColumnLineage{DatasetURN: urn}, nil
+	}
+
+	result := &types.ColumnLineage{
+		DatasetURN: urn,
+	}
+
+	// Build column lineage mappings from fine-grained lineages
+	for _, fgl := range response.Dataset.FineGrainedLineages {
+		// Each fine-grained lineage entry maps downstream columns to upstream columns
+		for _, downstream := range fgl.Downstreams {
+			for _, upstream := range fgl.Upstreams {
+				mapping := types.ColumnLineageMapping{
+					DownstreamColumn: downstream.Path,
+					UpstreamDataset:  upstream.Dataset,
+					UpstreamColumn:   upstream.Path,
+					Transform:        fgl.TransformOperation,
+					Query:            fgl.Query,
+					ConfidenceScore:  fgl.ConfidenceScore,
+				}
+				result.Mappings = append(result.Mappings, mapping)
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// GetSchemas retrieves schema metadata for multiple datasets by URN.
+// Returns a map of URN to schema metadata. Datasets without schemas are omitted.
+func (c *Client) GetSchemas(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error) {
+	if len(urns) == 0 {
+		return make(map[string]*types.SchemaMetadata), nil
+	}
+
+	variables := map[string]any{
+		"urns": urns,
+	}
+
+	var response struct {
+		Entities []struct {
+			URN            string            `json:"urn"`
+			SchemaMetadata rawSchemaMetadata `json:"schemaMetadata"`
+		} `json:"entities"`
+	}
+
+	if err := c.Execute(ctx, BatchGetSchemasQuery, variables, &response); err != nil {
+		return nil, fmt.Errorf("GetSchemas: %w", err)
+	}
+
+	result := make(map[string]*types.SchemaMetadata)
+
+	for _, entity := range response.Entities {
+		if entity.URN == "" {
+			continue
+		}
+
+		result[entity.URN] = parseSchemaMetadata(entity.SchemaMetadata)
+	}
+
+	return result, nil
 }

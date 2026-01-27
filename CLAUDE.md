@@ -97,7 +97,7 @@ export DATAHUB_TOKEN=your_token
 ./mcp-datahub
 ```
 
-## Available Tools (11 total)
+## Available Tools (12 total)
 
 | Tool | Description |
 |------|-------------|
@@ -105,6 +105,7 @@ export DATAHUB_TOKEN=your_token
 | `datahub_get_entity` | Get entity metadata by URN |
 | `datahub_get_schema` | Get dataset schema |
 | `datahub_get_lineage` | Get upstream/downstream lineage |
+| `datahub_get_column_lineage` | Get fine-grained column-level lineage |
 | `datahub_get_queries` | Get associated SQL queries |
 | `datahub_get_glossary_term` | Get glossary term details |
 | `datahub_list_tags` | List available tags |

@@ -1569,3 +1569,343 @@ func restoreEnvT(t *testing.T, key, value string) {
 		t.Errorf("failed to restore env %s: %v", key, err)
 	}
 }
+
+func TestClientGetColumnLineage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"dataset": map[string]interface{}{
+					"fineGrainedLineages": []map[string]interface{}{
+						{
+							"upstreams": []map[string]interface{}{
+								{
+									"path":    "id",
+									"dataset": "urn:li:dataset:source",
+								},
+							},
+							"downstreams": []map[string]interface{}{
+								{
+									"path": "user_id",
+								},
+							},
+							"transformOperation": "IDENTITY",
+							"confidenceScore":    0.9,
+							"query":              "urn:li:query:123",
+						},
+						{
+							"upstreams": []map[string]interface{}{
+								{
+									"path":    "first_name",
+									"dataset": "urn:li:dataset:source",
+								},
+								{
+									"path":    "last_name",
+									"dataset": "urn:li:dataset:source",
+								},
+							},
+							"downstreams": []map[string]interface{}{
+								{
+									"path": "full_name",
+								},
+							},
+							"transformOperation": "TRANSFORM",
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := client.GetColumnLineage(context.Background(), "urn:li:dataset:test")
+	if err != nil {
+		t.Errorf("GetColumnLineage() unexpected error: %v", err)
+		return
+	}
+
+	if result.DatasetURN != "urn:li:dataset:test" {
+		t.Errorf("GetColumnLineage() DatasetURN = %s, want urn:li:dataset:test", result.DatasetURN)
+	}
+
+	// First lineage entry has 1 downstream x 1 upstream = 1 mapping
+	// Second lineage entry has 1 downstream x 2 upstreams = 2 mappings
+	// Total = 3 mappings
+	if len(result.Mappings) != 3 {
+		t.Errorf("GetColumnLineage() Mappings count = %d, want 3", len(result.Mappings))
+		return
+	}
+
+	// Check first mapping
+	if result.Mappings[0].DownstreamColumn != "user_id" {
+		t.Errorf("GetColumnLineage() first mapping DownstreamColumn = %s, want user_id", result.Mappings[0].DownstreamColumn)
+	}
+	if result.Mappings[0].UpstreamDataset != "urn:li:dataset:source" {
+		t.Errorf("GetColumnLineage() first mapping UpstreamDataset = %s, want urn:li:dataset:source", result.Mappings[0].UpstreamDataset)
+	}
+	if result.Mappings[0].Transform != "IDENTITY" {
+		t.Errorf("GetColumnLineage() first mapping Transform = %s, want IDENTITY", result.Mappings[0].Transform)
+	}
+}
+
+func TestClientGetColumnLineageEmpty(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"dataset": map[string]interface{}{
+					"fineGrainedLineages": []map[string]interface{}{},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := client.GetColumnLineage(context.Background(), "urn:li:dataset:test")
+	if err != nil {
+		t.Errorf("GetColumnLineage() unexpected error: %v", err)
+		return
+	}
+
+	if len(result.Mappings) != 0 {
+		t.Errorf("GetColumnLineage() Mappings count = %d, want 0", len(result.Mappings))
+	}
+}
+
+func TestClientGetColumnLineageError(t *testing.T) {
+	// When fine-grained lineage is not available, should return empty result (not error)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"errors": []map[string]interface{}{
+				{"message": "Field 'fineGrainedLineages' doesn't exist"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := client.GetColumnLineage(context.Background(), "urn:li:dataset:test")
+	if err != nil {
+		t.Errorf("GetColumnLineage() should not error for unavailable fine-grained lineage: %v", err)
+		return
+	}
+
+	// Should return empty result
+	if result.DatasetURN != "urn:li:dataset:test" {
+		t.Errorf("GetColumnLineage() DatasetURN = %s, want urn:li:dataset:test", result.DatasetURN)
+	}
+	if len(result.Mappings) != 0 {
+		t.Errorf("GetColumnLineage() Mappings count = %d, want 0", len(result.Mappings))
+	}
+}
+
+func TestClientGetSchemas(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"entities": []map[string]interface{}{
+					{
+						"urn": "urn:li:dataset:table1",
+						"schemaMetadata": map[string]interface{}{
+							"name":        "schema1",
+							"version":     1,
+							"hash":        "abc123",
+							"primaryKeys": []string{"id"},
+							"fields": []map[string]interface{}{
+								{
+									"fieldPath":      "id",
+									"type":           "NUMBER",
+									"nativeDataType": "INT64",
+									"description":    "Primary key",
+									"nullable":       false,
+									"isPartOfKey":    true,
+								},
+							},
+						},
+					},
+					{
+						"urn": "urn:li:dataset:table2",
+						"schemaMetadata": map[string]interface{}{
+							"name":    "schema2",
+							"version": 2,
+							"fields": []map[string]interface{}{
+								{
+									"fieldPath":      "name",
+									"type":           "STRING",
+									"nativeDataType": "VARCHAR",
+									"description":    "Name field",
+									"nullable":       true,
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	urns := []string{"urn:li:dataset:table1", "urn:li:dataset:table2"}
+	result, err := client.GetSchemas(context.Background(), urns)
+	if err != nil {
+		t.Errorf("GetSchemas() unexpected error: %v", err)
+		return
+	}
+
+	if len(result) != 2 {
+		t.Errorf("GetSchemas() result count = %d, want 2", len(result))
+		return
+	}
+
+	// Check first schema
+	schema1, ok := result["urn:li:dataset:table1"]
+	if !ok {
+		t.Error("GetSchemas() missing schema for table1")
+		return
+	}
+	if schema1.Name != "schema1" {
+		t.Errorf("GetSchemas() table1 schema name = %s, want schema1", schema1.Name)
+	}
+	if len(schema1.Fields) != 1 {
+		t.Errorf("GetSchemas() table1 fields count = %d, want 1", len(schema1.Fields))
+	}
+
+	// Check second schema
+	schema2, ok := result["urn:li:dataset:table2"]
+	if !ok {
+		t.Error("GetSchemas() missing schema for table2")
+		return
+	}
+	if schema2.Name != "schema2" {
+		t.Errorf("GetSchemas() table2 schema name = %s, want schema2", schema2.Name)
+	}
+}
+
+func TestClientGetSchemasEmpty(t *testing.T) {
+	client, err := New(Config{
+		URL:      "https://datahub.example.com",
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	// Empty URNs should return empty result without making API call
+	result, err := client.GetSchemas(context.Background(), []string{})
+	if err != nil {
+		t.Errorf("GetSchemas() unexpected error: %v", err)
+		return
+	}
+
+	if len(result) != 0 {
+		t.Errorf("GetSchemas() result count = %d, want 0", len(result))
+	}
+}
+
+func TestClientGetSchemasPartialResults(t *testing.T) {
+	// Test when some URNs don't have schemas
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"entities": []map[string]interface{}{
+					{
+						"urn": "urn:li:dataset:table1",
+						"schemaMetadata": map[string]interface{}{
+							"name":   "schema1",
+							"fields": []map[string]interface{}{},
+						},
+					},
+					{
+						// Entity without URN should be skipped
+						"schemaMetadata": map[string]interface{}{
+							"name":   "orphan",
+							"fields": []map[string]interface{}{},
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	urns := []string{"urn:li:dataset:table1", "urn:li:dataset:nonexistent"}
+	result, err := client.GetSchemas(context.Background(), urns)
+	if err != nil {
+		t.Errorf("GetSchemas() unexpected error: %v", err)
+		return
+	}
+
+	// Should only have one result (empty URN entity is skipped)
+	if len(result) != 1 {
+		t.Errorf("GetSchemas() result count = %d, want 1", len(result))
+	}
+}
+
+func TestClientGetSchemasError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(t, w, map[string]interface{}{
+			"errors": []map[string]interface{}{
+				{"message": "Internal server error"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	_, err = client.GetSchemas(context.Background(), []string{"urn:li:dataset:test"})
+	if err == nil {
+		t.Error("GetSchemas() expected error for server failure")
+	}
+}

@@ -1,6 +1,6 @@
 # Available Tools
 
-mcp-datahub provides 11 MCP tools for interacting with DataHub.
+mcp-datahub provides 12 MCP tools for interacting with DataHub.
 
 ## Multi-Server Support
 
@@ -351,6 +351,74 @@ Get upstream and downstream lineage for an entity.
 - Root cause analysis for data issues
 - Understanding data flow
 - Discovering related datasets
+
+---
+
+## datahub_get_column_lineage
+
+Get fine-grained column-level lineage mappings for a dataset.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urn` | string | Yes | Dataset URN |
+| `connection` | string | No | Named connection to use |
+
+**Example Request:**
+
+```json
+{
+  "urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.analytics.customer_metrics,PROD)"
+}
+```
+
+**Example Response:**
+
+```json
+{
+  "dataset_urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.analytics.customer_metrics,PROD)",
+  "mappings": [
+    {
+      "downstream_column": "customer_id",
+      "upstream_dataset": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.sales.customers,PROD)",
+      "upstream_column": "id",
+      "transform": "IDENTITY"
+    },
+    {
+      "downstream_column": "total_orders",
+      "upstream_dataset": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.sales.orders,PROD)",
+      "upstream_column": "order_count",
+      "transform": "AGGREGATE",
+      "confidence_score": 0.95
+    },
+    {
+      "downstream_column": "last_order_date",
+      "upstream_dataset": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.sales.orders,PROD)",
+      "upstream_column": "order_date",
+      "transform": "AGGREGATE"
+    }
+  ]
+}
+```
+
+**Mapping Properties:**
+
+| Property | Description |
+|----------|-------------|
+| `downstream_column` | Column name in the target dataset |
+| `upstream_dataset` | URN of the source dataset |
+| `upstream_column` | Column name in the source dataset |
+| `transform` | Transformation type (IDENTITY, AGGREGATE, etc.) |
+| `query` | Optional SQL query that defines the transformation |
+| `confidence_score` | Optional confidence score (0-1) for inferred lineage |
+
+**Common Use Cases:**
+
+- Fine-grained impact analysis for column changes
+- Understanding column-level data transformations
+- Tracing data from source to derived columns
+- Data quality root cause analysis at column level
 
 ---
 

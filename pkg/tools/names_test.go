@@ -14,6 +14,7 @@ func TestToolNameConstants(t *testing.T) {
 		{ToolGetEntity, "datahub_get_entity"},
 		{ToolGetSchema, "datahub_get_schema"},
 		{ToolGetLineage, "datahub_get_lineage"},
+		{ToolGetColumnLineage, "datahub_get_column_lineage"},
 		{ToolGetQueries, "datahub_get_queries"},
 		{ToolGetGlossaryTerm, "datahub_get_glossary_term"},
 		{ToolListTags, "datahub_list_tags"},
@@ -35,8 +36,8 @@ func TestToolNameConstants(t *testing.T) {
 func TestAllTools(t *testing.T) {
 	tools := AllTools()
 
-	// Should return all 11 tools
-	expectedCount := 11
+	// Should return all 12 tools
+	expectedCount := 12
 	if len(tools) != expectedCount {
 		t.Errorf("AllTools() count = %d, want %d", len(tools), expectedCount)
 	}
@@ -47,6 +48,7 @@ func TestAllTools(t *testing.T) {
 		ToolGetEntity:        true,
 		ToolGetSchema:        true,
 		ToolGetLineage:       true,
+		ToolGetColumnLineage: true,
 		ToolGetQueries:       true,
 		ToolGetGlossaryTerm:  true,
 		ToolListTags:         true,

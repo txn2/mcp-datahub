@@ -1,4 +1,4 @@
-# txn2/mcp-datahub
+![txn2/mcp-datahub](./docs/images/txn2_mcp_datahub_banner.png)
 
 [![GitHub license](https://img.shields.io/github/license/txn2/mcp-datahub.svg)](LICENSE)
 [![Go Reference](https://pkg.go.dev/badge/github.com/txn2/mcp-datahub.svg)](https://pkg.go.dev/github.com/txn2/mcp-datahub)
@@ -197,6 +197,7 @@ See the [library documentation](https://mcp-datahub.txn2.com/library/) for compl
 | `datahub_get_entity` | Get entity metadata by URN (description, owners, tags, domain) |
 | `datahub_get_schema` | Get dataset schema with field types and descriptions |
 | `datahub_get_lineage` | Get upstream/downstream data lineage |
+| `datahub_get_column_lineage` | Get fine-grained column-level lineage mappings |
 | `datahub_get_queries` | Get SQL queries associated with a dataset |
 | `datahub_get_glossary_term` | Get glossary term definition and properties |
 | `datahub_list_tags` | List available tags in the catalog |

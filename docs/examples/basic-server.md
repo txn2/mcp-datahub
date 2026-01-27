@@ -88,12 +88,13 @@ go build -o basic-server
 
 ## Available Tools
 
-This example registers all 11 DataHub tools:
+This example registers all 12 DataHub tools:
 
 - `datahub_search`
 - `datahub_get_entity`
 - `datahub_get_schema`
 - `datahub_get_lineage`
+- `datahub_get_column_lineage`
 - `datahub_get_queries`
 - `datahub_get_glossary_term`
 - `datahub_list_tags`
