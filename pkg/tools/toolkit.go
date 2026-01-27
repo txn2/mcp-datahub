@@ -132,6 +132,8 @@ func (t *Toolkit) registerTool(server *mcp.Server, name ToolName, cfg *toolConfi
 		t.registerGetSchemaTool(server, cfg)
 	case ToolGetLineage:
 		t.registerGetLineageTool(server, cfg)
+	case ToolGetColumnLineage:
+		t.registerGetColumnLineageTool(server, cfg)
 	case ToolGetQueries:
 		t.registerGetQueriesTool(server, cfg)
 	case ToolGetGlossaryTerm:

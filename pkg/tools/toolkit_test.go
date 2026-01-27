@@ -17,7 +17,9 @@ type mockClient struct {
 	searchFunc           func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 	getEntityFunc        func(ctx context.Context, urn string) (*types.Entity, error)
 	getSchemaFunc        func(ctx context.Context, urn string) (*types.SchemaMetadata, error)
+	getSchemasFunc       func(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
 	getLineageFunc       func(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error)
+	getColumnLineageFunc func(ctx context.Context, urn string) (*types.ColumnLineage, error)
 	getQueriesFunc       func(ctx context.Context, urn string) (*types.QueryList, error)
 	getGlossaryTermFunc  func(ctx context.Context, urn string) (*types.GlossaryTerm, error)
 	listTagsFunc         func(ctx context.Context, filter string) ([]types.Tag, error)
@@ -48,11 +50,25 @@ func (m *mockClient) GetSchema(ctx context.Context, urn string) (*types.SchemaMe
 	return &types.SchemaMetadata{}, nil
 }
 
+func (m *mockClient) GetSchemas(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error) {
+	if m.getSchemasFunc != nil {
+		return m.getSchemasFunc(ctx, urns)
+	}
+	return make(map[string]*types.SchemaMetadata), nil
+}
+
 func (m *mockClient) GetLineage(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error) {
 	if m.getLineageFunc != nil {
 		return m.getLineageFunc(ctx, urn, opts...)
 	}
 	return &types.LineageResult{Start: urn}, nil
+}
+
+func (m *mockClient) GetColumnLineage(ctx context.Context, urn string) (*types.ColumnLineage, error) {
+	if m.getColumnLineageFunc != nil {
+		return m.getColumnLineageFunc(ctx, urn)
+	}
+	return &types.ColumnLineage{DatasetURN: urn}, nil
 }
 
 func (m *mockClient) GetQueries(ctx context.Context, urn string) (*types.QueryList, error) {
