@@ -12,6 +12,7 @@ Learn how to trace data dependencies and understand data flow through your organ
 - How to trace upstream dependencies (where data comes from)
 - How to discover downstream consumers (who uses this data)
 - How to control lineage depth
+- How to explore column-level lineage
 - How to interpret lineage results
 
 ## Understanding Lineage
@@ -208,6 +209,55 @@ DataHub tracks lineage across platforms. Ask:
 
 This shows data flowing from Snowflake tables to Looker dashboards.
 
+## Step 7: Column-Level Lineage
+
+For fine-grained analysis, explore how individual columns are derived. Ask:
+
+> "Show me the column-level lineage for customer_metrics"
+
+The AI uses `datahub_get_column_lineage`:
+
+```json
+{
+  "dataset_urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.analytics.customer_metrics,PROD)",
+  "mappings": [
+    {
+      "downstream_column": "customer_id",
+      "upstream_dataset": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.sales.customers,PROD)",
+      "upstream_column": "id",
+      "transform": "IDENTITY"
+    },
+    {
+      "downstream_column": "total_orders",
+      "upstream_dataset": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.sales.orders,PROD)",
+      "upstream_column": "order_count",
+      "transform": "AGGREGATE",
+      "confidence_score": 0.95
+    },
+    {
+      "downstream_column": "email",
+      "upstream_dataset": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.sales.customers,PROD)",
+      "upstream_column": "email_address",
+      "transform": "IDENTITY"
+    }
+  ]
+}
+```
+
+**Understanding Column Lineage**
+
+- **IDENTITY**: Column is copied directly from source
+- **AGGREGATE**: Column is derived from aggregation (SUM, COUNT, etc.)
+- **TRANSFORM**: Column has been transformed or computed
+- **confidence_score**: Indicates how confident the lineage detection is (1.0 = certain)
+
+Column-level lineage helps with:
+
+- Understanding exactly how fields are derived
+- Fine-grained impact analysis before column changes
+- Data quality root cause analysis at column level
+- Compliance and data governance audits
+
 ## Lineage Use Cases
 
 ### Impact Analysis
@@ -240,6 +290,7 @@ Find related datasets by exploring lineage:
 - Upstream lineage: tracing data sources
 - Downstream lineage: finding data consumers
 - Controlling lineage depth for deeper exploration
+- Column-level lineage: fine-grained field derivation tracking
 - Cross-platform lineage tracking
 - Practical use cases for lineage analysis
 
