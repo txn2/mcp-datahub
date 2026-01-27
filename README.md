@@ -1,4 +1,4 @@
-# txn2/mcp-datahub
+![txn2/mcp-datahub](./docs/images/txn2_mcp_datahub_banner.png)
 
 [![GitHub license](https://img.shields.io/github/license/txn2/mcp-datahub.svg)](LICENSE)
 [![Go Reference](https://pkg.go.dev/badge/github.com/txn2/mcp-datahub.svg)](https://pkg.go.dev/github.com/txn2/mcp-datahub)
