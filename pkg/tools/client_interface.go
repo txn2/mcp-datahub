@@ -19,8 +19,14 @@ type DataHubClient interface {
 	// GetSchema retrieves schema for a dataset.
 	GetSchema(ctx context.Context, urn string) (*types.SchemaMetadata, error)
 
+	// GetSchemas retrieves schemas for multiple datasets by URN.
+	GetSchemas(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
+
 	// GetLineage retrieves lineage for an entity.
 	GetLineage(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error)
+
+	// GetColumnLineage retrieves fine-grained column-level lineage for a dataset.
+	GetColumnLineage(ctx context.Context, urn string) (*types.ColumnLineage, error)
 
 	// GetQueries retrieves queries for a dataset.
 	GetQueries(ctx context.Context, urn string) (*types.QueryList, error)
