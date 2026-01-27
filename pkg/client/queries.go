@@ -505,4 +505,82 @@ query getDataProduct($urn: String!) {
   }
 }
 `
+
+	// GetColumnLineageQuery retrieves fine-grained column-level lineage for a dataset.
+	GetColumnLineageQuery = `
+query getColumnLineage($urn: String!) {
+  dataset(urn: $urn) {
+    fineGrainedLineages {
+      upstreams {
+        path
+        dataset
+      }
+      downstreams {
+        path
+      }
+      transformOperation
+      confidenceScore
+      query
+    }
+  }
+}
+`
+
+	// BatchGetSchemasQuery retrieves schemas for multiple datasets by URN.
+	BatchGetSchemasQuery = `
+query batchGetSchemas($urns: [String!]!) {
+  entities(urns: $urns) {
+    ... on Dataset {
+      urn
+      schemaMetadata {
+        name
+        platformSchema {
+          ... on TableSchema {
+            schema
+          }
+        }
+        version
+        hash
+        fields {
+          fieldPath
+          type
+          nativeDataType
+          description
+          nullable
+          isPartOfKey
+          tags {
+            tags {
+              tag {
+                urn
+                name
+              }
+            }
+          }
+          glossaryTerms {
+            terms {
+              term {
+                urn
+                name
+              }
+            }
+          }
+        }
+        primaryKeys
+        foreignKeys {
+          name
+          sourceFields {
+            fieldPath
+          }
+          foreignDataset {
+            urn
+          }
+          foreignFields {
+            fieldPath
+          }
+        }
+      }
+    }
+  }
+}
+`
 )
