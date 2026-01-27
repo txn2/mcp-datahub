@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/txn2/mcp-datahub/pkg/client"
+	"github.com/txn2/mcp-datahub/pkg/multiserver"
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
@@ -58,6 +60,24 @@ func TestHandleGetColumnLineage(t *testing.T) {
 			mockErr: errors.New("not found"),
 			wantErr: true,
 		},
+		{
+			name:  "successful get with confidence score and query",
+			input: GetColumnLineageInput{URN: "urn:li:dataset:test"},
+			mockColumnLineage: &types.ColumnLineage{
+				DatasetURN: "urn:li:dataset:test",
+				Mappings: []types.ColumnLineageMapping{
+					{
+						DownstreamColumn: "total",
+						UpstreamDataset:  "urn:li:dataset:source",
+						UpstreamColumn:   "amount",
+						Transform:        "AGGREGATE",
+						ConfidenceScore:  0.95,
+						Query:            "SELECT SUM(amount) as total FROM source",
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -84,5 +104,33 @@ func TestHandleGetColumnLineage(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestHandleGetColumnLineage_ConnectionError(t *testing.T) {
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	toolkit := NewToolkitWithManager(mgr, DefaultConfig())
+
+	// Try to use an unknown connection
+	input := GetColumnLineageInput{
+		URN:        "urn:li:dataset:test",
+		Connection: "unknown",
+	}
+
+	result, _, _ := toolkit.handleGetColumnLineage(context.Background(), nil, input)
+
+	if !result.IsError {
+		t.Error("handleGetColumnLineage() should return error for unknown connection")
 	}
 }
