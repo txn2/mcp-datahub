@@ -14,11 +14,17 @@ type Query struct {
 	// URN is the query URN.
 	URN string `json:"urn,omitempty"`
 
+	// Name is the query name.
+	Name string `json:"name,omitempty"`
+
 	// Statement is the SQL query text.
 	Statement string `json:"statement"`
 
 	// Description is the query description.
 	Description string `json:"description,omitempty"`
+
+	// Source indicates how the query was created (e.g., "MANUAL", "SYSTEM").
+	Source string `json:"source,omitempty"`
 
 	// CreatedBy is who created the query.
 	CreatedBy string `json:"created_by,omitempty"`
