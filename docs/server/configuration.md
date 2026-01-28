@@ -20,6 +20,7 @@ All configuration is done through environment variables.
 | `DATAHUB_MAX_LINEAGE_DEPTH` | Maximum lineage traversal depth | `5` |
 | `DATAHUB_CONNECTION_NAME` | Display name for primary connection | `datahub` |
 | `DATAHUB_ADDITIONAL_SERVERS` | JSON map of additional servers | (empty) |
+| `DATAHUB_DEBUG` | Enable debug logging (`1` or `true`) | `false` |
 
 ## Example Configuration
 
@@ -32,6 +33,9 @@ export DATAHUB_TOKEN=your_personal_access_token
 export DATAHUB_TIMEOUT=60
 export DATAHUB_DEFAULT_LIMIT=20
 export DATAHUB_MAX_LIMIT=50
+
+# Debug logging (for troubleshooting)
+export DATAHUB_DEBUG=1
 ```
 
 ## Multi-Server Configuration

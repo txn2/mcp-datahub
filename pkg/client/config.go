@@ -29,6 +29,13 @@ type Config struct {
 
 	// MaxLineageDepth is the maximum lineage traversal depth. Default: 5.
 	MaxLineageDepth int
+
+	// Debug enables debug logging. Default: false.
+	Debug bool
+
+	// Logger is the logger for debug output. If nil, a NopLogger is used.
+	// When Debug is true and Logger is nil, a StdLogger is created automatically.
+	Logger Logger
 }
 
 // DefaultConfig returns a Config with default values.
@@ -87,6 +94,10 @@ func FromEnv() (Config, error) {
 			return cfg, fmt.Errorf("invalid DATAHUB_MAX_LINEAGE_DEPTH: %w", err)
 		}
 		cfg.MaxLineageDepth = val
+	}
+
+	if debug := os.Getenv("DATAHUB_DEBUG"); debug != "" {
+		cfg.Debug = debug == "1" || debug == "true"
 	}
 
 	return cfg, nil

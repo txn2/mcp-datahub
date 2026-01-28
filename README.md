@@ -219,6 +219,7 @@ See the [tools reference](https://mcp-datahub.txn2.com/server/tools/) for detail
 | `DATAHUB_MAX_LIMIT` | Maximum limit | `100` |
 | `DATAHUB_CONNECTION_NAME` | Display name for primary connection | `datahub` |
 | `DATAHUB_ADDITIONAL_SERVERS` | JSON map of additional servers | (optional) |
+| `DATAHUB_DEBUG` | Enable debug logging (`1` or `true`) | `false` |
 
 See [configuration reference](https://mcp-datahub.txn2.com/server/configuration/) for all options.
 

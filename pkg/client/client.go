@@ -20,6 +20,7 @@ type Client struct {
 	token      string
 	httpClient *http.Client
 	config     Config
+	logger     Logger
 }
 
 // New creates a new DataHub client with the given configuration.
@@ -52,6 +53,16 @@ func New(cfg Config) (*Client, error) {
 		endpoint = strings.TrimSuffix(endpoint, "/") + "/api/graphql"
 	}
 
+	// Initialize logger
+	logger := cfg.Logger
+	if logger == nil {
+		if cfg.Debug {
+			logger = NewStdLogger(true)
+		} else {
+			logger = NopLogger{}
+		}
+	}
+
 	return &Client{
 		endpoint: endpoint,
 		token:    cfg.Token,
@@ -59,6 +70,7 @@ func New(cfg Config) (*Client, error) {
 			Timeout: cfg.Timeout,
 		},
 		config: cfg,
+		logger: logger,
 	}, nil
 }
 
@@ -101,23 +113,55 @@ func (c *Client) Execute(ctx context.Context, query string, variables map[string
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	// Extract operation name for logging
+	opName := extractOperationName(query)
+	c.logger.Debug("executing GraphQL query",
+		"operation", opName,
+		"endpoint", c.endpoint,
+		"request_size", len(jsonBody))
+
+	start := time.Now()
 	var lastErr error
 	for attempt := 0; attempt <= c.config.RetryMax; attempt++ {
 		if attempt > 0 {
 			// Exponential backoff
-			time.Sleep(time.Duration(attempt*attempt) * 100 * time.Millisecond)
+			backoff := time.Duration(attempt*attempt) * 100 * time.Millisecond
+			c.logger.Debug("retrying request",
+				"operation", opName,
+				"attempt", attempt+1,
+				"backoff_ms", backoff.Milliseconds())
+			time.Sleep(backoff)
 		}
 
 		lastErr = c.doRequest(ctx, jsonBody, result)
 		if lastErr == nil {
+			c.logger.Debug("request completed",
+				"operation", opName,
+				"duration_ms", time.Since(start).Milliseconds(),
+				"attempts", attempt+1)
 			return nil
 		}
 
 		// Don't retry on certain errors
 		if errors.Is(lastErr, ErrUnauthorized) || errors.Is(lastErr, ErrForbidden) || errors.Is(lastErr, ErrNotFound) {
+			c.logger.Debug("request failed (not retrying)",
+				"operation", opName,
+				"error", lastErr.Error(),
+				"duration_ms", time.Since(start).Milliseconds())
 			return lastErr
 		}
+
+		c.logger.Debug("request failed (will retry)",
+			"operation", opName,
+			"attempt", attempt+1,
+			"error", lastErr.Error())
 	}
+
+	c.logger.Error("request failed after retries",
+		"operation", opName,
+		"attempts", c.config.RetryMax+1,
+		"error", lastErr.Error(),
+		"duration_ms", time.Since(start).Milliseconds())
 
 	return lastErr
 }
@@ -133,10 +177,7 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		if ctx.Err() != nil {
-			return ErrTimeout
-		}
-		return fmt.Errorf("failed to execute request: %w", err)
+		return c.handleRequestError(ctx, err)
 	}
 	defer func() {
 		// Error intentionally ignored; response body close errors are non-actionable
@@ -148,39 +189,139 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 		return fmt.Errorf("failed to read response: %w", err)
 	}
 
-	switch resp.StatusCode {
-	case http.StatusUnauthorized:
-		return ErrUnauthorized
-	case http.StatusForbidden:
-		return ErrForbidden
-	case http.StatusTooManyRequests:
-		return ErrRateLimited
-	case http.StatusOK:
-		// Continue processing
-	default:
-		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	c.logger.Debug("received response",
+		"status", resp.StatusCode,
+		"response_size", len(body))
+
+	if err := c.checkStatusCode(resp.StatusCode, body); err != nil {
+		return err
 	}
 
+	return c.parseGraphQLResponse(body, result)
+}
+
+// handleRequestError handles HTTP request errors, distinguishing timeouts from other failures.
+func (c *Client) handleRequestError(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		c.logger.Debug("request timeout", "error", ctx.Err().Error())
+		return ErrTimeout
+	}
+	c.logger.Debug("request failed", "error", err.Error())
+	return fmt.Errorf("failed to execute request: %w", err)
+}
+
+// checkStatusCode validates the HTTP status code and returns appropriate errors.
+func (c *Client) checkStatusCode(statusCode int, body []byte) error {
+	switch statusCode {
+	case http.StatusUnauthorized:
+		c.logger.Warn("unauthorized request - check DATAHUB_TOKEN")
+		return ErrUnauthorized
+	case http.StatusForbidden:
+		c.logger.Warn("forbidden request - insufficient permissions")
+		return ErrForbidden
+	case http.StatusTooManyRequests:
+		c.logger.Warn("rate limited by DataHub server")
+		return ErrRateLimited
+	case http.StatusOK:
+		return nil
+	default:
+		c.logger.Error("unexpected HTTP status",
+			"status", statusCode,
+			"body", truncateString(string(body), 200))
+		return fmt.Errorf("unexpected status %d: %s", statusCode, string(body))
+	}
+}
+
+// parseGraphQLResponse parses the GraphQL response and unmarshals it into result.
+func (c *Client) parseGraphQLResponse(body []byte, result any) error {
 	var gqlResp graphQLResponse
 	if err := json.Unmarshal(body, &gqlResp); err != nil {
+		c.logger.Error("failed to unmarshal response",
+			"error", err.Error(),
+			"body_preview", truncateString(string(body), 200))
 		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	if len(gqlResp.Errors) > 0 {
-		errMsg := gqlResp.Errors[0].Message
-		if strings.Contains(strings.ToLower(errMsg), "not found") {
-			return ErrNotFound
-		}
-		return fmt.Errorf("graphql error: %s", errMsg)
+		return c.handleGraphQLErrors(gqlResp.Errors)
 	}
 
-	if result != nil && gqlResp.Data != nil {
+	// Check for null data without errors - this can indicate silent failures
+	// JSON null becomes []byte("null"), not nil
+	if gqlResp.Data == nil || string(gqlResp.Data) == "null" {
+		c.logger.Warn("GraphQL returned null data without errors - possible silent failure")
+		return fmt.Errorf("graphql returned null data without errors")
+	}
+
+	if result != nil {
 		if err := json.Unmarshal(gqlResp.Data, result); err != nil {
+			c.logger.Error("failed to unmarshal data field",
+				"error", err.Error(),
+				"data_preview", truncateString(string(gqlResp.Data), 200))
 			return fmt.Errorf("failed to unmarshal data: %w", err)
 		}
 	}
 
 	return nil
+}
+
+// handleGraphQLErrors processes GraphQL errors and returns appropriate error types.
+func (c *Client) handleGraphQLErrors(errors []graphQLError) error {
+	errMsg := errors[0].Message
+	c.logger.Debug("GraphQL returned errors",
+		"error_count", len(errors),
+		"first_error", errMsg)
+	if strings.Contains(strings.ToLower(errMsg), "not found") {
+		return ErrNotFound
+	}
+	return fmt.Errorf("graphql error: %s", errMsg)
+}
+
+const (
+	opNameAnonymous = "anonymous"
+	opNameUnknown   = "unknown"
+)
+
+// extractOperationName extracts the operation name from a GraphQL query.
+func extractOperationName(query string) string {
+	// Look for "query OperationName" or "mutation OperationName"
+	query = strings.TrimSpace(query)
+	if strings.HasPrefix(query, "query ") {
+		return extractName(query[6:])
+	}
+	if strings.HasPrefix(query, "mutation ") {
+		return extractName(query[9:])
+	}
+	// Check for inline query starting with "{"
+	if strings.HasPrefix(query, "{") {
+		return opNameAnonymous
+	}
+	return opNameUnknown
+}
+
+// extractName extracts the operation name before any parentheses or braces.
+func extractName(s string) string {
+	s = strings.TrimSpace(s)
+	for i, c := range s {
+		if c == '(' || c == '{' || c == ' ' {
+			if i > 0 {
+				return s[:i]
+			}
+			return opNameAnonymous
+		}
+	}
+	if len(s) > 0 {
+		return s
+	}
+	return opNameAnonymous
+}
+
+// truncateString truncates a string to maxLen and adds "..." if truncated.
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 // Close closes the client.
@@ -457,7 +598,7 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 	}
 
 	if response.Entity.URN == "" {
-		return nil, fmt.Errorf("GetEntity(%s): %w", urn, ErrNotFound)
+		return nil, fmt.Errorf("GetEntity(%s): empty URN in response (entity may not exist or access denied): %w", urn, ErrNotFound)
 	}
 
 	entity := &types.Entity{
