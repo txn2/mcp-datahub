@@ -189,6 +189,16 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// firstNonEmpty returns the first non-empty string from the arguments.
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 // Ping tests the connection to DataHub.
 func (c *Client) Ping(ctx context.Context) error {
 	var result map[string]any
@@ -471,12 +481,7 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 
 	// Parse ownership
 	for _, o := range response.Entity.Ownership.Owners {
-		name := o.Owner.Username
-		if o.Owner.Info.DisplayName != "" {
-			name = o.Owner.Info.DisplayName
-		} else if o.Owner.Name != "" {
-			name = o.Owner.Name
-		}
+		name := firstNonEmpty(o.Owner.Info.DisplayName, o.Owner.Name, o.Owner.Username)
 		entity.Owners = append(entity.Owners, types.Owner{
 			URN:   o.Owner.URN,
 			Name:  name,
