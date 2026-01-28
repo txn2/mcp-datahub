@@ -3,9 +3,11 @@ package tools
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/txn2/mcp-datahub/pkg/client"
 	"github.com/txn2/mcp-datahub/pkg/integration"
 	"github.com/txn2/mcp-datahub/pkg/multiserver"
 )
@@ -16,6 +18,7 @@ type Toolkit struct {
 	client  DataHubClient        // Single client mode (for backwards compatibility)
 	manager *multiserver.Manager // Multi-server mode (optional)
 	config  Config
+	logger  client.Logger
 
 	// Extensibility hooks (all optional, zero-value = no overhead)
 	middlewares     []ToolMiddleware
@@ -59,8 +62,19 @@ func NewToolkitWithManager(mgr *multiserver.Manager, cfg Config, opts ...Toolkit
 
 // newBaseToolkit creates a toolkit with common fields initialized.
 func newBaseToolkit(cfg Config) *Toolkit {
+	// Initialize logger
+	logger := cfg.Logger
+	if logger == nil {
+		if cfg.Debug {
+			logger = client.NewStdLogger(true)
+		} else {
+			logger = client.NopLogger{}
+		}
+	}
+
 	return &Toolkit{
 		config:          cfg,
+		logger:          logger,
 		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
 		registeredTools: make(map[ToolName]bool),
 	}
@@ -169,19 +183,28 @@ func (t *Toolkit) wrapHandler(
 		allMiddlewares = append(allMiddlewares, cfg.middlewares...)
 	}
 
-	// If no middleware configured, return handler unchanged
-	if len(allMiddlewares) == 0 {
+	// If no middleware configured and no debug logging, return handler unchanged
+	if len(allMiddlewares) == 0 && !t.config.Debug {
 		return handler
 	}
 
 	return func(ctx context.Context, req *mcp.CallToolRequest, input any) (*mcp.CallToolResult, any, error) {
 		tc := NewToolContext(name, input)
+		start := time.Now()
+
+		t.log().Debug("tool invoked",
+			"tool", string(name),
+			"input_type", fmt.Sprintf("%T", input),
+			"middleware_count", len(allMiddlewares))
 
 		// Run Before hooks
 		var err error
 		for _, m := range allMiddlewares {
 			ctx, err = m.Before(ctx, tc)
 			if err != nil {
+				t.log().Error("middleware before hook failed",
+					"tool", string(name),
+					"error", err.Error())
 				return ErrorResult(fmt.Sprintf("middleware error: %v", err)), nil, nil
 			}
 		}
@@ -189,10 +212,30 @@ func (t *Toolkit) wrapHandler(
 		// Execute handler
 		result, extra, handlerErr := handler(ctx, req, input)
 
+		// Log handler result
+		switch {
+		case handlerErr != nil:
+			t.log().Error("tool handler error",
+				"tool", string(name),
+				"error", handlerErr.Error(),
+				"duration_ms", time.Since(start).Milliseconds())
+		case result != nil && result.IsError:
+			t.log().Debug("tool returned error result",
+				"tool", string(name),
+				"duration_ms", time.Since(start).Milliseconds())
+		default:
+			t.log().Debug("tool handler completed",
+				"tool", string(name),
+				"duration_ms", time.Since(start).Milliseconds())
+		}
+
 		// Run After hooks (reverse order)
 		for i := len(allMiddlewares) - 1; i >= 0; i-- {
 			result, err = allMiddlewares[i].After(ctx, tc, result, handlerErr)
 			if err != nil {
+				t.log().Error("middleware after hook failed",
+					"tool", string(name),
+					"error", err.Error())
 				return ErrorResult(fmt.Sprintf("middleware error: %v", err)), nil, nil
 			}
 		}
@@ -243,14 +286,34 @@ func (t *Toolkit) HasQueryProvider() bool {
 func (t *Toolkit) getClient(connection string) (DataHubClient, error) {
 	// Multi-server mode
 	if t.manager != nil {
-		return t.manager.Client(connection)
+		connName := connection
+		if connName == "" {
+			connName = "(default)"
+		}
+		t.log().Debug("selecting connection", "connection", connName)
+		c, err := t.manager.Client(connection)
+		if err != nil {
+			t.log().Error("connection selection failed",
+				"connection", connName,
+				"error", err.Error())
+		}
+		return c, err
 	}
 
 	// Single-client mode - ignore connection parameter
 	if t.client == nil {
+		t.log().Error("no client configured")
 		return nil, fmt.Errorf("no client configured")
 	}
 	return t.client, nil
+}
+
+// log returns the logger, defaulting to NopLogger if nil.
+func (t *Toolkit) log() client.Logger {
+	if t.logger == nil {
+		return client.NopLogger{}
+	}
+	return t.logger
 }
 
 // HasManager returns true if multi-server mode is enabled.
