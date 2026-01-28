@@ -20,6 +20,7 @@ Complete configuration reference for mcp-datahub.
 | `DATAHUB_DEFAULT_LIMIT` | Default search result limit | `10` |
 | `DATAHUB_MAX_LIMIT` | Maximum allowed search limit | `100` |
 | `DATAHUB_MAX_LINEAGE_DEPTH` | Maximum lineage traversal depth | `5` |
+| `DATAHUB_DEBUG` | Enable debug logging (`1` or `true`) | `false` |
 
 ## Client Configuration
 
@@ -34,6 +35,8 @@ type Config struct {
     DefaultLimit    int           // Default search limit
     MaxLimit        int           // Maximum search limit
     MaxLineageDepth int           // Max lineage depth
+    Debug           bool          // Enable debug logging
+    Logger          Logger        // Custom logger (nil = auto-select)
 }
 ```
 
@@ -49,6 +52,8 @@ func DefaultConfig() Config {
         DefaultLimit:    10,
         MaxLimit:        100,
         MaxLineageDepth: 5,
+        Debug:           false,
+        Logger:          nil, // Uses NopLogger; StdLogger when Debug=true
     }
 }
 ```
@@ -68,9 +73,11 @@ if err != nil {
 
 ```go
 type Config struct {
-    DefaultLimit    int // Default search limit
-    MaxLimit        int // Maximum search limit
-    MaxLineageDepth int // Max lineage depth
+    DefaultLimit    int           // Default search limit
+    MaxLimit        int           // Maximum search limit
+    MaxLineageDepth int           // Max lineage depth
+    Debug           bool          // Enable debug logging
+    Logger          client.Logger // Custom logger (nil = auto-select)
 }
 ```
 
@@ -82,6 +89,62 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{
     MaxLimit:        50,
     MaxLineageDepth: 3,
 })
+```
+
+## Debug Logging
+
+Enable debug logging to troubleshoot issues with DataHub connectivity, GraphQL queries, and tool execution.
+
+### Via Environment Variable
+
+```bash
+export DATAHUB_DEBUG=1
+./mcp-datahub
+```
+
+### Programmatic Configuration
+
+```go
+// Auto-create StdLogger when Debug=true
+cfg := client.Config{
+    URL:   "https://datahub.example.com",
+    Token: "token",
+    Debug: true,
+}
+
+// Or provide a custom logger
+cfg := client.Config{
+    URL:    "https://datahub.example.com",
+    Token:  "token",
+    Logger: myCustomLogger,
+}
+```
+
+### Logger Interface
+
+The `Logger` interface is compatible with `slog.Logger` patterns:
+
+```go
+type Logger interface {
+    Debug(msg string, args ...any)
+    Info(msg string, args ...any)
+    Warn(msg string, args ...any)
+    Error(msg string, args ...any)
+}
+```
+
+Built-in implementations:
+- `NopLogger` - Discards all output (default when debug disabled)
+- `StdLogger` - Writes to stderr with structured key-value format
+
+### Log Output
+
+When debug logging is enabled, you'll see:
+
+```
+[datahub] DEBUG: executing GraphQL query [operation=GetEntity endpoint=https://... request_size=256]
+[datahub] DEBUG: received response [status=200 response_size=1024]
+[datahub] DEBUG: request completed [operation=GetEntity duration_ms=150 attempts=1]
 ```
 
 ## Validation
