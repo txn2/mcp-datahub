@@ -1247,6 +1247,37 @@ func (c *Client) GetDataProduct(ctx context.Context, urn string) (*types.DataPro
 	return product, nil
 }
 
+// extractDatasetURNFromSchemaFieldURN extracts the dataset URN from a schemaField URN.
+// Schema field URNs have the format: urn:li:schemaField:(<dataset_urn>,<field_path>)
+// If the input is not a schemaField URN, it is returned as-is.
+func extractDatasetURNFromSchemaFieldURN(schemaFieldURN string) string {
+	const prefix = "urn:li:schemaField:("
+	if !strings.HasPrefix(schemaFieldURN, prefix) {
+		return schemaFieldURN // Return as-is if not a schemaField URN
+	}
+
+	// Remove prefix and trailing parenthesis
+	inner := strings.TrimPrefix(schemaFieldURN, prefix)
+	inner = strings.TrimSuffix(inner, ")")
+
+	// Find the comma that separates dataset URN from field path.
+	// Handle nested parentheses in the dataset URN.
+	depth := 0
+	for i, c := range inner {
+		switch c {
+		case '(':
+			depth++
+		case ')':
+			depth--
+		case ',':
+			if depth == 0 {
+				return inner[:i]
+			}
+		}
+	}
+	return inner
+}
+
 // GetColumnLineage retrieves fine-grained column-level lineage for a dataset.
 // Returns empty result if fine-grained lineage is not available for the dataset.
 func (c *Client) GetColumnLineage(ctx context.Context, urn string) (*types.ColumnLineage, error) {
@@ -1258,15 +1289,15 @@ func (c *Client) GetColumnLineage(ctx context.Context, urn string) (*types.Colum
 		Dataset struct {
 			FineGrainedLineages []struct {
 				Upstreams []struct {
-					Path    string `json:"path"`
-					Dataset string `json:"dataset"`
+					URN  string `json:"urn"`
+					Path string `json:"path"`
 				} `json:"upstreams"`
 				Downstreams []struct {
+					URN  string `json:"urn"`
 					Path string `json:"path"`
 				} `json:"downstreams"`
-				TransformOperation string  `json:"transformOperation"`
-				ConfidenceScore    float64 `json:"confidenceScore"`
-				Query              string  `json:"query"`
+				TransformOperation string `json:"transformOperation"`
+				Query              string `json:"query"`
 			} `json:"fineGrainedLineages"`
 		} `json:"dataset"`
 	}
@@ -1287,11 +1318,11 @@ func (c *Client) GetColumnLineage(ctx context.Context, urn string) (*types.Colum
 			for _, upstream := range fgl.Upstreams {
 				mapping := types.ColumnLineageMapping{
 					DownstreamColumn: downstream.Path,
-					UpstreamDataset:  upstream.Dataset,
+					UpstreamDataset:  extractDatasetURNFromSchemaFieldURN(upstream.URN),
 					UpstreamColumn:   upstream.Path,
 					Transform:        fgl.TransformOperation,
 					Query:            fgl.Query,
-					ConfidenceScore:  fgl.ConfidenceScore,
+					// ConfidenceScore left at zero - not available in DataHub v1.3.x
 				}
 				result.Mappings = append(result.Mappings, mapping)
 			}
