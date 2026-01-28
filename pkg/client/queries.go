@@ -175,6 +175,9 @@ query getEntity($urn: String!) {
           value
         }
       }
+      editableProperties {
+        description
+      }
       subTypes {
         typeNames
       }
@@ -253,6 +256,28 @@ query getSchema($urn: String!) {
         }
         foreignFields {
           fieldPath
+        }
+      }
+    }
+    editableSchemaMetadata {
+      editableSchemaFieldInfo {
+        fieldPath
+        description
+        glossaryTerms {
+          terms {
+            term {
+              urn
+              name
+            }
+          }
+        }
+        tags {
+          tags {
+            tag {
+              urn
+              name
+            }
+          }
         }
       }
     }
@@ -576,6 +601,28 @@ query batchGetSchemas($urns: [String!]!) {
           }
           foreignFields {
             fieldPath
+          }
+        }
+      }
+      editableSchemaMetadata {
+        editableSchemaFieldInfo {
+          fieldPath
+          description
+          glossaryTerms {
+            terms {
+              term {
+                urn
+                name
+              }
+            }
+          }
+          tags {
+            tags {
+              tag {
+                urn
+                name
+              }
+            }
           }
         }
       }

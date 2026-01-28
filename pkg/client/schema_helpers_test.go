@@ -343,3 +343,315 @@ func TestParseSchemaMetadata(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeEditableSchemaMetadata(t *testing.T) {
+	tests := []struct {
+		name           string
+		schema         *types.SchemaMetadata
+		edited         rawEditableSchemaMetadata
+		expectedFields []types.SchemaField
+	}{
+		{
+			name:   "nil schema does not panic",
+			schema: nil,
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{FieldPath: "field1", Description: "edited"},
+				},
+			},
+			expectedFields: nil,
+		},
+		{
+			name: "empty edited metadata does not change schema",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{FieldPath: "field1", Description: "original"},
+				},
+			},
+			edited: rawEditableSchemaMetadata{},
+			expectedFields: []types.SchemaField{
+				{FieldPath: "field1", Description: "original"},
+			},
+		},
+		{
+			name: "edited description overrides original",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{FieldPath: "field1", Description: "original description"},
+				},
+			},
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{FieldPath: "field1", Description: "UI edited description"},
+				},
+			},
+			expectedFields: []types.SchemaField{
+				{FieldPath: "field1", Description: "UI edited description"},
+			},
+		},
+		{
+			name: "empty edited description does not override",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{FieldPath: "field1", Description: "original description"},
+				},
+			},
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{FieldPath: "field1", Description: ""},
+				},
+			},
+			expectedFields: []types.SchemaField{
+				{FieldPath: "field1", Description: "original description"},
+			},
+		},
+		{
+			name: "edited glossary terms replace ingested ones",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{
+						FieldPath: "revenue",
+						GlossaryTerms: []types.GlossaryTerm{
+							{URN: "urn:li:glossaryTerm:ingested", Name: "Ingested Term"},
+						},
+					},
+				},
+			},
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{
+						FieldPath: "revenue",
+						GlossaryTerms: struct {
+							Terms []struct {
+								Term struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								} `json:"term"`
+							} `json:"terms"`
+						}{
+							Terms: []struct {
+								Term struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								} `json:"term"`
+							}{
+								{Term: struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								}{URN: "urn:li:glossaryTerm:ui_added", Name: "UI Added Term"}},
+							},
+						},
+					},
+				},
+			},
+			expectedFields: []types.SchemaField{
+				{
+					FieldPath: "revenue",
+					GlossaryTerms: []types.GlossaryTerm{
+						{URN: "urn:li:glossaryTerm:ui_added", Name: "UI Added Term"},
+					},
+				},
+			},
+		},
+		{
+			name: "edited tags replace ingested ones",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{
+						FieldPath: "email",
+						Tags: []types.Tag{
+							{URN: "urn:li:tag:ingested", Name: "Ingested Tag"},
+						},
+					},
+				},
+			},
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{
+						FieldPath: "email",
+						Tags: struct {
+							Tags []struct {
+								Tag struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								} `json:"tag"`
+							} `json:"tags"`
+						}{
+							Tags: []struct {
+								Tag struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								} `json:"tag"`
+							}{
+								{Tag: struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								}{URN: "urn:li:tag:pii", Name: "PII"}},
+							},
+						},
+					},
+				},
+			},
+			expectedFields: []types.SchemaField{
+				{
+					FieldPath: "email",
+					Tags: []types.Tag{
+						{URN: "urn:li:tag:pii", Name: "PII"},
+					},
+				},
+			},
+		},
+		{
+			name: "no edited glossary terms preserves ingested ones",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{
+						FieldPath: "revenue",
+						GlossaryTerms: []types.GlossaryTerm{
+							{URN: "urn:li:glossaryTerm:ingested", Name: "Ingested Term"},
+						},
+					},
+				},
+			},
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{
+						FieldPath:   "revenue",
+						Description: "Edited description only",
+						// No glossaryTerms - should preserve ingested ones
+					},
+				},
+			},
+			expectedFields: []types.SchemaField{
+				{
+					FieldPath:   "revenue",
+					Description: "Edited description only",
+					GlossaryTerms: []types.GlossaryTerm{
+						{URN: "urn:li:glossaryTerm:ingested", Name: "Ingested Term"},
+					},
+				},
+			},
+		},
+		{
+			name: "edited field not in schema is ignored",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{FieldPath: "existing_field", Description: "original"},
+				},
+			},
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{FieldPath: "nonexistent_field", Description: "should be ignored"},
+				},
+			},
+			expectedFields: []types.SchemaField{
+				{FieldPath: "existing_field", Description: "original"},
+			},
+		},
+		{
+			name: "multiple fields are merged correctly",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{FieldPath: "field1", Description: "desc1"},
+					{FieldPath: "field2", Description: "desc2"},
+					{FieldPath: "field3", Description: "desc3"},
+				},
+			},
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{FieldPath: "field1", Description: "edited1"},
+					{FieldPath: "field3", Description: "edited3"},
+				},
+			},
+			expectedFields: []types.SchemaField{
+				{FieldPath: "field1", Description: "edited1"},
+				{FieldPath: "field2", Description: "desc2"},
+				{FieldPath: "field3", Description: "edited3"},
+			},
+		},
+		{
+			name: "glossary terms added to field with no existing terms",
+			schema: &types.SchemaMetadata{
+				Fields: []types.SchemaField{
+					{FieldPath: "field1"},
+				},
+			},
+			edited: rawEditableSchemaMetadata{
+				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
+					{
+						FieldPath: "field1",
+						GlossaryTerms: struct {
+							Terms []struct {
+								Term struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								} `json:"term"`
+							} `json:"terms"`
+						}{
+							Terms: []struct {
+								Term struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								} `json:"term"`
+							}{
+								{Term: struct {
+									URN  string `json:"urn"`
+									Name string `json:"name"`
+								}{URN: "urn:li:glossaryTerm:new", Name: "New Term"}},
+							},
+						},
+					},
+				},
+			},
+			expectedFields: []types.SchemaField{
+				{
+					FieldPath: "field1",
+					GlossaryTerms: []types.GlossaryTerm{
+						{URN: "urn:li:glossaryTerm:new", Name: "New Term"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mergeEditableSchemaMetadata(tc.schema, tc.edited)
+
+			if tc.schema == nil {
+				return
+			}
+
+			if len(tc.schema.Fields) != len(tc.expectedFields) {
+				t.Errorf("Fields count = %d, want %d", len(tc.schema.Fields), len(tc.expectedFields))
+				return
+			}
+
+			for i, field := range tc.schema.Fields {
+				expected := tc.expectedFields[i]
+				if field.FieldPath != expected.FieldPath {
+					t.Errorf("Field[%d].FieldPath = %s, want %s", i, field.FieldPath, expected.FieldPath)
+				}
+				if field.Description != expected.Description {
+					t.Errorf("Field[%d].Description = %s, want %s", i, field.Description, expected.Description)
+				}
+				if len(field.GlossaryTerms) != len(expected.GlossaryTerms) {
+					t.Errorf("Field[%d].GlossaryTerms count = %d, want %d", i, len(field.GlossaryTerms), len(expected.GlossaryTerms))
+				}
+				for j, term := range field.GlossaryTerms {
+					if term.URN != expected.GlossaryTerms[j].URN || term.Name != expected.GlossaryTerms[j].Name {
+						t.Errorf("Field[%d].GlossaryTerms[%d] = %+v, want %+v", i, j, term, expected.GlossaryTerms[j])
+					}
+				}
+				if len(field.Tags) != len(expected.Tags) {
+					t.Errorf("Field[%d].Tags count = %d, want %d", i, len(field.Tags), len(expected.Tags))
+				}
+				for j, tag := range field.Tags {
+					if tag.URN != expected.Tags[j].URN || tag.Name != expected.Tags[j].Name {
+						t.Errorf("Field[%d].Tags[%d] = %+v, want %+v", i, j, tag, expected.Tags[j])
+					}
+				}
+			}
+		})
+	}
+}

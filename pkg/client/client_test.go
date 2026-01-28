@@ -467,6 +467,59 @@ func TestClientGetEntityNotFound(t *testing.T) {
 	}
 }
 
+func TestClientGetEntityWithEditableProperties(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"entity": map[string]interface{}{
+					"urn":         "urn:li:dataset:test",
+					"type":        "DATASET",
+					"name":        "test",
+					"description": "Top-level description",
+					"platform": map[string]interface{}{
+						"name": "snowflake",
+					},
+					"properties": map[string]interface{}{
+						"name":        "Ingested Name",
+						"description": "Description from ingestion",
+					},
+					"editableProperties": map[string]interface{}{
+						"description": "User edited description in UI",
+					},
+					"subTypes": map[string]interface{}{
+						"typeNames": []string{},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	entity, err := client.GetEntity(context.Background(), "urn:li:dataset:test")
+	if err != nil {
+		t.Errorf("GetEntity() unexpected error: %v", err)
+		return
+	}
+
+	// Editable properties should take precedence
+	if entity.Description != "User edited description in UI" {
+		t.Errorf("GetEntity() Description = %s, want 'User edited description in UI'", entity.Description)
+	}
+	// Name should still come from properties (no editable name)
+	if entity.Name != "Ingested Name" {
+		t.Errorf("GetEntity() Name = %s, want 'Ingested Name'", entity.Name)
+	}
+}
+
 func TestClientGetEntityWithPropertiesAndDeprecation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(t, w, map[string]interface{}{
@@ -588,6 +641,208 @@ func TestClientGetSchema(t *testing.T) {
 	}
 	if schema.Fields[0].FieldPath != "id" {
 		t.Errorf("GetSchema() first field = %s, want id", schema.Fields[0].FieldPath)
+	}
+}
+
+func TestClientGetSchemaWithEditedMetadata(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"dataset": map[string]interface{}{
+					"schemaMetadata": map[string]interface{}{
+						"name":        "schema",
+						"version":     1,
+						"hash":        "abc123",
+						"primaryKeys": []string{"id"},
+						"fields": []map[string]interface{}{
+							{
+								"fieldPath":      "id",
+								"type":           "NUMBER",
+								"nativeDataType": "INT64",
+								"description":    "Primary key from ingestion",
+								"nullable":       false,
+								"isPartOfKey":    true,
+							},
+							{
+								"fieldPath":      "email",
+								"type":           "STRING",
+								"nativeDataType": "VARCHAR",
+								"description":    "Email field",
+								"nullable":       true,
+								"isPartOfKey":    false,
+								"tags": map[string]interface{}{
+									"tags": []map[string]interface{}{
+										{"tag": map[string]interface{}{"urn": "urn:li:tag:ingested", "name": "Ingested"}},
+									},
+								},
+							},
+							{
+								"fieldPath":      "revenue",
+								"type":           "NUMBER",
+								"nativeDataType": "DECIMAL",
+								"description":    "Revenue amount",
+								"nullable":       true,
+								"isPartOfKey":    false,
+							},
+						},
+					},
+					"editableSchemaMetadata": map[string]interface{}{
+						"editableSchemaFieldInfo": []map[string]interface{}{
+							{
+								"fieldPath":   "email",
+								"description": "Updated description from UI",
+								"tags": map[string]interface{}{
+									"tags": []map[string]interface{}{
+										{"tag": map[string]interface{}{"urn": "urn:li:tag:pii", "name": "PII"}},
+									},
+								},
+							},
+							{
+								"fieldPath": "revenue",
+								"glossaryTerms": map[string]interface{}{
+									"terms": []map[string]interface{}{
+										{"term": map[string]interface{}{"urn": "urn:li:glossaryTerm:Finance.Revenue", "name": "Revenue"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	schema, err := client.GetSchema(context.Background(), "urn:li:dataset:test")
+	if err != nil {
+		t.Errorf("GetSchema() unexpected error: %v", err)
+		return
+	}
+
+	if len(schema.Fields) != 3 {
+		t.Errorf("GetSchema() Fields count = %d, want 3", len(schema.Fields))
+		return
+	}
+
+	// Verify email field has updated description and ONLY UI tags (replaces ingested)
+	emailField := schema.Fields[1]
+	if emailField.Description != "Updated description from UI" {
+		t.Errorf("GetSchema() email description = %s, want 'Updated description from UI'", emailField.Description)
+	}
+	if len(emailField.Tags) != 1 {
+		t.Errorf("GetSchema() email tags count = %d, want 1 (UI replaces ingested)", len(emailField.Tags))
+	} else {
+		if emailField.Tags[0].Name != "PII" {
+			t.Errorf("GetSchema() email tag = %s, want 'PII'", emailField.Tags[0].Name)
+		}
+	}
+
+	// Verify revenue field has glossary term from UI
+	revenueField := schema.Fields[2]
+	if len(revenueField.GlossaryTerms) != 1 {
+		t.Errorf("GetSchema() revenue glossary terms count = %d, want 1", len(revenueField.GlossaryTerms))
+	} else {
+		if revenueField.GlossaryTerms[0].Name != "Revenue" {
+			t.Errorf("GetSchema() revenue glossary term = %s, want 'Revenue'", revenueField.GlossaryTerms[0].Name)
+		}
+	}
+}
+
+func TestClientGetSchemasWithEditedMetadata(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"entities": []map[string]interface{}{
+					{
+						"urn": "urn:li:dataset:table1",
+						"schemaMetadata": map[string]interface{}{
+							"name":    "schema1",
+							"version": 1,
+							"fields": []map[string]interface{}{
+								{
+									"fieldPath":   "id",
+									"type":        "NUMBER",
+									"description": "Original description",
+								},
+							},
+						},
+						"editableSchemaMetadata": map[string]interface{}{
+							"editableSchemaFieldInfo": []map[string]interface{}{
+								{
+									"fieldPath":   "id",
+									"description": "UI edited description",
+									"glossaryTerms": map[string]interface{}{
+										"terms": []map[string]interface{}{
+											{"term": map[string]interface{}{"urn": "urn:li:glossaryTerm:ID", "name": "Identifier"}},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						"urn": "urn:li:dataset:table2",
+						"schemaMetadata": map[string]interface{}{
+							"name":    "schema2",
+							"version": 1,
+							"fields": []map[string]interface{}{
+								{
+									"fieldPath": "name",
+									"type":      "STRING",
+								},
+							},
+						},
+						// No editableSchemaMetadata for this entity
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	urns := []string{"urn:li:dataset:table1", "urn:li:dataset:table2"}
+	result, err := client.GetSchemas(context.Background(), urns)
+	if err != nil {
+		t.Errorf("GetSchemas() unexpected error: %v", err)
+		return
+	}
+
+	if len(result) != 2 {
+		t.Errorf("GetSchemas() result count = %d, want 2", len(result))
+		return
+	}
+
+	// Check first schema has merged data
+	schema1 := result["urn:li:dataset:table1"]
+	if schema1.Fields[0].Description != "UI edited description" {
+		t.Errorf("GetSchemas() table1 field description = %s, want 'UI edited description'", schema1.Fields[0].Description)
+	}
+	if len(schema1.Fields[0].GlossaryTerms) != 1 {
+		t.Errorf("GetSchemas() table1 field glossary terms count = %d, want 1", len(schema1.Fields[0].GlossaryTerms))
+	}
+
+	// Check second schema is unchanged (no editable metadata)
+	schema2 := result["urn:li:dataset:table2"]
+	if len(schema2.Fields[0].GlossaryTerms) != 0 {
+		t.Errorf("GetSchemas() table2 field glossary terms count = %d, want 0", len(schema2.Fields[0].GlossaryTerms))
 	}
 }
 
