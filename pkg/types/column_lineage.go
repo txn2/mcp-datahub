@@ -30,5 +30,6 @@ type ColumnLineageMapping struct {
 
 	// ConfidenceScore indicates the confidence of the lineage mapping (optional).
 	// Values typically range from 0.0 to 1.0.
+	// Note: This field is not available in DataHub v1.3.x and will be zero.
 	ConfidenceScore float64 `json:"confidence_score,omitempty"`
 }

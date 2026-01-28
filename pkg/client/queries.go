@@ -329,9 +329,38 @@ query getLineage($urn: String!, $direction: LineageDirection!) {
 }
 `
 
-	// GetQueriesQuery retrieves queries for a dataset.
+	// GetQueriesQuery retrieves saved Query entities associated with a dataset.
 	GetQueriesQuery = `
-query getQueries($urn: String!) {
+query getQueries($input: ListQueriesInput!) {
+  listQueries(input: $input) {
+    total
+    queries {
+      urn
+      properties {
+        name
+        description
+        source
+        statement {
+          value
+          language
+        }
+        created {
+          time
+          actor
+        }
+        lastModified {
+          time
+          actor
+        }
+      }
+    }
+  }
+}
+`
+
+	// GetUsageStatsQueriesQuery retrieves queries from usage stats (fallback for older DataHub).
+	GetUsageStatsQueriesQuery = `
+query getUsageStatsQueries($urn: String!) {
   dataset(urn: $urn) {
     usageStats {
       buckets {
@@ -532,19 +561,20 @@ query getDataProduct($urn: String!) {
 `
 
 	// GetColumnLineageQuery retrieves fine-grained column-level lineage for a dataset.
+	// Uses SchemaFieldRef.urn (available in DataHub v1.3.x+) to get the dataset URN.
 	GetColumnLineageQuery = `
 query getColumnLineage($urn: String!) {
   dataset(urn: $urn) {
     fineGrainedLineages {
       upstreams {
+        urn
         path
-        dataset
       }
       downstreams {
+        urn
         path
       }
       transformOperation
-      confidenceScore
       query
     }
   }

@@ -821,9 +821,69 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 	return result, nil
 }
 
-// GetQueries retrieves queries associated with a dataset.
-// Returns empty result if usage stats are not configured for the dataset.
+// GetQueries retrieves saved Query entities associated with a dataset.
+// Falls back to usage stats queries if the listQueries API is not available.
 func (c *Client) GetQueries(ctx context.Context, urn string) (*types.QueryList, error) {
+	variables := map[string]any{
+		"input": map[string]any{
+			"start":      0,
+			"count":      100,
+			"datasetUrn": urn,
+		},
+	}
+
+	var response struct {
+		ListQueries struct {
+			Total   int `json:"total"`
+			Queries []struct {
+				URN        string `json:"urn"`
+				Properties struct {
+					Name        string `json:"name"`
+					Description string `json:"description"`
+					Source      string `json:"source"`
+					Statement   struct {
+						Value    string `json:"value"`
+						Language string `json:"language"`
+					} `json:"statement"`
+					Created struct {
+						Time  int64  `json:"time"`
+						Actor string `json:"actor"`
+					} `json:"created"`
+					LastModified struct {
+						Time  int64  `json:"time"`
+						Actor string `json:"actor"`
+					} `json:"lastModified"`
+				} `json:"properties"`
+			} `json:"queries"`
+		} `json:"listQueries"`
+	}
+
+	err := c.Execute(ctx, GetQueriesQuery, variables, &response)
+	if err != nil {
+		// Fall back to usage stats if listQueries not available
+		return c.getUsageStatsQueries(ctx, urn)
+	}
+
+	result := &types.QueryList{
+		Total: response.ListQueries.Total,
+	}
+	for _, q := range response.ListQueries.Queries {
+		result.Queries = append(result.Queries, types.Query{
+			URN:         q.URN,
+			Name:        q.Properties.Name,
+			Statement:   q.Properties.Statement.Value,
+			Description: q.Properties.Description,
+			Source:      q.Properties.Source,
+			CreatedBy:   q.Properties.Created.Actor,
+			Created:     q.Properties.Created.Time,
+		})
+	}
+
+	return result, nil
+}
+
+// getUsageStatsQueries retrieves queries from usage stats (fallback for older DataHub).
+func (c *Client) getUsageStatsQueries(ctx context.Context, urn string) (*types.QueryList, error) {
 	variables := map[string]any{
 		"urn": urn,
 	}
@@ -841,7 +901,7 @@ func (c *Client) GetQueries(ctx context.Context, urn string) (*types.QueryList, 
 	}
 
 	// Execute query - may return error if usage stats not configured
-	err := c.Execute(ctx, GetQueriesQuery, variables, &response)
+	err := c.Execute(ctx, GetUsageStatsQueriesQuery, variables, &response)
 	if err != nil {
 		// Return empty result if usage stats are not available
 		// This is common when usage tracking isn't configured
@@ -1247,6 +1307,37 @@ func (c *Client) GetDataProduct(ctx context.Context, urn string) (*types.DataPro
 	return product, nil
 }
 
+// extractDatasetURNFromSchemaFieldURN extracts the dataset URN from a schemaField URN.
+// Schema field URNs have the format: urn:li:schemaField:(<dataset_urn>,<field_path>)
+// If the input is not a schemaField URN, it is returned as-is.
+func extractDatasetURNFromSchemaFieldURN(schemaFieldURN string) string {
+	const prefix = "urn:li:schemaField:("
+	if !strings.HasPrefix(schemaFieldURN, prefix) {
+		return schemaFieldURN // Return as-is if not a schemaField URN
+	}
+
+	// Remove prefix and trailing parenthesis
+	inner := strings.TrimPrefix(schemaFieldURN, prefix)
+	inner = strings.TrimSuffix(inner, ")")
+
+	// Find the comma that separates dataset URN from field path.
+	// Handle nested parentheses in the dataset URN.
+	depth := 0
+	for i, c := range inner {
+		switch c {
+		case '(':
+			depth++
+		case ')':
+			depth--
+		case ',':
+			if depth == 0 {
+				return inner[:i]
+			}
+		}
+	}
+	return inner
+}
+
 // GetColumnLineage retrieves fine-grained column-level lineage for a dataset.
 // Returns empty result if fine-grained lineage is not available for the dataset.
 func (c *Client) GetColumnLineage(ctx context.Context, urn string) (*types.ColumnLineage, error) {
@@ -1258,15 +1349,15 @@ func (c *Client) GetColumnLineage(ctx context.Context, urn string) (*types.Colum
 		Dataset struct {
 			FineGrainedLineages []struct {
 				Upstreams []struct {
-					Path    string `json:"path"`
-					Dataset string `json:"dataset"`
+					URN  string `json:"urn"`
+					Path string `json:"path"`
 				} `json:"upstreams"`
 				Downstreams []struct {
+					URN  string `json:"urn"`
 					Path string `json:"path"`
 				} `json:"downstreams"`
-				TransformOperation string  `json:"transformOperation"`
-				ConfidenceScore    float64 `json:"confidenceScore"`
-				Query              string  `json:"query"`
+				TransformOperation string `json:"transformOperation"`
+				Query              string `json:"query"`
 			} `json:"fineGrainedLineages"`
 		} `json:"dataset"`
 	}
@@ -1287,11 +1378,11 @@ func (c *Client) GetColumnLineage(ctx context.Context, urn string) (*types.Colum
 			for _, upstream := range fgl.Upstreams {
 				mapping := types.ColumnLineageMapping{
 					DownstreamColumn: downstream.Path,
-					UpstreamDataset:  upstream.Dataset,
+					UpstreamDataset:  extractDatasetURNFromSchemaFieldURN(upstream.URN),
 					UpstreamColumn:   upstream.Path,
 					Transform:        fgl.TransformOperation,
 					Query:            fgl.Query,
-					ConfidenceScore:  fgl.ConfidenceScore,
+					// ConfidenceScore left at zero - not available in DataHub v1.3.x
 				}
 				result.Mappings = append(result.Mappings, mapping)
 			}
