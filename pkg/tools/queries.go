@@ -25,8 +25,9 @@ func (t *Toolkit) registerGetQueriesTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolGetQueries, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolGetQueries),
-		Description: "Get SQL queries associated with a dataset",
+		Name: string(ToolGetQueries),
+		Description: "Get saved SQL queries associated with a dataset. Returns Query entities " +
+			"linked to this dataset, including query text, description, and creator information.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetQueriesInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
