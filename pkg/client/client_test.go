@@ -1834,32 +1834,33 @@ func TestClientGetColumnLineage(t *testing.T) {
 						{
 							"upstreams": []map[string]interface{}{
 								{
-									"path":    "id",
-									"dataset": "urn:li:dataset:source",
+									"urn":  "urn:li:schemaField:(urn:li:dataset:source,id)",
+									"path": "id",
 								},
 							},
 							"downstreams": []map[string]interface{}{
 								{
+									"urn":  "urn:li:schemaField:(urn:li:dataset:test,user_id)",
 									"path": "user_id",
 								},
 							},
 							"transformOperation": "IDENTITY",
-							"confidenceScore":    0.9,
 							"query":              "urn:li:query:123",
 						},
 						{
 							"upstreams": []map[string]interface{}{
 								{
-									"path":    "first_name",
-									"dataset": "urn:li:dataset:source",
+									"urn":  "urn:li:schemaField:(urn:li:dataset:source,first_name)",
+									"path": "first_name",
 								},
 								{
-									"path":    "last_name",
-									"dataset": "urn:li:dataset:source",
+									"urn":  "urn:li:schemaField:(urn:li:dataset:source,last_name)",
+									"path": "last_name",
 								},
 							},
 							"downstreams": []map[string]interface{}{
 								{
+									"urn":  "urn:li:schemaField:(urn:li:dataset:test,full_name)",
 									"path": "full_name",
 								},
 							},
@@ -1975,6 +1976,50 @@ func TestClientGetColumnLineageError(t *testing.T) {
 	}
 	if len(result.Mappings) != 0 {
 		t.Errorf("GetColumnLineage() Mappings count = %d, want 0", len(result.Mappings))
+	}
+}
+
+func TestExtractDatasetURNFromSchemaFieldURN(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "standard schemaField URN",
+			input:    "urn:li:schemaField:(urn:li:dataset:source,field_name)",
+			expected: "urn:li:dataset:source",
+		},
+		{
+			name:     "schemaField URN with complex dataset URN",
+			input:    "urn:li:schemaField:(urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD),column)",
+			expected: "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+		},
+		{
+			name:     "non-schemaField URN returns as-is",
+			input:    "urn:li:dataset:some-dataset",
+			expected: "urn:li:dataset:some-dataset",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "schemaField URN with nested parentheses",
+			input:    "urn:li:schemaField:(urn:li:dataset:(platform,(db,table),env),field)",
+			expected: "urn:li:dataset:(platform,(db,table),env)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractDatasetURNFromSchemaFieldURN(tt.input)
+			if result != tt.expected {
+				t.Errorf("extractDatasetURNFromSchemaFieldURN(%q) = %q, want %q",
+					tt.input, result, tt.expected)
+			}
+		})
 	}
 }
 
