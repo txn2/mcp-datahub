@@ -247,7 +247,8 @@ func (c *Client) parseGraphQLResponse(body []byte, result any) error {
 	}
 
 	// Check for null data without errors - this can indicate silent failures
-	if gqlResp.Data == nil {
+	// JSON null becomes []byte("null"), not nil
+	if gqlResp.Data == nil || string(gqlResp.Data) == "null" {
 		c.logger.Warn("GraphQL returned null data without errors - possible silent failure")
 		return fmt.Errorf("graphql returned null data without errors")
 	}
