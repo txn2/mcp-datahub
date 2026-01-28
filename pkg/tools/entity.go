@@ -48,7 +48,12 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 
 	entity, err := datahubClient.GetEntity(ctx, input.URN)
 	if err != nil {
-		return ErrorResult(err.Error()), nil, nil
+		return ErrorResult("GetEntity failed for " + input.URN + ": " + err.Error()), nil, nil
+	}
+
+	// Check for nil entity (should not happen if no error, but defensive)
+	if entity == nil {
+		return ErrorResult("GetEntity returned nil for " + input.URN), nil, nil
 	}
 
 	// Build response - include query context if provider configured
