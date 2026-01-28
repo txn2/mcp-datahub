@@ -113,6 +113,41 @@ export DATAHUB_TOKEN=your_token
 # Or use .env file with direnv
 ```
 
+## Debug Logging
+
+Enable debug logging to see detailed information about requests, responses, and errors.
+
+### Enable Debug Mode
+
+```bash
+export DATAHUB_DEBUG=1
+./mcp-datahub
+```
+
+### What Debug Logging Shows
+
+- GraphQL operation names and request sizes
+- HTTP response status codes and sizes
+- Request duration and retry attempts
+- Detailed error messages with context
+- Connection selection in multi-server mode
+
+### Example Debug Output
+
+```
+[datahub] DEBUG: executing GraphQL query [operation=GetEntity endpoint=https://datahub.example.com/api/graphql request_size=256]
+[datahub] DEBUG: received response [status=200 response_size=1024]
+[datahub] DEBUG: request completed [operation=GetEntity duration_ms=150 attempts=1]
+```
+
+### Common Debug Scenarios
+
+**Silent failures**: If a query returns empty results unexpectedly, debug logging will show if GraphQL returned null data without errors.
+
+**Retry behavior**: See when and how often requests are retried, including backoff timing.
+
+**Auth issues**: Debug logs show when requests fail with 401/403 status codes before the error is returned.
+
 ## Getting Help
 
 If you're still having issues:
