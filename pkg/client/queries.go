@@ -329,9 +329,38 @@ query getLineage($urn: String!, $direction: LineageDirection!) {
 }
 `
 
-	// GetQueriesQuery retrieves queries for a dataset.
+	// GetQueriesQuery retrieves saved Query entities associated with a dataset.
 	GetQueriesQuery = `
-query getQueries($urn: String!) {
+query getQueries($input: ListQueriesInput!) {
+  listQueries(input: $input) {
+    total
+    queries {
+      urn
+      properties {
+        name
+        description
+        source
+        statement {
+          value
+          language
+        }
+        created {
+          time
+          actor
+        }
+        lastModified {
+          time
+          actor
+        }
+      }
+    }
+  }
+}
+`
+
+	// GetUsageStatsQueriesQuery retrieves queries from usage stats (fallback for older DataHub).
+	GetUsageStatsQueriesQuery = `
+query getUsageStatsQueries($urn: String!) {
   dataset(urn: $urn) {
     usageStats {
       buckets {
