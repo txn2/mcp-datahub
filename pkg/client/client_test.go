@@ -3,9 +3,11 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -1322,15 +1324,46 @@ func TestClientGetQueries(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
-				"dataset": map[string]interface{}{
-					"usageStats": map[string]interface{}{
-						"buckets": []map[string]interface{}{
-							{
-								"metrics": map[string]interface{}{
-									"topSqlQueries": []string{
-										"SELECT * FROM table",
-										"SELECT id FROM table WHERE active = true",
-									},
+				"listQueries": map[string]interface{}{
+					"total": 2,
+					"queries": []map[string]interface{}{
+						{
+							"urn": "urn:li:query:abc123",
+							"properties": map[string]interface{}{
+								"name":        "Location Analysis",
+								"description": "Get active locations",
+								"source":      "MANUAL",
+								"statement": map[string]interface{}{
+									"value":    "SELECT * FROM location WHERE active = true",
+									"language": "SQL",
+								},
+								"created": map[string]interface{}{
+									"time":  int64(1704067200000),
+									"actor": "urn:li:corpuser:admin",
+								},
+								"lastModified": map[string]interface{}{
+									"time":  int64(1704067200000),
+									"actor": "urn:li:corpuser:admin",
+								},
+							},
+						},
+						{
+							"urn": "urn:li:query:def456",
+							"properties": map[string]interface{}{
+								"name":        "Count Query",
+								"description": "Count all records",
+								"source":      "SYSTEM",
+								"statement": map[string]interface{}{
+									"value":    "SELECT COUNT(*) FROM location",
+									"language": "SQL",
+								},
+								"created": map[string]interface{}{
+									"time":  int64(1704153600000),
+									"actor": "urn:li:corpuser:system",
+								},
+								"lastModified": map[string]interface{}{
+									"time":  int64(1704153600000),
+									"actor": "urn:li:corpuser:system",
 								},
 							},
 						},
@@ -1358,6 +1391,133 @@ func TestClientGetQueries(t *testing.T) {
 
 	if result.Total != 2 {
 		t.Errorf("GetQueries() Total = %d, want 2", result.Total)
+	}
+
+	if len(result.Queries) != 2 {
+		t.Errorf("GetQueries() len(Queries) = %d, want 2", len(result.Queries))
+		return
+	}
+
+	// Check first query
+	q := result.Queries[0]
+	if q.URN != "urn:li:query:abc123" {
+		t.Errorf("GetQueries() query[0].URN = %q, want %q", q.URN, "urn:li:query:abc123")
+	}
+	if q.Name != "Location Analysis" {
+		t.Errorf("GetQueries() query[0].Name = %q, want %q", q.Name, "Location Analysis")
+	}
+	if q.Statement != "SELECT * FROM location WHERE active = true" {
+		t.Errorf("GetQueries() query[0].Statement = %q, want %q", q.Statement, "SELECT * FROM location WHERE active = true")
+	}
+	if q.Source != "MANUAL" {
+		t.Errorf("GetQueries() query[0].Source = %q, want %q", q.Source, "MANUAL")
+	}
+	if q.CreatedBy != "urn:li:corpuser:admin" {
+		t.Errorf("GetQueries() query[0].CreatedBy = %q, want %q", q.CreatedBy, "urn:li:corpuser:admin")
+	}
+}
+
+func TestClientGetQueriesFallbackToUsageStats(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Read request body to determine which query is being sent
+		body, _ := io.ReadAll(r.Body)
+		bodyStr := string(body)
+
+		if strings.Contains(bodyStr, "listQueries") {
+			// listQueries fails with GraphQL error (simulating older DataHub version)
+			writeJSON(t, w, map[string]interface{}{
+				"data":   nil,
+				"errors": []map[string]interface{}{{"message": "Unknown type: ListQueriesInput"}},
+			})
+			return
+		}
+
+		// getUsageStatsQueries succeeds
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"dataset": map[string]interface{}{
+					"usageStats": map[string]interface{}{
+						"buckets": []map[string]interface{}{
+							{
+								"metrics": map[string]interface{}{
+									"topSqlQueries": []string{
+										"SELECT * FROM table",
+										"SELECT id FROM table WHERE active = true",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 1, // Use 1 to avoid default of 3; 0 becomes 3
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := client.GetQueries(context.Background(), "urn:li:dataset:test")
+	if err != nil {
+		t.Errorf("GetQueries() unexpected error: %v", err)
+		return
+	}
+
+	if result.Total != 2 {
+		t.Errorf("GetQueries() Total = %d, want 2", result.Total)
+	}
+
+	if len(result.Queries) != 2 {
+		t.Errorf("GetQueries() len(Queries) = %d, want 2", len(result.Queries))
+		return
+	}
+
+	// Fallback queries only have Statement set
+	if result.Queries[0].Statement != "SELECT * FROM table" {
+		t.Errorf("GetQueries() query[0].Statement = %q, want %q", result.Queries[0].Statement, "SELECT * FROM table")
+	}
+}
+
+func TestClientGetQueriesEmpty(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"listQueries": map[string]interface{}{
+					"total":   0,
+					"queries": []map[string]interface{}{},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		URL:      server.URL,
+		Token:    "test-token",
+		RetryMax: 0,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := client.GetQueries(context.Background(), "urn:li:dataset:test")
+	if err != nil {
+		t.Errorf("GetQueries() unexpected error: %v", err)
+		return
+	}
+
+	if result.Total != 0 {
+		t.Errorf("GetQueries() Total = %d, want 0", result.Total)
+	}
+
+	if len(result.Queries) != 0 {
+		t.Errorf("GetQueries() len(Queries) = %d, want 0", len(result.Queries))
 	}
 }
 
