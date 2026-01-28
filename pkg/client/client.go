@@ -177,12 +177,7 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		if ctx.Err() != nil {
-			c.logger.Debug("request timeout", "error", ctx.Err().Error())
-			return ErrTimeout
-		}
-		c.logger.Debug("request failed", "error", err.Error())
-		return fmt.Errorf("failed to execute request: %w", err)
+		return c.handleRequestError(ctx, err)
 	}
 	defer func() {
 		// Error intentionally ignored; response body close errors are non-actionable
@@ -198,7 +193,26 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 		"status", resp.StatusCode,
 		"response_size", len(body))
 
-	switch resp.StatusCode {
+	if err := c.checkStatusCode(resp.StatusCode, body); err != nil {
+		return err
+	}
+
+	return c.parseGraphQLResponse(body, result)
+}
+
+// handleRequestError handles HTTP request errors, distinguishing timeouts from other failures.
+func (c *Client) handleRequestError(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		c.logger.Debug("request timeout", "error", ctx.Err().Error())
+		return ErrTimeout
+	}
+	c.logger.Debug("request failed", "error", err.Error())
+	return fmt.Errorf("failed to execute request: %w", err)
+}
+
+// checkStatusCode validates the HTTP status code and returns appropriate errors.
+func (c *Client) checkStatusCode(statusCode int, body []byte) error {
+	switch statusCode {
 	case http.StatusUnauthorized:
 		c.logger.Warn("unauthorized request - check DATAHUB_TOKEN")
 		return ErrUnauthorized
@@ -209,14 +223,17 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 		c.logger.Warn("rate limited by DataHub server")
 		return ErrRateLimited
 	case http.StatusOK:
-		// Continue processing
+		return nil
 	default:
 		c.logger.Error("unexpected HTTP status",
-			"status", resp.StatusCode,
+			"status", statusCode,
 			"body", truncateString(string(body), 200))
-		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("unexpected status %d: %s", statusCode, string(body))
 	}
+}
 
+// parseGraphQLResponse parses the GraphQL response and unmarshals it into result.
+func (c *Client) parseGraphQLResponse(body []byte, result any) error {
 	var gqlResp graphQLResponse
 	if err := json.Unmarshal(body, &gqlResp); err != nil {
 		c.logger.Error("failed to unmarshal response",
@@ -226,23 +243,16 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 	}
 
 	if len(gqlResp.Errors) > 0 {
-		errMsg := gqlResp.Errors[0].Message
-		c.logger.Debug("GraphQL returned errors",
-			"error_count", len(gqlResp.Errors),
-			"first_error", errMsg)
-		if strings.Contains(strings.ToLower(errMsg), "not found") {
-			return ErrNotFound
-		}
-		return fmt.Errorf("graphql error: %s", errMsg)
+		return c.handleGraphQLErrors(gqlResp.Errors)
 	}
 
 	// Check for null data without errors - this can indicate silent failures
-	if gqlResp.Data == nil && len(gqlResp.Errors) == 0 {
+	if gqlResp.Data == nil {
 		c.logger.Warn("GraphQL returned null data without errors - possible silent failure")
 		return fmt.Errorf("graphql returned null data without errors")
 	}
 
-	if result != nil && gqlResp.Data != nil {
+	if result != nil {
 		if err := json.Unmarshal(gqlResp.Data, result); err != nil {
 			c.logger.Error("failed to unmarshal data field",
 				"error", err.Error(),
@@ -252,6 +262,18 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 	}
 
 	return nil
+}
+
+// handleGraphQLErrors processes GraphQL errors and returns appropriate error types.
+func (c *Client) handleGraphQLErrors(errors []graphQLError) error {
+	errMsg := errors[0].Message
+	c.logger.Debug("GraphQL returned errors",
+		"error_count", len(errors),
+		"first_error", errMsg)
+	if strings.Contains(strings.ToLower(errMsg), "not found") {
+		return ErrNotFound
+	}
+	return fmt.Errorf("graphql error: %s", errMsg)
 }
 
 const (
