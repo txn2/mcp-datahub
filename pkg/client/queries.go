@@ -532,19 +532,20 @@ query getDataProduct($urn: String!) {
 `
 
 	// GetColumnLineageQuery retrieves fine-grained column-level lineage for a dataset.
+	// Uses SchemaFieldRef.urn (available in DataHub v1.3.x+) to get the dataset URN.
 	GetColumnLineageQuery = `
 query getColumnLineage($urn: String!) {
   dataset(urn: $urn) {
     fineGrainedLineages {
       upstreams {
+        urn
         path
-        dataset
       }
       downstreams {
+        urn
         path
       }
       transformOperation
-      confidenceScore
       query
     }
   }
