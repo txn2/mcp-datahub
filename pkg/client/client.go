@@ -821,9 +821,69 @@ func (c *Client) GetLineage(ctx context.Context, urn string, opts ...LineageOpti
 	return result, nil
 }
 
-// GetQueries retrieves queries associated with a dataset.
-// Returns empty result if usage stats are not configured for the dataset.
+// GetQueries retrieves saved Query entities associated with a dataset.
+// Falls back to usage stats queries if the listQueries API is not available.
 func (c *Client) GetQueries(ctx context.Context, urn string) (*types.QueryList, error) {
+	variables := map[string]any{
+		"input": map[string]any{
+			"start":      0,
+			"count":      100,
+			"datasetUrn": urn,
+		},
+	}
+
+	var response struct {
+		ListQueries struct {
+			Total   int `json:"total"`
+			Queries []struct {
+				URN        string `json:"urn"`
+				Properties struct {
+					Name        string `json:"name"`
+					Description string `json:"description"`
+					Source      string `json:"source"`
+					Statement   struct {
+						Value    string `json:"value"`
+						Language string `json:"language"`
+					} `json:"statement"`
+					Created struct {
+						Time  int64  `json:"time"`
+						Actor string `json:"actor"`
+					} `json:"created"`
+					LastModified struct {
+						Time  int64  `json:"time"`
+						Actor string `json:"actor"`
+					} `json:"lastModified"`
+				} `json:"properties"`
+			} `json:"queries"`
+		} `json:"listQueries"`
+	}
+
+	err := c.Execute(ctx, GetQueriesQuery, variables, &response)
+	if err != nil {
+		// Fall back to usage stats if listQueries not available
+		return c.getUsageStatsQueries(ctx, urn)
+	}
+
+	result := &types.QueryList{
+		Total: response.ListQueries.Total,
+	}
+	for _, q := range response.ListQueries.Queries {
+		result.Queries = append(result.Queries, types.Query{
+			URN:         q.URN,
+			Name:        q.Properties.Name,
+			Statement:   q.Properties.Statement.Value,
+			Description: q.Properties.Description,
+			Source:      q.Properties.Source,
+			CreatedBy:   q.Properties.Created.Actor,
+			Created:     q.Properties.Created.Time,
+		})
+	}
+
+	return result, nil
+}
+
+// getUsageStatsQueries retrieves queries from usage stats (fallback for older DataHub).
+func (c *Client) getUsageStatsQueries(ctx context.Context, urn string) (*types.QueryList, error) {
 	variables := map[string]any{
 		"urn": urn,
 	}
@@ -841,7 +901,7 @@ func (c *Client) GetQueries(ctx context.Context, urn string) (*types.QueryList, 
 	}
 
 	// Execute query - may return error if usage stats not configured
-	err := c.Execute(ctx, GetQueriesQuery, variables, &response)
+	err := c.Execute(ctx, GetUsageStatsQueriesQuery, variables, &response)
 	if err != nil {
 		// Return empty result if usage stats are not available
 		// This is common when usage tracking isn't configured
