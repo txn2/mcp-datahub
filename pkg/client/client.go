@@ -384,6 +384,9 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 					Value string `json:"value"`
 				} `json:"customProperties"`
 			} `json:"properties"`
+			EditableProperties struct {
+				Description string `json:"description"`
+			} `json:"editableProperties"`
 			SubTypes struct {
 				TypeNames []string `json:"typeNames"`
 			} `json:"subTypes"`
@@ -460,6 +463,10 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 	}
 	if response.Entity.Properties.Description != "" {
 		entity.Description = response.Entity.Properties.Description
+	}
+	// Editable properties take precedence (user's UI edits are source of truth)
+	if response.Entity.EditableProperties.Description != "" {
+		entity.Description = response.Entity.EditableProperties.Description
 	}
 
 	// Parse ownership
@@ -538,7 +545,8 @@ func (c *Client) GetSchema(ctx context.Context, urn string) (*types.SchemaMetada
 
 	var response struct {
 		Dataset struct {
-			SchemaMetadata rawSchemaMetadata `json:"schemaMetadata"`
+			SchemaMetadata         rawSchemaMetadata         `json:"schemaMetadata"`
+			EditableSchemaMetadata rawEditableSchemaMetadata `json:"editableSchemaMetadata"`
 		} `json:"dataset"`
 	}
 
@@ -546,7 +554,10 @@ func (c *Client) GetSchema(ctx context.Context, urn string) (*types.SchemaMetada
 		return nil, fmt.Errorf("GetSchema(%s): %w", urn, err)
 	}
 
-	return parseSchemaMetadata(response.Dataset.SchemaMetadata), nil
+	schema := parseSchemaMetadata(response.Dataset.SchemaMetadata)
+	mergeEditableSchemaMetadata(schema, response.Dataset.EditableSchemaMetadata)
+
+	return schema, nil
 }
 
 // GetLineage retrieves lineage for an entity.
@@ -1157,8 +1168,9 @@ func (c *Client) GetSchemas(ctx context.Context, urns []string) (map[string]*typ
 
 	var response struct {
 		Entities []struct {
-			URN            string            `json:"urn"`
-			SchemaMetadata rawSchemaMetadata `json:"schemaMetadata"`
+			URN                    string                    `json:"urn"`
+			SchemaMetadata         rawSchemaMetadata         `json:"schemaMetadata"`
+			EditableSchemaMetadata rawEditableSchemaMetadata `json:"editableSchemaMetadata"`
 		} `json:"entities"`
 	}
 
@@ -1173,7 +1185,9 @@ func (c *Client) GetSchemas(ctx context.Context, urns []string) (map[string]*typ
 			continue
 		}
 
-		result[entity.URN] = parseSchemaMetadata(entity.SchemaMetadata)
+		schema := parseSchemaMetadata(entity.SchemaMetadata)
+		mergeEditableSchemaMetadata(schema, entity.EditableSchemaMetadata)
+		result[entity.URN] = schema
 	}
 
 	return result, nil
