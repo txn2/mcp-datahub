@@ -1,5 +1,7 @@
 package tools
 
+import "github.com/txn2/mcp-datahub/pkg/client"
+
 // Config configures the DataHub toolkit behavior.
 type Config struct {
 	// DefaultLimit is the default search result limit. Default: 10.
@@ -10,6 +12,12 @@ type Config struct {
 
 	// MaxLineageDepth is the maximum lineage traversal depth. Default: 5.
 	MaxLineageDepth int
+
+	// Debug enables debug logging for toolkit operations.
+	Debug bool
+
+	// Logger is the logger for debug output. If nil and Debug is true, uses client.StdLogger.
+	Logger client.Logger
 }
 
 // DefaultConfig returns a Config with sensible defaults.
