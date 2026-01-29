@@ -4,12 +4,59 @@ import (
 	"testing"
 )
 
-func TestWithEntityType(t *testing.T) {
-	opts := &searchOptions{}
-	WithEntityType("DASHBOARD")(opts)
+func TestToEnumCase(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"empty string", "", ""},
+		{"single lowercase char", "a", "A"},
+		{"single uppercase char", "A", "A"},
+		{"all uppercase", "DATASET", "DATASET"},
+		{"all lowercase", "dataset", "DATASET"},
+		{"camelCase", "glossaryTerm", "GLOSSARY_TERM"},
+		{"PascalCase", "GlossaryTerm", "GLOSSARY_TERM"},
+		{"multi-word camelCase", "dataProduct", "DATA_PRODUCT"},
+		{"multi-word PascalCase", "DataProduct", "DATA_PRODUCT"},
+		{"three words camelCase", "corpUserGroup", "CORP_USER_GROUP"},
+		{"already screaming snake", "GLOSSARY_TERM", "GLOSSARY_TERM"},
+		{"mixed with numbers", "mlModel", "ML_MODEL"},
+		{"consecutive caps", "MLModel", "MLMODEL"},
+	}
 
-	if opts.entityType != "DASHBOARD" {
-		t.Errorf("WithEntityType() = %s, want DASHBOARD", opts.entityType)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toEnumCase(tt.input)
+			if got != tt.want {
+				t.Errorf("toEnumCase(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithEntityType(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"already uppercase", "DASHBOARD", "DASHBOARD"},
+		{"camelCase glossaryTerm", "glossaryTerm", "GLOSSARY_TERM"},
+		{"camelCase dataProduct", "dataProduct", "DATA_PRODUCT"},
+		{"camelCase corpUser", "corpUser", "CORP_USER"},
+		{"lowercase", "dataset", "DATASET"},
+		{"PascalCase", "GlossaryTerm", "GLOSSARY_TERM"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := &searchOptions{}
+			WithEntityType(tt.input)(opts)
+			if opts.entityType != tt.want {
+				t.Errorf("WithEntityType(%q) = %q, want %q", tt.input, opts.entityType, tt.want)
+			}
+		})
 	}
 }
 
