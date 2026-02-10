@@ -25,8 +25,15 @@ type aspectResponse struct {
 type ingestProposal struct {
 	EntityType string `json:"entityType"`
 	EntityURN  string `json:"entityUrn"`
+	ChangeType string `json:"changeType"`
 	AspectName string `json:"aspectName"`
 	Aspect     any    `json:"aspect"`
+}
+
+// genericAspect wraps aspect JSON in the format required by DataHub v1.3.0+.
+type genericAspect struct {
+	Value       string `json:"value"`
+	ContentType string `json:"contentType"`
 }
 
 // ingestRequest wraps the proposal for POST /aspects?action=ingestProposal.
@@ -81,8 +88,22 @@ func (c *Client) getAspect(ctx context.Context, entityURN, aspectName string) (j
 }
 
 // postIngestProposal posts a metadata change proposal to the DataHub REST API.
+// DataHub v1.3.0+ requires changeType and GenericAspect wrapper format.
 func (c *Client) postIngestProposal(ctx context.Context, proposal ingestProposal) error {
 	url := fmt.Sprintf("%s/aspects?action=ingestProposal", c.restBaseURL())
+
+	if proposal.ChangeType == "" {
+		proposal.ChangeType = "UPSERT"
+	}
+
+	aspectJSON, err := json.Marshal(proposal.Aspect)
+	if err != nil {
+		return fmt.Errorf("failed to marshal aspect: %w", err)
+	}
+	proposal.Aspect = genericAspect{
+		Value:       string(aspectJSON),
+		ContentType: "application/json",
+	}
 
 	reqBody := ingestRequest{Proposal: proposal}
 	jsonBody, err := json.Marshal(reqBody)
