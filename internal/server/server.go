@@ -4,6 +4,8 @@ package server
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -63,6 +65,13 @@ func New(opts Options) (*mcp.Server, *multiserver.Manager, error) {
 		Name:    "mcp-datahub",
 		Version: Version,
 	}, nil)
+
+	// Apply write-enabled from environment if not already set in config
+	if !opts.ToolkitConfig.WriteEnabled {
+		if v := os.Getenv("DATAHUB_WRITE_ENABLED"); strings.EqualFold(v, "true") || v == "1" {
+			opts.ToolkitConfig.WriteEnabled = true
+		}
+	}
 
 	// Build toolkit options
 	var toolkitOpts []tools.ToolkitOption
