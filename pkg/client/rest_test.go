@@ -3,10 +3,58 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
+
+// extractProposalWireFormat reads the raw HTTP request body and validates the
+// wire format required by DataHub v1.3.0+: changeType must be "UPSERT" and
+// aspect must use GenericAspect wrapper (value string + contentType).
+// Returns the proposal map and the inner aspect JSON string for further assertions.
+func extractProposalWireFormat(t *testing.T, body io.Reader) (map[string]any, string) {
+	t.Helper()
+
+	raw, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("failed to read request body: %v", err)
+	}
+
+	var envelope map[string]any
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		t.Fatalf("failed to unmarshal request body: %v", err)
+	}
+
+	proposal, ok := envelope["proposal"].(map[string]any)
+	if !ok {
+		t.Fatal("request body missing 'proposal' object")
+	}
+
+	// Validate changeType
+	changeType, ok := proposal["changeType"].(string)
+	if !ok || changeType != "UPSERT" {
+		t.Errorf("expected changeType 'UPSERT', got %v", proposal["changeType"])
+	}
+
+	// Validate GenericAspect wrapper
+	aspect, ok := proposal["aspect"].(map[string]any)
+	if !ok {
+		t.Fatal("proposal missing 'aspect' object")
+	}
+
+	value, ok := aspect["value"].(string)
+	if !ok {
+		t.Fatal("aspect.value must be a JSON string")
+	}
+
+	contentType, ok := aspect["contentType"].(string)
+	if !ok || contentType != "application/json" {
+		t.Errorf("expected aspect.contentType 'application/json', got %v", aspect["contentType"])
+	}
+
+	return proposal, value
+}
 
 func TestRestBaseURL(t *testing.T) {
 	tests := []struct {
@@ -153,19 +201,26 @@ func TestPostIngestProposal(t *testing.T) {
 			t.Errorf("unexpected content type: %s", r.Header.Get("Content-Type"))
 		}
 
-		// Verify request body
-		var req ingestRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("failed to decode request body: %v", err)
+		// Validate wire format: changeType and GenericAspect wrapper
+		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
+
+		if proposal["entityUrn"] != "urn:li:dataset:test" {
+			t.Errorf("unexpected URN: %v", proposal["entityUrn"])
 		}
-		if req.Proposal.EntityURN != "urn:li:dataset:test" {
-			t.Errorf("unexpected URN: %s", req.Proposal.EntityURN)
+		if proposal["aspectName"] != "globalTags" {
+			t.Errorf("unexpected aspect: %v", proposal["aspectName"])
 		}
-		if req.Proposal.AspectName != "globalTags" {
-			t.Errorf("unexpected aspect: %s", req.Proposal.AspectName)
+		if proposal["entityType"] != "dataset" {
+			t.Errorf("unexpected entity type: %v", proposal["entityType"])
 		}
-		if req.Proposal.EntityType != "dataset" {
-			t.Errorf("unexpected entity type: %s", req.Proposal.EntityType)
+
+		// Verify inner aspect content
+		var inner map[string]any
+		if err := json.Unmarshal([]byte(aspectJSON), &inner); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
+		if _, ok := inner["tags"]; !ok {
+			t.Error("inner aspect missing 'tags' key")
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -188,6 +243,112 @@ func TestPostIngestProposal(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestPostIngestProposal_GenericAspectFormat(t *testing.T) {
+	type testStruct struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}
+
+	type nestedStruct struct {
+		Items []testStruct `json:"items"`
+	}
+
+	tests := []struct {
+		name   string
+		aspect any
+		check  func(t *testing.T, aspectJSON string)
+	}{
+		{
+			name:   "map aspect",
+			aspect: map[string]any{"key": "val"},
+			check: func(t *testing.T, aspectJSON string) {
+				t.Helper()
+				var m map[string]any
+				if err := json.Unmarshal([]byte(aspectJSON), &m); err != nil {
+					t.Fatalf("failed to unmarshal: %v", err)
+				}
+				if m["key"] != "val" {
+					t.Errorf("expected key=val, got %v", m["key"])
+				}
+			},
+		},
+		{
+			name:   "struct aspect",
+			aspect: testStruct{Name: "test", Value: 42},
+			check: func(t *testing.T, aspectJSON string) {
+				t.Helper()
+				var s testStruct
+				if err := json.Unmarshal([]byte(aspectJSON), &s); err != nil {
+					t.Fatalf("failed to unmarshal: %v", err)
+				}
+				if s.Name != "test" || s.Value != 42 {
+					t.Errorf("unexpected struct values: %+v", s)
+				}
+			},
+		},
+		{
+			name:   "nested struct aspect",
+			aspect: nestedStruct{Items: []testStruct{{Name: "a", Value: 1}}},
+			check: func(t *testing.T, aspectJSON string) {
+				t.Helper()
+				var n nestedStruct
+				if err := json.Unmarshal([]byte(aspectJSON), &n); err != nil {
+					t.Fatalf("failed to unmarshal: %v", err)
+				}
+				if len(n.Items) != 1 || n.Items[0].Name != "a" {
+					t.Errorf("unexpected nested values: %+v", n)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, aspectJSON := extractProposalWireFormat(t, r.Body)
+				tt.check(t, aspectJSON)
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+
+			c := &Client{
+				endpoint:   server.URL + "/api/graphql",
+				token:      "test-token",
+				httpClient: server.Client(),
+				logger:     NopLogger{},
+			}
+
+			err := c.postIngestProposal(context.Background(), ingestProposal{
+				EntityType: "dataset",
+				EntityURN:  "urn:li:dataset:test",
+				AspectName: "testAspect",
+				Aspect:     tt.aspect,
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestPostIngestProposal_AspectMarshalError(t *testing.T) {
+	c := &Client{
+		endpoint: "https://datahub.example.com/api/graphql",
+		token:    "test-token",
+		logger:   NopLogger{},
+	}
+
+	err := c.postIngestProposal(context.Background(), ingestProposal{
+		EntityType: "dataset",
+		EntityURN:  "urn:li:dataset:test",
+		AspectName: "testAspect",
+		Aspect:     make(chan int),
+	})
+	if err == nil {
+		t.Fatal("expected error for unmarshalable aspect")
 	}
 }
 
