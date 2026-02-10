@@ -14,21 +14,18 @@ func TestUpdateDescription(t *testing.T) {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
 
-		var req ingestRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("failed to decode: %v", err)
+		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
+
+		if proposal["entityType"] != "dataset" {
+			t.Errorf("expected entity type 'dataset', got %v", proposal["entityType"])
+		}
+		if proposal["aspectName"] != "editableDatasetProperties" {
+			t.Errorf("expected aspect 'editableDatasetProperties', got %v", proposal["aspectName"])
 		}
 
-		if req.Proposal.EntityType != "dataset" {
-			t.Errorf("expected entity type 'dataset', got %q", req.Proposal.EntityType)
-		}
-		if req.Proposal.AspectName != "editableDatasetProperties" {
-			t.Errorf("expected aspect 'editableDatasetProperties', got %q", req.Proposal.AspectName)
-		}
-
-		aspectMap, ok := req.Proposal.Aspect.(map[string]any)
-		if !ok {
-			t.Fatal("aspect should be a map")
+		var aspectMap map[string]any
+		if err := json.Unmarshal([]byte(aspectJSON), &aspectMap); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
 		}
 		if aspectMap["description"] != "new description" {
 			t.Errorf("expected description 'new description', got %v", aspectMap["description"])
@@ -75,19 +72,17 @@ func TestAddTag(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(resp)
 
 		case r.Method == http.MethodPost:
-			var req ingestRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Fatalf("failed to decode: %v", err)
-			}
+			proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
 
-			if req.Proposal.AspectName != "globalTags" {
-				t.Errorf("expected aspect 'globalTags', got %q", req.Proposal.AspectName)
+			if proposal["aspectName"] != "globalTags" {
+				t.Errorf("expected aspect 'globalTags', got %v", proposal["aspectName"])
 			}
 
 			// Verify the tag was added to existing tags
-			aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
 			var tags globalTagsAspect
-			_ = json.Unmarshal(aspectBytes, &tags)
+			if err := json.Unmarshal([]byte(aspectJSON), &tags); err != nil {
+				t.Fatalf("failed to unmarshal inner aspect: %v", err)
+			}
 			if len(tags.Tags) != 2 {
 				t.Errorf("expected 2 tags, got %d", len(tags.Tags))
 			}
@@ -151,13 +146,11 @@ func TestAddTag_NoExistingTags(t *testing.T) {
 			return
 		}
 		// POST with the new tag
-		var req ingestRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("failed to decode: %v", err)
-		}
-		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
 		var tags globalTagsAspect
-		_ = json.Unmarshal(aspectBytes, &tags)
+		if err := json.Unmarshal([]byte(aspectJSON), &tags); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
 		if len(tags.Tags) != 1 {
 			t.Errorf("expected 1 tag, got %d", len(tags.Tags))
 		}
@@ -190,11 +183,11 @@ func TestRemoveTag(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
-		var req ingestRequest
-		_ = json.NewDecoder(r.Body).Decode(&req)
-		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
 		var tags globalTagsAspect
-		_ = json.Unmarshal(aspectBytes, &tags)
+		if err := json.Unmarshal([]byte(aspectJSON), &tags); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
 		if len(tags.Tags) != 1 {
 			t.Errorf("expected 1 tag after removal, got %d", len(tags.Tags))
 		}
@@ -230,16 +223,16 @@ func TestAddGlossaryTerm(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
-		var req ingestRequest
-		_ = json.NewDecoder(r.Body).Decode(&req)
-		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
 		var terms glossaryTermsAspect
-		_ = json.Unmarshal(aspectBytes, &terms)
+		if err := json.Unmarshal([]byte(aspectJSON), &terms); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
 		if len(terms.Terms) != 2 {
 			t.Errorf("expected 2 terms, got %d", len(terms.Terms))
 		}
-		if req.Proposal.AspectName != "glossaryTerms" {
-			t.Errorf("expected aspect 'glossaryTerms', got %q", req.Proposal.AspectName)
+		if proposal["aspectName"] != "glossaryTerms" {
+			t.Errorf("expected aspect 'glossaryTerms', got %v", proposal["aspectName"])
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -300,11 +293,11 @@ func TestRemoveGlossaryTerm(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
-		var req ingestRequest
-		_ = json.NewDecoder(r.Body).Decode(&req)
-		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
 		var terms glossaryTermsAspect
-		_ = json.Unmarshal(aspectBytes, &terms)
+		if err := json.Unmarshal([]byte(aspectJSON), &terms); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
 		if len(terms.Terms) != 1 {
 			t.Errorf("expected 1 term after removal, got %d", len(terms.Terms))
 		}
@@ -340,14 +333,14 @@ func TestAddLink(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
-		var req ingestRequest
-		_ = json.NewDecoder(r.Body).Decode(&req)
-		if req.Proposal.AspectName != "institutionalMemory" {
-			t.Errorf("expected aspect 'institutionalMemory', got %q", req.Proposal.AspectName)
+		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
+		if proposal["aspectName"] != "institutionalMemory" {
+			t.Errorf("expected aspect 'institutionalMemory', got %v", proposal["aspectName"])
 		}
-		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
 		var memory institutionalMemoryAspect
-		_ = json.Unmarshal(aspectBytes, &memory)
+		if err := json.Unmarshal([]byte(aspectJSON), &memory); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
 		if len(memory.Elements) != 2 {
 			t.Errorf("expected 2 links, got %d", len(memory.Elements))
 		}
@@ -418,11 +411,11 @@ func TestRemoveLink(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
-		var req ingestRequest
-		_ = json.NewDecoder(r.Body).Decode(&req)
-		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
 		var memory institutionalMemoryAspect
-		_ = json.Unmarshal(aspectBytes, &memory)
+		if err := json.Unmarshal([]byte(aspectJSON), &memory); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
 		if len(memory.Elements) != 1 {
 			t.Errorf("expected 1 link after removal, got %d", len(memory.Elements))
 		}
@@ -706,13 +699,11 @@ func TestAddGlossaryTerm_NoExistingTerms(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		var req ingestRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("failed to decode: %v", err)
-		}
-		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
 		var terms glossaryTermsAspect
-		_ = json.Unmarshal(aspectBytes, &terms)
+		if err := json.Unmarshal([]byte(aspectJSON), &terms); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
 		if len(terms.Terms) != 1 {
 			t.Errorf("expected 1 term, got %d", len(terms.Terms))
 		}
@@ -741,13 +732,11 @@ func TestAddLink_NoExistingLinks(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		var req ingestRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("failed to decode: %v", err)
-		}
-		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
 		var memory institutionalMemoryAspect
-		_ = json.Unmarshal(aspectBytes, &memory)
+		if err := json.Unmarshal([]byte(aspectJSON), &memory); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
 		if len(memory.Elements) != 1 {
 			t.Errorf("expected 1 link, got %d", len(memory.Elements))
 		}
