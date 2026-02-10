@@ -215,6 +215,75 @@ func TestPostIngestProposal_Forbidden(t *testing.T) {
 	}
 }
 
+func TestGetAspect_InvalidResponseJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`not valid json`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	_, err := c.getAspect(context.Background(), "urn:li:dataset:test", "globalTags")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON response")
+	}
+}
+
+func TestPostIngestProposal_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`internal server error`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.postIngestProposal(context.Background(), ingestProposal{
+		EntityType: "dataset",
+		EntityURN:  "urn:li:dataset:test",
+		AspectName: "globalTags",
+		Aspect:     map[string]any{},
+	})
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
+func TestPostIngestProposal_RateLimited(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.postIngestProposal(context.Background(), ingestProposal{
+		EntityType: "dataset",
+		EntityURN:  "urn:li:dataset:test",
+		AspectName: "globalTags",
+		Aspect:     map[string]any{},
+	})
+	if err != ErrRateLimited {
+		t.Errorf("expected ErrRateLimited, got: %v", err)
+	}
+}
+
 func TestCheckRESTStatus(t *testing.T) {
 	c := &Client{logger: NopLogger{}}
 

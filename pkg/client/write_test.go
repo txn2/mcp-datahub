@@ -448,6 +448,350 @@ func TestRemoveLink(t *testing.T) {
 	}
 }
 
+func TestAddTag_InvalidURN(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.AddTag(context.Background(), "not-a-urn", "urn:li:tag:PII")
+	if err == nil {
+		t.Fatal("expected error for invalid URN")
+	}
+}
+
+func TestRemoveTag_InvalidURN(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.RemoveTag(context.Background(), "not-a-urn", "urn:li:tag:PII")
+	if err == nil {
+		t.Fatal("expected error for invalid URN")
+	}
+}
+
+func TestAddTag_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":"server error"}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.AddTag(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"urn:li:tag:newtag")
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
+func TestRemoveTag_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":"server error"}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.RemoveTag(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"urn:li:tag:remove")
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
+func TestReadGlobalTags_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		resp := aspectResponse{
+			Value: json.RawMessage(`not valid json`),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	_, err := c.readGlobalTags(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestAddGlossaryTerm_InvalidURN(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.AddGlossaryTerm(context.Background(), "not-a-urn", "urn:li:glossaryTerm:Term")
+	if err == nil {
+		t.Fatal("expected error for invalid URN")
+	}
+}
+
+func TestRemoveGlossaryTerm_InvalidURN(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.RemoveGlossaryTerm(context.Background(), "not-a-urn", "urn:li:glossaryTerm:Term")
+	if err == nil {
+		t.Fatal("expected error for invalid URN")
+	}
+}
+
+func TestAddGlossaryTerm_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":"server error"}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.AddGlossaryTerm(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"urn:li:glossaryTerm:newterm")
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
+func TestRemoveGlossaryTerm_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":"server error"}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.RemoveGlossaryTerm(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"urn:li:glossaryTerm:remove")
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
+func TestReadGlossaryTerms_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		resp := aspectResponse{
+			Value: json.RawMessage(`not valid json`),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	_, err := c.readGlossaryTerms(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestAddLink_InvalidURN(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.AddLink(context.Background(), "not-a-urn", "https://test.com", "desc")
+	if err == nil {
+		t.Fatal("expected error for invalid URN")
+	}
+}
+
+func TestRemoveLink_InvalidURN(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.RemoveLink(context.Background(), "not-a-urn", "https://test.com")
+	if err == nil {
+		t.Fatal("expected error for invalid URN")
+	}
+}
+
+func TestAddLink_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":"server error"}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.AddLink(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"https://newlink.com", "desc")
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
+func TestRemoveLink_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":"server error"}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.RemoveLink(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"https://remove.com")
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
+func TestReadInstitutionalMemory_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		resp := aspectResponse{
+			Value: json.RawMessage(`not valid json`),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	_, err := c.readInstitutionalMemory(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestAddGlossaryTerm_NoExistingTerms(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		var req ingestRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode: %v", err)
+		}
+		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		var terms glossaryTermsAspect
+		_ = json.Unmarshal(aspectBytes, &terms)
+		if len(terms.Terms) != 1 {
+			t.Errorf("expected 1 term, got %d", len(terms.Terms))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.AddGlossaryTerm(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"urn:li:glossaryTerm:newterm")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAddLink_NoExistingLinks(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		var req ingestRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode: %v", err)
+		}
+		aspectBytes, _ := json.Marshal(req.Proposal.Aspect)
+		var memory institutionalMemoryAspect
+		_ = json.Unmarshal(aspectBytes, &memory)
+		if len(memory.Elements) != 1 {
+			t.Errorf("expected 1 link, got %d", len(memory.Elements))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.AddLink(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"https://newlink.com", "New Link")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateDescription_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`server error`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateDescription(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"new description")
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
 func TestEntityTypeFromURN(t *testing.T) {
 	tests := []struct {
 		name    string
