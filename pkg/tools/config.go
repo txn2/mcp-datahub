@@ -13,6 +13,10 @@ type Config struct {
 	// MaxLineageDepth is the maximum lineage traversal depth. Default: 5.
 	MaxLineageDepth int
 
+	// WriteEnabled enables write operations (add/remove tags, glossary terms, etc.).
+	// Default: false (read-only mode).
+	WriteEnabled bool
+
 	// Debug enables debug logging for toolkit operations.
 	Debug bool
 
