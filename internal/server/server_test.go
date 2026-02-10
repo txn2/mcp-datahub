@@ -129,6 +129,42 @@ func TestNewWithMissingConfig(t *testing.T) {
 	}
 }
 
+func TestNewWithWriteEnabled(t *testing.T) {
+	origWrite := os.Getenv("DATAHUB_WRITE_ENABLED")
+	t.Cleanup(func() {
+		restoreEnv(t, "DATAHUB_WRITE_ENABLED", origWrite)
+	})
+
+	if err := os.Setenv("DATAHUB_WRITE_ENABLED", "true"); err != nil {
+		t.Fatalf("failed to set DATAHUB_WRITE_ENABLED: %v", err)
+	}
+
+	cfg := &multiserver.Config{
+		Default: "datahub",
+		Primary: client.Config{
+			URL:   "https://test.datahub.io",
+			Token: "test-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{},
+	}
+
+	opts := Options{
+		MultiServerConfig: cfg,
+	}
+
+	server, mgr, err := New(opts)
+	if err != nil {
+		t.Fatalf("New() unexpected error: %v", err)
+	}
+	if server == nil {
+		t.Error("New() returned nil server")
+	}
+
+	if mgr != nil {
+		_ = mgr.Close()
+	}
+}
+
 func TestVersion(t *testing.T) {
 	if Version == "" {
 		t.Error("Version should not be empty")
