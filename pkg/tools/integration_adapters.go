@@ -188,7 +188,7 @@ func (m *AuditLoggerMiddleware) After(
 
 	// Log async - don't block on logging failures
 	go func() {
-		_ = m.logger.LogToolCall(ctx, string(tc.ToolName), params, userID) //nolint:errcheck // audit logging should not fail requests
+		_ = m.logger.LogToolCall(ctx, string(tc.ToolName), params, userID)
 	}()
 
 	return result, nil

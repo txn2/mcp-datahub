@@ -17,9 +17,19 @@ const (
 	ToolListDataProducts ToolName = "datahub_list_data_products"
 	ToolGetDataProduct   ToolName = "datahub_get_data_product"
 	ToolListConnections  ToolName = "datahub_list_connections"
+
+	// Write tool names.
+	ToolUpdateDescription  ToolName = "datahub_update_description"
+	ToolAddTag             ToolName = "datahub_add_tag"
+	ToolRemoveTag          ToolName = "datahub_remove_tag"
+	ToolAddGlossaryTerm    ToolName = "datahub_add_glossary_term"
+	ToolRemoveGlossaryTerm ToolName = "datahub_remove_glossary_term"
+	ToolAddLink            ToolName = "datahub_add_link"
+	ToolRemoveLink         ToolName = "datahub_remove_link"
 )
 
-// AllTools returns all available tool names.
+// AllTools returns all available read-only tool names.
+// This does not include write tools for backward compatibility.
 func AllTools() []ToolName {
 	return []ToolName{
 		ToolSearch,
@@ -34,5 +44,18 @@ func AllTools() []ToolName {
 		ToolListDataProducts,
 		ToolGetDataProduct,
 		ToolListConnections,
+	}
+}
+
+// WriteTools returns all write tool names.
+func WriteTools() []ToolName {
+	return []ToolName{
+		ToolUpdateDescription,
+		ToolAddTag,
+		ToolRemoveTag,
+		ToolAddGlossaryTerm,
+		ToolRemoveGlossaryTerm,
+		ToolAddLink,
+		ToolRemoveLink,
 	}
 }

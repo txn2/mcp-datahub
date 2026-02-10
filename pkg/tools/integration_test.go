@@ -70,6 +70,30 @@ func setupTestServer(t *testing.T, mock *mockClient) *mcp.ClientSession {
 	return session
 }
 
+// setupWriteTestServer creates a test MCP server with write tools enabled.
+func setupWriteTestServer(t *testing.T, mock *mockClient) *mcp.ClientSession {
+	t.Helper()
+
+	toolkit := NewToolkit(mock, Config{WriteEnabled: true})
+	impl := &mcp.Implementation{Name: "test-server", Version: "1.0.0"}
+	server := mcp.NewServer(impl, nil)
+	toolkit.RegisterAll(server)
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	mcpClient := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "1.0.0"}, nil)
+
+	go func() {
+		_ = server.Run(context.Background(), serverTransport)
+	}()
+
+	session, err := mcpClient.Connect(context.Background(), clientTransport, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect client: %v", err)
+	}
+
+	return session
+}
+
 // TestToolsViaServer tests tools by actually invoking them through the MCP server.
 // This covers the registration code paths including the type assertion branches.
 func TestToolsViaServer(t *testing.T) {
@@ -91,6 +115,85 @@ func TestToolsViaServer(t *testing.T) {
 		{"get_glossary_term", ToolGetGlossaryTerm, map[string]any{"urn": "urn:li:glossaryTerm:test"}},
 		{"list_data_products", ToolListDataProducts, map[string]any{}},
 		{"get_data_product", ToolGetDataProduct, map[string]any{"urn": "urn:li:dataProduct:test"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+				Name:      string(tt.toolName),
+				Arguments: tt.arguments,
+			})
+			if err != nil {
+				t.Errorf("CallTool(%s) error: %v", tt.name, err)
+			}
+			if result == nil {
+				t.Errorf("CallTool(%s) returned nil result", tt.name)
+			}
+		})
+	}
+}
+
+// TestWriteToolsViaServer tests write tools through the MCP server.
+// This covers the register*Tool closures including type assertions.
+func TestWriteToolsViaServer(t *testing.T) {
+	mock := createTestMockClient()
+	session := setupWriteTestServer(t, mock)
+
+	tests := []struct {
+		name      string
+		toolName  ToolName
+		arguments map[string]any
+	}{
+		{
+			"update_description", ToolUpdateDescription,
+			map[string]any{
+				"urn":         "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"description": "Updated description",
+			},
+		},
+		{
+			"add_tag", ToolAddTag,
+			map[string]any{
+				"urn":     "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"tag_urn": "urn:li:tag:PII",
+			},
+		},
+		{
+			"remove_tag", ToolRemoveTag,
+			map[string]any{
+				"urn":     "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"tag_urn": "urn:li:tag:PII",
+			},
+		},
+		{
+			"add_glossary_term", ToolAddGlossaryTerm,
+			map[string]any{
+				"urn":      "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"term_urn": "urn:li:glossaryTerm:Classification",
+			},
+		},
+		{
+			"remove_glossary_term", ToolRemoveGlossaryTerm,
+			map[string]any{
+				"urn":      "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"term_urn": "urn:li:glossaryTerm:Classification",
+			},
+		},
+		{
+			"add_link", ToolAddLink,
+			map[string]any{
+				"urn":         "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"url":         "https://docs.example.com",
+				"description": "Documentation",
+			},
+		},
+		{
+			"remove_link", ToolRemoveLink,
+			map[string]any{
+				"urn": "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"url": "https://docs.example.com",
+			},
+		},
 	}
 
 	for _, tt := range tests {

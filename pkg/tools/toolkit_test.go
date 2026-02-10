@@ -14,19 +14,26 @@ import (
 
 // mockClient implements DataHubClient for testing.
 type mockClient struct {
-	searchFunc           func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
-	getEntityFunc        func(ctx context.Context, urn string) (*types.Entity, error)
-	getSchemaFunc        func(ctx context.Context, urn string) (*types.SchemaMetadata, error)
-	getSchemasFunc       func(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
-	getLineageFunc       func(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error)
-	getColumnLineageFunc func(ctx context.Context, urn string) (*types.ColumnLineage, error)
-	getQueriesFunc       func(ctx context.Context, urn string) (*types.QueryList, error)
-	getGlossaryTermFunc  func(ctx context.Context, urn string) (*types.GlossaryTerm, error)
-	listTagsFunc         func(ctx context.Context, filter string) ([]types.Tag, error)
-	listDomainsFunc      func(ctx context.Context) ([]types.Domain, error)
-	listDataProductsFunc func(ctx context.Context) ([]types.DataProduct, error)
-	getDataProductFunc   func(ctx context.Context, urn string) (*types.DataProduct, error)
-	pingFunc             func(ctx context.Context) error
+	searchFunc             func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
+	getEntityFunc          func(ctx context.Context, urn string) (*types.Entity, error)
+	getSchemaFunc          func(ctx context.Context, urn string) (*types.SchemaMetadata, error)
+	getSchemasFunc         func(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
+	getLineageFunc         func(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error)
+	getColumnLineageFunc   func(ctx context.Context, urn string) (*types.ColumnLineage, error)
+	getQueriesFunc         func(ctx context.Context, urn string) (*types.QueryList, error)
+	getGlossaryTermFunc    func(ctx context.Context, urn string) (*types.GlossaryTerm, error)
+	listTagsFunc           func(ctx context.Context, filter string) ([]types.Tag, error)
+	listDomainsFunc        func(ctx context.Context) ([]types.Domain, error)
+	listDataProductsFunc   func(ctx context.Context) ([]types.DataProduct, error)
+	getDataProductFunc     func(ctx context.Context, urn string) (*types.DataProduct, error)
+	pingFunc               func(ctx context.Context) error
+	updateDescriptionFunc  func(ctx context.Context, urn, description string) error
+	addTagFunc             func(ctx context.Context, urn, tagURN string) error
+	removeTagFunc          func(ctx context.Context, urn, tagURN string) error
+	addGlossaryTermFunc    func(ctx context.Context, urn, termURN string) error
+	removeGlossaryTermFunc func(ctx context.Context, urn, termURN string) error
+	addLinkFunc            func(ctx context.Context, urn, linkURL, description string) error
+	removeLinkFunc         func(ctx context.Context, urn, linkURL string) error
 }
 
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
@@ -121,6 +128,55 @@ func (m *mockClient) Ping(ctx context.Context) error {
 }
 
 func (m *mockClient) Close() error {
+	return nil
+}
+
+func (m *mockClient) UpdateDescription(ctx context.Context, urn, description string) error {
+	if m.updateDescriptionFunc != nil {
+		return m.updateDescriptionFunc(ctx, urn, description)
+	}
+	return nil
+}
+
+func (m *mockClient) AddTag(ctx context.Context, urn, tagURN string) error {
+	if m.addTagFunc != nil {
+		return m.addTagFunc(ctx, urn, tagURN)
+	}
+	return nil
+}
+
+func (m *mockClient) RemoveTag(ctx context.Context, urn, tagURN string) error {
+	if m.removeTagFunc != nil {
+		return m.removeTagFunc(ctx, urn, tagURN)
+	}
+	return nil
+}
+
+func (m *mockClient) AddGlossaryTerm(ctx context.Context, urn, termURN string) error {
+	if m.addGlossaryTermFunc != nil {
+		return m.addGlossaryTermFunc(ctx, urn, termURN)
+	}
+	return nil
+}
+
+func (m *mockClient) RemoveGlossaryTerm(ctx context.Context, urn, termURN string) error {
+	if m.removeGlossaryTermFunc != nil {
+		return m.removeGlossaryTermFunc(ctx, urn, termURN)
+	}
+	return nil
+}
+
+func (m *mockClient) AddLink(ctx context.Context, urn, linkURL, description string) error {
+	if m.addLinkFunc != nil {
+		return m.addLinkFunc(ctx, urn, linkURL, description)
+	}
+	return nil
+}
+
+func (m *mockClient) RemoveLink(ctx context.Context, urn, linkURL string) error {
+	if m.removeLinkFunc != nil {
+		return m.removeLinkFunc(ctx, urn, linkURL)
+	}
 	return nil
 }
 
@@ -727,5 +783,101 @@ func TestToolkitRegisterAll_MultiServer(t *testing.T) {
 	// Verify ToolListConnections is included
 	if !toolkit.registeredTools[ToolListConnections] {
 		t.Error("RegisterAll() should register ToolListConnections")
+	}
+
+	// Verify write tools are NOT registered when WriteEnabled is false
+	for _, name := range WriteTools() {
+		if toolkit.registeredTools[name] {
+			t.Errorf("RegisterAll() should NOT register write tool %s when WriteEnabled is false", name)
+		}
+	}
+}
+
+func TestToolkitRegisterAll_WriteEnabled(t *testing.T) {
+	mock := &mockClient{}
+	toolkit := NewToolkit(mock, Config{WriteEnabled: true})
+
+	impl := &mcp.Implementation{Name: "test", Version: "1.0.0"}
+	server := mcp.NewServer(impl, nil)
+	toolkit.RegisterAll(server)
+
+	// Verify all read tools are registered
+	for _, name := range AllTools() {
+		if !toolkit.registeredTools[name] {
+			t.Errorf("RegisterAll() should register read tool %s", name)
+		}
+	}
+
+	// Verify all write tools are registered
+	for _, name := range WriteTools() {
+		if !toolkit.registeredTools[name] {
+			t.Errorf("RegisterAll() should register write tool %s when WriteEnabled is true", name)
+		}
+	}
+}
+
+func TestToolkitGetWriteClient_Disabled(t *testing.T) {
+	mock := &mockClient{}
+	toolkit := NewToolkit(mock, DefaultConfig()) // WriteEnabled = false
+
+	_, err := toolkit.getWriteClient("")
+	if err == nil {
+		t.Fatal("expected error when write is disabled")
+	}
+	if !errors.Is(err, client.ErrWriteDisabled) {
+		t.Errorf("expected ErrWriteDisabled, got: %v", err)
+	}
+}
+
+func TestToolkitGetWriteClient_Enabled(t *testing.T) {
+	mock := &mockClient{}
+	toolkit := NewToolkit(mock, Config{WriteEnabled: true})
+
+	c, err := toolkit.getWriteClient("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if c != mock {
+		t.Error("expected mock client")
+	}
+}
+
+func TestWriteTools(t *testing.T) {
+	wt := WriteTools()
+	if len(wt) != 7 {
+		t.Errorf("expected 7 write tools, got %d", len(wt))
+	}
+
+	expected := map[ToolName]bool{
+		ToolUpdateDescription:  true,
+		ToolAddTag:             true,
+		ToolRemoveTag:          true,
+		ToolAddGlossaryTerm:    true,
+		ToolRemoveGlossaryTerm: true,
+		ToolAddLink:            true,
+		ToolRemoveLink:         true,
+	}
+	for _, name := range wt {
+		if !expected[name] {
+			t.Errorf("unexpected write tool: %s", name)
+		}
+	}
+}
+
+func TestAllToolsUnchanged(t *testing.T) {
+	at := AllTools()
+	if len(at) != 12 {
+		t.Errorf("AllTools() should return 12 tools (backward compat), got %d", len(at))
+	}
+
+	// Verify no write tools in AllTools
+	writeSet := make(map[ToolName]bool)
+	for _, name := range WriteTools() {
+		writeSet[name] = true
+	}
+	for _, name := range at {
+		if writeSet[name] {
+			t.Errorf("AllTools() should not contain write tool %s", name)
+		}
 	}
 }

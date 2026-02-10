@@ -111,8 +111,12 @@ func (t *Toolkit) buildIntegrationMiddleware() {
 }
 
 // RegisterAll adds all DataHub tools to the given MCP server.
+// If WriteEnabled is true, also registers write tools.
 func (t *Toolkit) RegisterAll(server *mcp.Server) {
 	t.Register(server, AllTools()...)
+	if t.isWriteEnabled() {
+		t.Register(server, WriteTools()...)
+	}
 }
 
 // Register adds specific tools to the server.
@@ -131,40 +135,46 @@ func (t *Toolkit) RegisterWith(server *mcp.Server, name ToolName, opts ...ToolOp
 	t.registerTool(server, name, cfg)
 }
 
+// toolRegistrar is a function that registers a single tool on a server.
+type toolRegistrar func(server *mcp.Server, cfg *toolConfig)
+
+// toolRegistry returns the mapping of tool names to their registration functions.
+func (t *Toolkit) toolRegistry() map[ToolName]toolRegistrar {
+	return map[ToolName]toolRegistrar{
+		// Read tools
+		ToolSearch:           t.registerSearchTool,
+		ToolGetEntity:        t.registerGetEntityTool,
+		ToolGetSchema:        t.registerGetSchemaTool,
+		ToolGetLineage:       t.registerGetLineageTool,
+		ToolGetColumnLineage: t.registerGetColumnLineageTool,
+		ToolGetQueries:       t.registerGetQueriesTool,
+		ToolGetGlossaryTerm:  t.registerGetGlossaryTermTool,
+		ToolListTags:         t.registerListTagsTool,
+		ToolListDomains:      t.registerListDomainsTool,
+		ToolListDataProducts: t.registerListDataProductsTool,
+		ToolGetDataProduct:   t.registerGetDataProductTool,
+		ToolListConnections:  t.registerListConnectionsTool,
+		// Write tools
+		ToolUpdateDescription:  t.registerUpdateDescriptionTool,
+		ToolAddTag:             t.registerAddTagTool,
+		ToolRemoveTag:          t.registerRemoveTagTool,
+		ToolAddGlossaryTerm:    t.registerAddGlossaryTermTool,
+		ToolRemoveGlossaryTerm: t.registerRemoveGlossaryTermTool,
+		ToolAddLink:            t.registerAddLinkTool,
+		ToolRemoveLink:         t.registerRemoveLinkTool,
+	}
+}
+
 // registerTool is the internal registration method.
 func (t *Toolkit) registerTool(server *mcp.Server, name ToolName, cfg *toolConfig) {
 	if t.registeredTools[name] {
 		return // Already registered
 	}
 
-	switch name {
-	case ToolSearch:
-		t.registerSearchTool(server, cfg)
-	case ToolGetEntity:
-		t.registerGetEntityTool(server, cfg)
-	case ToolGetSchema:
-		t.registerGetSchemaTool(server, cfg)
-	case ToolGetLineage:
-		t.registerGetLineageTool(server, cfg)
-	case ToolGetColumnLineage:
-		t.registerGetColumnLineageTool(server, cfg)
-	case ToolGetQueries:
-		t.registerGetQueriesTool(server, cfg)
-	case ToolGetGlossaryTerm:
-		t.registerGetGlossaryTermTool(server, cfg)
-	case ToolListTags:
-		t.registerListTagsTool(server, cfg)
-	case ToolListDomains:
-		t.registerListDomainsTool(server, cfg)
-	case ToolListDataProducts:
-		t.registerListDataProductsTool(server, cfg)
-	case ToolGetDataProduct:
-		t.registerGetDataProductTool(server, cfg)
-	case ToolListConnections:
-		t.registerListConnectionsTool(server, cfg)
+	if register, ok := t.toolRegistry()[name]; ok {
+		register(server, cfg)
+		t.registeredTools[name] = true
 	}
-
-	t.registeredTools[name] = true
 }
 
 // wrapHandler wraps a handler with middleware support.
@@ -278,6 +288,20 @@ func (t *Toolkit) QueryProvider() integration.QueryProvider {
 // HasQueryProvider returns true if a query provider is configured.
 func (t *Toolkit) HasQueryProvider() bool {
 	return t.queryProvider != nil
+}
+
+// isWriteEnabled returns true if write operations are enabled in the toolkit config.
+func (t *Toolkit) isWriteEnabled() bool {
+	return t.config.WriteEnabled
+}
+
+// getWriteClient returns the DataHub client for write operations.
+// Returns ErrWriteDisabled if write operations are not enabled.
+func (t *Toolkit) getWriteClient(connection string) (DataHubClient, error) {
+	if !t.isWriteEnabled() {
+		return nil, client.ErrWriteDisabled
+	}
+	return t.getClient(connection)
 }
 
 // getClient returns the DataHub client for the given connection name.

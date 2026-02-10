@@ -97,7 +97,9 @@ export DATAHUB_TOKEN=your_token
 ./mcp-datahub
 ```
 
-## Available Tools (12 total)
+## Available Tools (19 total: 12 read + 7 write)
+
+### Read Tools
 
 | Tool | Description |
 |------|-------------|
@@ -114,6 +116,18 @@ export DATAHUB_TOKEN=your_token
 | `datahub_get_data_product` | Get data product details |
 | `datahub_list_connections` | List configured DataHub server connections |
 
+### Write Tools (require `WriteEnabled: true`)
+
+| Tool | Description |
+|------|-------------|
+| `datahub_update_description` | Update entity description |
+| `datahub_add_tag` | Add a tag to an entity |
+| `datahub_remove_tag` | Remove a tag from an entity |
+| `datahub_add_glossary_term` | Add a glossary term to an entity |
+| `datahub_remove_glossary_term` | Remove a glossary term from an entity |
+| `datahub_add_link` | Add a link to an entity |
+| `datahub_remove_link` | Remove a link from an entity |
+
 ## Multi-Server Configuration
 
 The reference implementation supports connecting to multiple DataHub instances:
@@ -124,8 +138,11 @@ export DATAHUB_URL=https://prod.datahub.example.com/api/graphql
 export DATAHUB_TOKEN=prod-token
 export DATAHUB_CONNECTION_NAME=prod
 
-# Additional servers (JSON)
-export DATAHUB_ADDITIONAL_SERVERS='{"staging":{"url":"https://staging.datahub.example.com/api/graphql","token":"staging-token"}}'
+# Enable write operations (default: false)
+export DATAHUB_WRITE_ENABLED=true
+
+# Additional servers (JSON) - write_enabled is per-connection (nil=inherit)
+export DATAHUB_ADDITIONAL_SERVERS='{"staging":{"url":"https://staging.datahub.example.com/api/graphql","token":"staging-token","write_enabled":false}}'
 ```
 
 All tools accept an optional `connection` parameter to target a specific server.
@@ -138,3 +155,57 @@ The client handles variations across DataHub versions gracefully:
 - Parses properties from different response structures
 
 When adding new queries, test against actual DataHub instances as GraphQL schemas vary between versions.
+
+## Verification (AI-Verified Development)
+
+Run the full verification suite before every commit:
+```
+make verify
+```
+
+Individual checks (all must pass):
+```
+make lint            # golangci-lint (43 linters) + go vet
+make test            # go test -race -shuffle=on ./...
+make coverage        # Coverage report (threshold: 80%)
+make patch-coverage  # Coverage of changed lines only (threshold: 80%)
+make security        # gosec + govulncheck
+make mutation        # gremlins (threshold: 60%)
+make deadcode        # deadcode (unreachable functions)
+make build-check     # go build + go mod verify
+```
+
+Performance diagnostics (not part of verify, use when investigating):
+```
+make bench           # Run benchmarks with memory allocation reporting
+make profile         # Generate CPU and memory profiles for pprof
+```
+
+## Code Quality Thresholds
+
+- Test coverage: >=80%
+- Mutation score: >=60%
+- Cyclomatic complexity: <=15 per function
+- Cognitive complexity: <=15 per function
+- Function length: <=80 lines, <=50 statements
+- Function arguments: <=5
+- Function return values: <=3
+
+## Go Code Standards (AI-Verified)
+
+1. **Error handling**: Always wrap errors with context: `fmt.Errorf("operation failed: %w", err)`
+2. **Naming**: Follow Go conventions. MixedCaps, not underscores. Acronyms are all-caps (HTTP, URL, ID).
+3. **Interfaces**: Accept interfaces, return structs. Define interfaces at the consumer, not the provider.
+4. **Context**: First parameter when needed. Never store in structs.
+5. **Concurrency**: Use channels for communication, mutexes for state. Always run tests with `-race`.
+6. **Dependencies**: Use `internal/` for code that shouldn't be imported. Minimize third-party dependencies.
+7. **Testing**: Table-driven tests. Property-based tests for pure functions.
+
+## AI-Specific Rules
+
+1. **No tautological tests**: tests must encode expected outputs, not reimplement logic
+2. **No hallucinated imports**: verify every dependency exists in the Go module ecosystem
+3. **Human review required**: all code requires human review before merge
+4. **Acceptance criteria first**: do not write code without Given/When/Then criteria
+5. **Explain non-obvious decisions**: comment WHY, not WHAT
+6. **No vaporware**: every package must be imported by non-test code

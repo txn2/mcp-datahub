@@ -191,6 +191,8 @@ See the [library documentation](https://mcp-datahub.txn2.com/library/) for compl
 
 ## Available Tools
 
+### Read Tools (always available)
+
 | Tool | Description |
 |------|-------------|
 | `datahub_search` | Search for datasets, dashboards, pipelines by query and entity type |
@@ -206,6 +208,20 @@ See the [library documentation](https://mcp-datahub.txn2.com/library/) for compl
 | `datahub_get_data_product` | Get data product details (owners, domain, properties) |
 | `datahub_list_connections` | List configured DataHub server connections (multi-server mode) |
 
+### Write Tools (require `DATAHUB_WRITE_ENABLED=true`)
+
+| Tool | Description |
+|------|-------------|
+| `datahub_update_description` | Update the description of an entity |
+| `datahub_add_tag` | Add a tag to an entity |
+| `datahub_remove_tag` | Remove a tag from an entity |
+| `datahub_add_glossary_term` | Add a glossary term to an entity |
+| `datahub_remove_glossary_term` | Remove a glossary term from an entity |
+| `datahub_add_link` | Add a link to an entity |
+| `datahub_remove_link` | Remove a link from an entity |
+
+Write tools use DataHub's REST API (`POST /aspects?action=ingestProposal`) with read-modify-write semantics for array aspects (tags, terms, links). They are disabled by default for safety.
+
 See the [tools reference](https://mcp-datahub.txn2.com/server/tools/) for detailed documentation.
 
 ## Configuration
@@ -219,6 +235,7 @@ See the [tools reference](https://mcp-datahub.txn2.com/server/tools/) for detail
 | `DATAHUB_MAX_LIMIT` | Maximum limit | `100` |
 | `DATAHUB_CONNECTION_NAME` | Display name for primary connection | `datahub` |
 | `DATAHUB_ADDITIONAL_SERVERS` | JSON map of additional servers | (optional) |
+| `DATAHUB_WRITE_ENABLED` | Enable write operations (`true` or `1`) | `false` |
 | `DATAHUB_DEBUG` | Enable debug logging (`1` or `true`) | `false` |
 
 See [configuration reference](https://mcp-datahub.txn2.com/server/configuration/) for all options.

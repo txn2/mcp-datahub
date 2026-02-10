@@ -5,10 +5,13 @@ linters:
   enable:
     - bodyclose
     - copyloopvar
+    - depguard
     - dogsled
     - dupl
+    - errcheck
     - errorlint
     - exhaustive
+    - funlen
     - gochecknoinits
     - goconst
     - gocritic
@@ -16,16 +19,25 @@ linters:
     - godot
     - goprintffuncname
     - gosec
+    - ineffassign
     - lll
     - misspell
     - nakedret
+    - nestif
     - noctx
     - nolintlint
     - prealloc
+    - predeclared
     - revive
+    - rowserrcheck
+    - sqlclosecheck
     - staticcheck
+    - thelper
+    - tparallel
     - unconvert
     - unparam
+    - unused
+    - wastedassign
     - whitespace
   settings:
     gocritic:
@@ -35,17 +47,30 @@ linters:
       threshold: 100
     errcheck:
       check-type-assertions: true
-      check-blank: true
+      check-blank: false
+    funlen:
+      lines: 170
+      statements: 80
     gocyclo:
-      min-complexity: 20
+      min-complexity: 15
+    goconst:
+      min-len: 3
+      min-occurrences: 5
     lll:
       line-length: 140
     misspell:
       locale: US
+    nestif:
+      min-complexity: 5
     nolintlint:
       require-explanation: true
       require-specific: true
+    gosec:
+      excludes:
+        - G104
     revive:
+      severity: warning
+      confidence: 0.8
       rules:
         - name: blank-imports
         - name: context-as-argument
@@ -55,10 +80,10 @@ linters:
         - name: error-strings
         - name: error-naming
         - name: exported
-        - name: if-return
         - name: increment-decrement
         - name: var-naming
         - name: var-declaration
+        - name: package-comments
         - name: range
         - name: receiver-naming
         - name: time-naming
@@ -70,6 +95,28 @@ linters:
         - name: unused-parameter
         - name: unreachable-code
         - name: redefines-builtin-id
+        - name: modifies-value-receiver
+        - name: waitgroup-by-value
+        - name: atomic
+        - name: range-val-in-closure
+        - name: range-val-address
+        - name: constant-logical-expr
+        - name: identical-branches
+        - name: unconditional-recursion
+        - name: duplicated-imports
+        - name: unhandled-error
+          arguments:
+            - "fmt.Printf"
+            - "fmt.Println"
+            - "fmt.Print"
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: "io/ioutil"
+              desc: "Deprecated: use io and os packages instead"
+            - pkg: "github.com/pkg/errors"
+              desc: "Use fmt.Errorf with %w instead"
     govet:
       disable:
         - fieldalignment
@@ -79,6 +126,7 @@ linters:
       # Relax rules for test files
       - linters:
           - dupl
+          - funlen
           - goconst
           - gocyclo
           - gosec
@@ -88,11 +136,20 @@ linters:
           - revive
           - dogsled
           - staticcheck
+          - nestif
         path: _test\.go
       # Tool registration follows intentional repetitive pattern
       - linters:
           - dupl
         path: pkg/tools/
+      # Write methods follow intentional read-modify-write pattern
+      - linters:
+          - dupl
+        path: pkg/client/write\.go
+      # Package name is intentional
+      - linters:
+          - revive
+        path: pkg/types/
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

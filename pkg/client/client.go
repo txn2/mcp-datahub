@@ -181,7 +181,7 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 	}
 	defer func() {
 		// Error intentionally ignored; response body close errors are non-actionable
-		_ = resp.Body.Close() //nolint:errcheck // closing response body, error not actionable
+		_ = resp.Body.Close()
 	}()
 
 	body, err := io.ReadAll(resp.Body)
@@ -1157,7 +1157,7 @@ func (c *Client) ListDataProducts(ctx context.Context) ([]types.DataProduct, err
 
 	err := c.Execute(ctx, ListDataProductsQuery, nil, &response)
 	if err == nil {
-		var products []types.DataProduct
+		products := make([]types.DataProduct, 0, len(response.ListDataProducts.DataProducts))
 		for _, dp := range response.ListDataProducts.DataProducts {
 			product := types.DataProduct{
 				URN:         dp.URN,
