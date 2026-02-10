@@ -51,4 +51,27 @@ type DataHubClient interface {
 
 	// Close closes the client.
 	Close() error
+
+	// Write operations (require WriteEnabled config).
+
+	// UpdateDescription sets the editable description for an entity.
+	UpdateDescription(ctx context.Context, urn, description string) error
+
+	// AddTag adds a tag to an entity.
+	AddTag(ctx context.Context, urn, tagURN string) error
+
+	// RemoveTag removes a tag from an entity.
+	RemoveTag(ctx context.Context, urn, tagURN string) error
+
+	// AddGlossaryTerm adds a glossary term to an entity.
+	AddGlossaryTerm(ctx context.Context, urn, termURN string) error
+
+	// RemoveGlossaryTerm removes a glossary term from an entity.
+	RemoveGlossaryTerm(ctx context.Context, urn, termURN string) error
+
+	// AddLink adds a link to an entity.
+	AddLink(ctx context.Context, urn, linkURL, description string) error
+
+	// RemoveLink removes a link from an entity by URL.
+	RemoveLink(ctx context.Context, urn, linkURL string) error
 }
