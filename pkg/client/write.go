@@ -17,23 +17,51 @@ func entityTypeFromURN(urn string) (string, error) {
 	return parsed.EntityType, nil
 }
 
-// UpdateDescription sets the editable description for any entity.
+// editablePropertiesAspect represents the editableDatasetProperties aspect.
+type editablePropertiesAspect struct {
+	Description  string         `json:"description"`
+	Created      *auditStampRaw `json:"created,omitempty"`
+	LastModified *auditStampRaw `json:"lastModified,omitempty"`
+}
+
+// UpdateDescription sets the editable description for any entity using read-modify-write.
 func (c *Client) UpdateDescription(ctx context.Context, urn, description string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
 
-	aspect := map[string]any{
-		"description": description,
+	props, err := c.readEditableProperties(ctx, urn)
+	if err != nil {
+		return fmt.Errorf("UpdateDescription: %w", err)
 	}
+
+	props.Description = description
 
 	return c.postIngestProposal(ctx, ingestProposal{
 		EntityType: entityType,
 		EntityURN:  urn,
 		AspectName: "editableDatasetProperties",
-		Aspect:     aspect,
+		Aspect:     props,
 	})
+}
+
+// readEditableProperties reads the current editableDatasetProperties aspect.
+// Returns an empty aspect if none exists (not an error).
+func (c *Client) readEditableProperties(ctx context.Context, urn string) (*editablePropertiesAspect, error) {
+	raw, err := c.getAspect(ctx, urn, "editableDatasetProperties")
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return &editablePropertiesAspect{}, nil
+		}
+		return nil, fmt.Errorf("reading editableDatasetProperties: %w", err)
+	}
+
+	var props editablePropertiesAspect
+	if err := json.Unmarshal(raw, &props); err != nil {
+		return nil, fmt.Errorf("parsing editableDatasetProperties: %w", err)
+	}
+	return &props, nil
 }
 
 // globalTagsAspect represents the globalTags aspect structure.
