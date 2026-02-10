@@ -24,4 +24,7 @@ var (
 
 	// ErrNotConfigured indicates the client is not properly configured.
 	ErrNotConfigured = errors.New("datahub client not configured")
+
+	// ErrWriteDisabled indicates write operations are not enabled.
+	ErrWriteDisabled = errors.New("write operations are disabled: set WriteEnabled to true in config")
 )
