@@ -27,9 +27,9 @@ func toEnumCase(s string) string {
 	for i, r := range runes {
 		// Insert underscore before uppercase if preceded by lowercase
 		if i > 0 && unicode.IsUpper(r) && unicode.IsLower(runes[i-1]) {
-			result.WriteRune('_')
+			_, _ = result.WriteRune('_')
 		}
-		result.WriteRune(unicode.ToUpper(r))
+		_, _ = result.WriteRune(unicode.ToUpper(r))
 	}
 	return result.String()
 }
