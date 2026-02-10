@@ -10,8 +10,14 @@ import (
 
 func TestUpdateDescription(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("expected POST, got %s", r.Method)
+		if r.Method == http.MethodGet {
+			propsJSON := `{"description":"old desc",` +
+				`"created":{"actor":"urn:li:corpuser:admin","time":1000},` +
+				`"lastModified":{"actor":"urn:li:corpuser:admin","time":2000}}`
+			resp := aspectResponse{Value: json.RawMessage(propsJSON)}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
 		}
 
 		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
@@ -23,12 +29,18 @@ func TestUpdateDescription(t *testing.T) {
 			t.Errorf("expected aspect 'editableDatasetProperties', got %v", proposal["aspectName"])
 		}
 
-		var aspectMap map[string]any
-		if err := json.Unmarshal([]byte(aspectJSON), &aspectMap); err != nil {
+		var props editablePropertiesAspect
+		if err := json.Unmarshal([]byte(aspectJSON), &props); err != nil {
 			t.Fatalf("failed to unmarshal inner aspect: %v", err)
 		}
-		if aspectMap["description"] != "new description" {
-			t.Errorf("expected description 'new description', got %v", aspectMap["description"])
+		if props.Description != "new description" {
+			t.Errorf("expected 'new description', got %q", props.Description)
+		}
+		if props.Created == nil || props.Created.Actor != "urn:li:corpuser:admin" {
+			t.Error("expected created audit stamp to be preserved")
+		}
+		if props.LastModified == nil || props.LastModified.Time != 2000 {
+			t.Error("expected lastModified audit stamp to be preserved")
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -47,6 +59,102 @@ func TestUpdateDescription(t *testing.T) {
 		"new description")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateDescription_NoExistingProperties(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
+		var props editablePropertiesAspect
+		if err := json.Unmarshal([]byte(aspectJSON), &props); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
+		if props.Description != "first description" {
+			t.Errorf("expected 'first description', got %q", props.Description)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateDescription(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"first description")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateDescription_MarkdownContent(t *testing.T) {
+	mdDesc := "## Overview\n\n**bold** and _italic_\n\n- item 1\n- item 2\n\n`code`"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			propsJSON := `{"description":"old",` +
+				`"created":{"actor":"urn:li:corpuser:datahub","time":0},` +
+				`"lastModified":{"actor":"urn:li:corpuser:datahub","time":0}}`
+			resp := aspectResponse{Value: json.RawMessage(propsJSON)}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
+		var props editablePropertiesAspect
+		if err := json.Unmarshal([]byte(aspectJSON), &props); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
+		if props.Description != mdDesc {
+			t.Errorf("markdown not preserved:\ngot:  %q\nwant: %q",
+				props.Description, mdDesc)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateDescription(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		mdDesc)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReadEditableProperties_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		resp := aspectResponse{Value: json.RawMessage(`not valid json`)}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	_, err := c.readEditableProperties(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
 	}
 }
 
