@@ -36,6 +36,10 @@ type ConnectionConfig struct {
 
 	// MaxLineageDepth is the maximum lineage traversal depth. Inherits from primary if zero.
 	MaxLineageDepth int `json:"max_lineage_depth,omitempty"`
+
+	// WriteEnabled enables write operations for this connection.
+	// nil = inherit from toolkit config, true/false = explicit override.
+	WriteEnabled *bool `json:"write_enabled,omitempty"`
 }
 
 // Config holds configuration for multiple DataHub connections.
@@ -143,7 +147,8 @@ func (c Config) ClientConfig(name string) (client.Config, error) {
 // ConnectionNames returns the names of all available connections.
 // Always includes the primary connection name as the first entry.
 func (c Config) ConnectionNames() []string {
-	names := []string{c.Default}
+	names := make([]string, 0, 1+len(c.Connections))
+	names = append(names, c.Default)
 	for name := range c.Connections {
 		names = append(names, name)
 	}
