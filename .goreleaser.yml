@@ -173,6 +173,7 @@ release:
   name_template: "{{.ProjectName}}-v{{.Version}}"
   prerelease: auto
   mode: append
+  draft: true
   footer: |
     ## Installation
 
