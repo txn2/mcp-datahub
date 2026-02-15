@@ -25,7 +25,7 @@ func (t *Toolkit) registerListDomainsTool(server *mcp.Server, cfg *toolConfig) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolListDomains),
-		Description: "List data domains in the DataHub catalog",
+		Description: t.getDescription(ToolListDomains, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListDomainsInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

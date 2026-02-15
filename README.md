@@ -80,6 +80,34 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{})
 toolkit.RegisterAll(yourMCPServer)
 ```
 
+#### Customizing Tool Descriptions
+
+Override tool descriptions to match your deployment:
+
+```go
+toolkit := tools.NewToolkit(datahubClient, tools.Config{},
+    tools.WithDescriptions(map[tools.ToolName]string{
+        tools.ToolSearch: "Search our internal data catalog for datasets and dashboards",
+    }),
+)
+```
+
+#### Extensions (Logging, Metrics, Error Hints)
+
+Enable optional middleware via the extensions package:
+
+```go
+import "github.com/txn2/mcp-datahub/pkg/extensions"
+
+// Load from environment variables (MCP_DATAHUB_EXT_*)
+cfg := extensions.FromEnv()
+opts := extensions.BuildToolkitOptions(cfg)
+toolkit := tools.NewToolkit(datahubClient, toolsCfg, opts...)
+
+// Or load from a YAML/JSON config file
+serverCfg, _ := extensions.LoadConfig("config.yaml")
+```
+
 See the [library documentation](https://mcp-datahub.txn2.com/library/) for middleware, selective tool registration, and enterprise patterns.
 
 ## Combining with mcp-trino
@@ -237,6 +265,38 @@ See the [tools reference](https://mcp-datahub.txn2.com/server/tools/) for detail
 | `DATAHUB_ADDITIONAL_SERVERS` | JSON map of additional servers | (optional) |
 | `DATAHUB_WRITE_ENABLED` | Enable write operations (`true` or `1`) | `false` |
 | `DATAHUB_DEBUG` | Enable debug logging (`1` or `true`) | `false` |
+
+### Extensions
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MCP_DATAHUB_EXT_LOGGING` | Enable structured logging of tool calls | `false` |
+| `MCP_DATAHUB_EXT_METRICS` | Enable metrics collection | `false` |
+| `MCP_DATAHUB_EXT_METADATA` | Enable metadata enrichment on results | `false` |
+| `MCP_DATAHUB_EXT_ERRORS` | Enable error hint enrichment | `true` |
+
+### Config File
+
+As an alternative to environment variables, configure via YAML or JSON:
+
+```yaml
+datahub:
+  url: https://datahub.example.com
+  token: "${DATAHUB_TOKEN}"
+  timeout: "30s"
+  write_enabled: true
+
+toolkit:
+  default_limit: 20
+  descriptions:
+    datahub_search: "Custom search description for your deployment"
+
+extensions:
+  logging: true
+  errors: true
+```
+
+Load with `extensions.LoadConfig("config.yaml")`. Environment variables override file values for sensitive fields. Token values support `$VAR` / `${VAR}` expansion.
 
 See [configuration reference](https://mcp-datahub.txn2.com/server/configuration/) for all options.
 

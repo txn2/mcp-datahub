@@ -96,6 +96,43 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{
 })
 ```
 
+## With Description Overrides
+
+Customize tool descriptions to match your deployment:
+
+```go
+toolkit := tools.NewToolkit(datahubClient, tools.Config{},
+    tools.WithDescriptions(map[tools.ToolName]string{
+        tools.ToolSearch: "Search our internal data catalog for datasets and dashboards",
+    }),
+)
+```
+
+## With Extensions
+
+Enable built-in middleware for logging, metrics, and error hints:
+
+```go
+import "github.com/txn2/mcp-datahub/pkg/extensions"
+
+// Load from environment variables (MCP_DATAHUB_EXT_*)
+cfg := extensions.FromEnv()
+opts := extensions.BuildToolkitOptions(cfg)
+toolkit := tools.NewToolkit(datahubClient, toolsCfg, opts...)
+```
+
+Or load everything from a config file:
+
+```go
+serverCfg, _ := extensions.LoadConfig("config.yaml")
+clientCfg := serverCfg.ClientConfig()
+toolsCfg := serverCfg.ToolsConfig()
+extOpts := extensions.BuildToolkitOptions(serverCfg.ExtConfig())
+
+datahubClient, _ := client.New(clientCfg)
+toolkit := tools.NewToolkit(datahubClient, toolsCfg, extOpts...)
+```
+
 ## Next Steps
 
 - [Architecture](architecture.md)

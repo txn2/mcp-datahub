@@ -56,7 +56,29 @@ func main() {
 }
 ```
 
-## Adding Middleware
+## Built-in Extensions
+
+The `extensions` package provides ready-to-use middleware for common needs:
+
+```go
+import "github.com/txn2/mcp-datahub/pkg/extensions"
+
+// Enable via environment variables
+cfg := extensions.FromEnv()
+opts := extensions.BuildToolkitOptions(cfg)
+toolkit := tools.NewToolkit(datahubClient, toolsCfg, opts...)
+```
+
+| Extension | Env Variable | Description |
+|-----------|-------------|-------------|
+| Logging | `MCP_DATAHUB_EXT_LOGGING` | Structured logging of tool calls with duration |
+| Metrics | `MCP_DATAHUB_EXT_METRICS` | Call counts, error counts, and timing |
+| Error Hints | `MCP_DATAHUB_EXT_ERRORS` | Helpful hints appended to error messages |
+| Metadata | `MCP_DATAHUB_EXT_METADATA` | Execution metadata on successful results |
+
+For custom middleware beyond what extensions provide, see below.
+
+## Adding Custom Middleware
 
 Add cross-cutting concerns like logging or access control:
 

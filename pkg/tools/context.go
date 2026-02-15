@@ -42,3 +42,17 @@ func (tc *ToolContext) Get(key string) (any, bool) {
 	v, ok := tc.Extra[key]
 	return v, ok
 }
+
+// GetString retrieves a string value from Extra.
+// Returns an empty string if the key is not found or the value is not a string.
+func (tc *ToolContext) GetString(key string) string {
+	v, ok := tc.Extra[key]
+	if !ok {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
+}

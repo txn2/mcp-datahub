@@ -9,6 +9,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/txn2/mcp-datahub/pkg/extensions"
 	"github.com/txn2/mcp-datahub/pkg/multiserver"
 	"github.com/txn2/mcp-datahub/pkg/tools"
 )
@@ -24,6 +25,12 @@ type Options struct {
 
 	// ToolkitConfig is the toolkit configuration.
 	ToolkitConfig tools.Config
+
+	// Descriptions overrides tool descriptions at the toolkit level.
+	Descriptions map[tools.ToolName]string
+
+	// ExtensionsConfig configures optional middleware extensions.
+	ExtensionsConfig extensions.Config
 }
 
 // DefaultOptions returns default server options.
@@ -32,6 +39,7 @@ func DefaultOptions() Options {
 	return Options{
 		MultiServerConfig: nil, // Loaded from env in New()
 		ToolkitConfig:     tools.DefaultConfig(),
+		ExtensionsConfig:  extensions.FromEnv(),
 	}
 }
 
@@ -75,6 +83,14 @@ func New(opts Options) (*mcp.Server, *multiserver.Manager, error) {
 
 	// Build toolkit options
 	var toolkitOpts []tools.ToolkitOption
+
+	// Apply extension middleware
+	toolkitOpts = append(toolkitOpts, extensions.BuildToolkitOptions(opts.ExtensionsConfig)...)
+
+	// Apply description overrides
+	if len(opts.Descriptions) > 0 {
+		toolkitOpts = append(toolkitOpts, tools.WithDescriptions(opts.Descriptions))
+	}
 
 	// If unconfigured, add middleware that returns helpful error for all tools
 	if configErr != nil {

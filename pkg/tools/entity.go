@@ -25,11 +25,8 @@ func (t *Toolkit) registerGetEntityTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolGetEntity, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: string(ToolGetEntity),
-		Description: "Get detailed metadata for a DataHub entity by its URN. " +
-			"When a QueryProvider (e.g., Trino) is configured, also returns: " +
-			"query_table (resolved table path), query_examples (generated sample SQL), " +
-			"query_availability (row count, availability status).",
+		Name:        string(ToolGetEntity),
+		Description: t.getDescription(ToolGetEntity, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetEntityInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

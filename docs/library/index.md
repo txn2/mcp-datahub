@@ -50,6 +50,38 @@ var schema *types.SchemaMetadata
 var lineage *types.LineageResult
 ```
 
+### pkg/integration
+
+Extension interfaces for enterprise integrations (access control, audit logging, query providers):
+
+```go
+import "github.com/txn2/mcp-datahub/pkg/integration"
+```
+
+### pkg/extensions
+
+Built-in middleware for logging, metrics, error hints, and metadata enrichment. Also provides YAML/JSON config file support:
+
+```go
+import "github.com/txn2/mcp-datahub/pkg/extensions"
+
+// Load from environment variables
+cfg := extensions.FromEnv()
+opts := extensions.BuildToolkitOptions(cfg)
+toolkit := tools.NewToolkit(datahubClient, toolsCfg, opts...)
+
+// Or load from a config file
+serverCfg, _ := extensions.LoadConfig("config.yaml")
+```
+
+### pkg/multiserver
+
+Multi-server configuration and connection management for connecting to multiple DataHub instances:
+
+```go
+import "github.com/txn2/mcp-datahub/pkg/multiserver"
+```
+
 ## Next Steps
 
 - [Quick Start Guide](quickstart.md)

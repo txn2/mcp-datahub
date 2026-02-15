@@ -1,6 +1,6 @@
 # Available Tools
 
-mcp-datahub provides 12 MCP tools for interacting with DataHub.
+mcp-datahub provides 19 MCP tools for interacting with DataHub (12 read + 7 write).
 
 ## Multi-Server Support
 
@@ -644,6 +644,111 @@ Get detailed information about a data product.
   }
 }
 ```
+
+---
+
+## Write Tools
+
+Write tools require `DATAHUB_WRITE_ENABLED=true` to be set. They use DataHub's REST API (`POST /aspects?action=ingestProposal`) with read-modify-write semantics for array aspects (tags, terms, links).
+
+---
+
+### datahub_update_description
+
+Update the description of an entity.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urn` | string | Yes | Entity URN |
+| `description` | string | Yes | New description text |
+| `connection` | string | No | Named connection to use |
+
+---
+
+### datahub_add_tag
+
+Add a tag to an entity.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urn` | string | Yes | Entity URN |
+| `tag_urn` | string | Yes | Tag URN to add |
+| `connection` | string | No | Named connection to use |
+
+---
+
+### datahub_remove_tag
+
+Remove a tag from an entity.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urn` | string | Yes | Entity URN |
+| `tag_urn` | string | Yes | Tag URN to remove |
+| `connection` | string | No | Named connection to use |
+
+---
+
+### datahub_add_glossary_term
+
+Add a glossary term to an entity.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urn` | string | Yes | Entity URN |
+| `term_urn` | string | Yes | Glossary term URN to add |
+| `connection` | string | No | Named connection to use |
+
+---
+
+### datahub_remove_glossary_term
+
+Remove a glossary term from an entity.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urn` | string | Yes | Entity URN |
+| `term_urn` | string | Yes | Glossary term URN to remove |
+| `connection` | string | No | Named connection to use |
+
+---
+
+### datahub_add_link
+
+Add a link to an entity.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urn` | string | Yes | Entity URN |
+| `link_url` | string | Yes | URL to add |
+| `link_label` | string | Yes | Display label for the link |
+| `connection` | string | No | Named connection to use |
+
+---
+
+### datahub_remove_link
+
+Remove a link from an entity.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urn` | string | Yes | Entity URN |
+| `link_url` | string | Yes | URL to remove |
+| `connection` | string | No | Named connection to use |
 
 ---
 

@@ -37,6 +37,9 @@ type Toolkit struct {
 	// Pre-built integration middleware (built after options applied)
 	integrationMiddleware []ToolMiddleware
 
+	// Description overrides (toolkit-level, set via WithDescriptions)
+	descriptions map[ToolName]string
+
 	// Internal tracking
 	registeredTools map[ToolName]bool
 }
@@ -76,6 +79,7 @@ func newBaseToolkit(cfg Config) *Toolkit {
 		config:          cfg,
 		logger:          logger,
 		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
+		descriptions:    make(map[ToolName]string),
 		registeredTools: make(map[ToolName]bool),
 	}
 }

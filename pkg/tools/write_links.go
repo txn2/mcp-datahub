@@ -34,7 +34,7 @@ func (t *Toolkit) registerAddLinkTool(server *mcp.Server, cfg *toolConfig) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolAddLink),
-		Description: "Add a link to a DataHub entity",
+		Description: t.getDescription(ToolAddLink, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddLinkInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
@@ -53,7 +53,7 @@ func (t *Toolkit) registerRemoveLinkTool(server *mcp.Server, cfg *toolConfig) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolRemoveLink),
-		Description: "Remove a link from a DataHub entity",
+		Description: t.getDescription(ToolRemoveLink, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveLinkInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

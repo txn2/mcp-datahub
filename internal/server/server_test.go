@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/txn2/mcp-datahub/pkg/client"
+	"github.com/txn2/mcp-datahub/pkg/extensions"
 	"github.com/txn2/mcp-datahub/pkg/multiserver"
+	"github.com/txn2/mcp-datahub/pkg/tools"
 )
 
 func TestDefaultOptions(t *testing.T) {
@@ -162,6 +164,77 @@ func TestNewWithWriteEnabled(t *testing.T) {
 
 	if mgr != nil {
 		_ = mgr.Close()
+	}
+}
+
+func TestNewWithDescriptions(t *testing.T) {
+	cfg := &multiserver.Config{
+		Default: "datahub",
+		Primary: client.Config{
+			URL:   "https://test.datahub.io",
+			Token: "test-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{},
+	}
+
+	opts := Options{
+		MultiServerConfig: cfg,
+		Descriptions: map[tools.ToolName]string{
+			tools.ToolSearch: "Custom search description",
+		},
+	}
+
+	server, mgr, err := New(opts)
+	if err != nil {
+		t.Fatalf("New() unexpected error: %v", err)
+	}
+	if server == nil {
+		t.Error("New() returned nil server")
+	}
+
+	if mgr != nil {
+		_ = mgr.Close()
+	}
+}
+
+func TestNewWithExtensionsConfig(t *testing.T) {
+	cfg := &multiserver.Config{
+		Default: "datahub",
+		Primary: client.Config{
+			URL:   "https://test.datahub.io",
+			Token: "test-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{},
+	}
+
+	opts := Options{
+		MultiServerConfig: cfg,
+		ExtensionsConfig: extensions.Config{
+			EnableLogging:   true,
+			EnableMetrics:   true,
+			EnableErrorHelp: true,
+		},
+	}
+
+	server, mgr, err := New(opts)
+	if err != nil {
+		t.Fatalf("New() unexpected error: %v", err)
+	}
+	if server == nil {
+		t.Error("New() returned nil server")
+	}
+
+	if mgr != nil {
+		_ = mgr.Close()
+	}
+}
+
+func TestDefaultOptions_ExtensionsConfig(t *testing.T) {
+	opts := DefaultOptions()
+
+	// Default should have error hints enabled
+	if !opts.ExtensionsConfig.EnableErrorHelp {
+		t.Error("DefaultOptions() should have EnableErrorHelp=true")
 	}
 }
 

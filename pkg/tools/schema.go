@@ -25,10 +25,8 @@ func (t *Toolkit) registerGetSchemaTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolGetSchema, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: string(ToolGetSchema),
-		Description: "Get the schema (fields, types, descriptions) for a dataset. " +
-			"Returns query_table (resolved table path) when QueryProvider is configured. " +
-			"For row counts and query examples, use datahub_get_entity instead.",
+		Name:        string(ToolGetSchema),
+		Description: t.getDescription(ToolGetSchema, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetSchemaInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

@@ -30,7 +30,8 @@ pkg/
 ├── multiserver/ # Multi-server configuration and connection management
 ├── types/       # Domain types (entities, schema, lineage, etc.)
 ├── tools/       # MCP toolkit (composable tool registration)
-└── integration/ # Extension interfaces for custom integrations
+├── integration/ # Extension interfaces for custom integrations
+└── extensions/  # Optional middleware: logging, metrics, error hints, config files
 
 internal/
 └── server/      # Reference implementation server setup
@@ -127,6 +128,60 @@ export DATAHUB_TOKEN=your_token
 | `datahub_remove_glossary_term` | Remove a glossary term from an entity |
 | `datahub_add_link` | Add a link to an entity |
 | `datahub_remove_link` | Remove a link from an entity |
+
+## Description Overrides
+
+Tool descriptions can be customized at three levels of priority:
+
+1. **Per-registration** (highest): `toolkit.RegisterWith(server, tools.ToolSearch, tools.WithDescription("custom"))`
+2. **Toolkit-level**: `tools.NewToolkit(client, cfg, tools.WithDescriptions(map[tools.ToolName]string{...}))`
+3. **Default**: Built-in descriptions from `pkg/tools/descriptions.go`
+
+Descriptions can also be set via config file (`toolkit.descriptions` section) or the `Descriptions` field in `server.Options`.
+
+## Extensions Package (`pkg/extensions/`)
+
+Optional middleware and config file support. All extensions are opt-in.
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MCP_DATAHUB_EXT_LOGGING` | Enable structured logging of tool calls | `false` |
+| `MCP_DATAHUB_EXT_METRICS` | Enable metrics collection | `false` |
+| `MCP_DATAHUB_EXT_METADATA` | Enable metadata enrichment on results | `false` |
+| `MCP_DATAHUB_EXT_ERRORS` | Enable error hint enrichment | `true` |
+
+### Available Middleware
+
+- **LoggingMiddleware**: Logs tool invocations and results to an `io.Writer`
+- **MetricsMiddleware**: Collects call count, error count, and duration via `MetricsCollector` interface
+- **ErrorHintMiddleware**: Appends helpful hints to error results (e.g., "Use datahub_search to find entities")
+- **MetadataMiddleware**: Appends execution metadata footer (tool name, duration, timestamp) to results
+
+### Config File Support
+
+Load configuration from YAML or JSON files with `extensions.FromFile()` or `extensions.LoadConfig()`:
+
+```yaml
+datahub:
+  url: https://datahub.example.com
+  token: "${DATAHUB_TOKEN}"
+  timeout: "30s"
+  write_enabled: true
+
+toolkit:
+  default_limit: 20
+  descriptions:
+    datahub_search: "Custom search description for your org"
+
+extensions:
+  logging: true
+  errors: true
+```
+
+Environment variables override file values for sensitive fields (`DATAHUB_URL`, `DATAHUB_TOKEN`, etc.).
+Token values support `$VAR` / `${VAR}` expansion.
 
 ## Multi-Server Configuration
 

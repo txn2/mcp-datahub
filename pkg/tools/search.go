@@ -32,10 +32,8 @@ func (t *Toolkit) registerSearchTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolSearch, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: string(ToolSearch),
-		Description: "Search for datasets, dashboards, pipelines, and other assets in the DataHub catalog. " +
-			"When a QueryProvider is configured, results include query_context " +
-			"showing which entities are queryable.",
+		Name:        string(ToolSearch),
+		Description: t.getDescription(ToolSearch, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input SearchInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

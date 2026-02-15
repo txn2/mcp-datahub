@@ -70,6 +70,27 @@ func TestToolContextSetGet(t *testing.T) {
 	}
 }
 
+func TestToolContextGetString(t *testing.T) {
+	tc := NewToolContext(ToolSearch, nil)
+
+	// Set a string value
+	tc.Set("connection", "prod")
+	if got := tc.GetString("connection"); got != "prod" {
+		t.Errorf("GetString() = %q, want %q", got, "prod")
+	}
+
+	// Non-existent key returns empty string
+	if got := tc.GetString("nonexistent"); got != "" {
+		t.Errorf("GetString() for missing key = %q, want empty", got)
+	}
+
+	// Non-string value returns empty string
+	tc.Set("count", 42)
+	if got := tc.GetString("count"); got != "" {
+		t.Errorf("GetString() for non-string value = %q, want empty", got)
+	}
+}
+
 func TestToolContextOverwrite(t *testing.T) {
 	tc := NewToolContext(ToolSearch, nil)
 

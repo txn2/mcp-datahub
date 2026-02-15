@@ -20,7 +20,19 @@ All configuration is done through environment variables.
 | `DATAHUB_MAX_LINEAGE_DEPTH` | Maximum lineage traversal depth | `5` |
 | `DATAHUB_CONNECTION_NAME` | Display name for primary connection | `datahub` |
 | `DATAHUB_ADDITIONAL_SERVERS` | JSON map of additional servers | (empty) |
+| `DATAHUB_WRITE_ENABLED` | Enable write operations (`true` or `1`) | `false` |
 | `DATAHUB_DEBUG` | Enable debug logging (`1` or `true`) | `false` |
+
+## Extensions Variables
+
+Optional middleware can be enabled via environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MCP_DATAHUB_EXT_LOGGING` | Enable structured logging of tool calls | `false` |
+| `MCP_DATAHUB_EXT_METRICS` | Enable metrics collection | `false` |
+| `MCP_DATAHUB_EXT_METADATA` | Enable metadata enrichment on results | `false` |
+| `MCP_DATAHUB_EXT_ERRORS` | Enable error hint enrichment | `true` |
 
 ## Example Configuration
 
@@ -79,6 +91,7 @@ Each additional server can override these settings (inherits from primary if not
 | `default_limit` | Default search limit |
 | `max_limit` | Maximum allowed limit |
 | `max_lineage_depth` | Maximum lineage depth |
+| `write_enabled` | Enable write operations (nil = inherit from primary) |
 
 ### Using Multiple Servers
 
@@ -97,6 +110,33 @@ datahub_search query="customers" connection="staging"
 2. Go to Settings > Access Tokens
 3. Generate a new token with appropriate permissions
 4. Copy the token value
+
+## Config File
+
+As an alternative to environment variables, configure via YAML or JSON:
+
+```yaml
+datahub:
+  url: https://datahub.example.com
+  token: "${DATAHUB_TOKEN}"
+  timeout: "30s"
+  connection_name: prod
+  write_enabled: true
+
+toolkit:
+  default_limit: 20
+  max_limit: 50
+  descriptions:
+    datahub_search: "Custom search description for your deployment"
+
+extensions:
+  logging: true
+  errors: true
+```
+
+Load with `extensions.LoadConfig("config.yaml")` when using as a library. Environment variables override file values for sensitive fields. Token values support `$VAR` / `${VAR}` expansion.
+
+See the [configuration reference](../reference/configuration.md) for all options.
 
 ## Security Considerations
 
