@@ -23,13 +23,34 @@ func WithToolMiddleware(name ToolName, mw ToolMiddleware) ToolkitOption {
 	}
 }
 
+// WithDescriptions sets toolkit-level description overrides for multiple tools.
+// These take priority over default descriptions but are overridden by
+// per-registration WithDescription options.
+func WithDescriptions(descs map[ToolName]string) ToolkitOption {
+	return func(t *Toolkit) {
+		for name, desc := range descs {
+			t.descriptions[name] = desc
+		}
+	}
+}
+
 // toolConfig holds per-registration configuration.
 type toolConfig struct {
 	middlewares []ToolMiddleware
+	description *string
 }
 
 // ToolOption configures a single tool registration.
 type ToolOption func(*toolConfig)
+
+// WithDescription overrides the description for a single tool registration.
+// This is the highest priority override, taking precedence over both
+// toolkit-level WithDescriptions and default descriptions.
+func WithDescription(desc string) ToolOption {
+	return func(cfg *toolConfig) {
+		cfg.description = &desc
+	}
+}
 
 // WithPerToolMiddleware adds middleware for a single tool registration.
 func WithPerToolMiddleware(mw ToolMiddleware) ToolOption {

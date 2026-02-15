@@ -81,6 +81,72 @@ func TestMultipleMiddleware(t *testing.T) {
 	}
 }
 
+func TestWithDescription(t *testing.T) {
+	cfg := &toolConfig{}
+	opt := WithDescription("custom description")
+	opt(cfg)
+
+	if cfg.description == nil {
+		t.Fatal("WithDescription() should set description pointer")
+	}
+	if *cfg.description != "custom description" {
+		t.Errorf("WithDescription() description = %q, want %q", *cfg.description, "custom description")
+	}
+}
+
+func TestWithDescriptions(t *testing.T) {
+	toolkit := &Toolkit{
+		descriptions:    make(map[ToolName]string),
+		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
+		registeredTools: make(map[ToolName]bool),
+	}
+
+	descs := map[ToolName]string{
+		ToolSearch:    "custom search",
+		ToolGetEntity: "custom entity",
+	}
+
+	opt := WithDescriptions(descs)
+	opt(toolkit)
+
+	if toolkit.descriptions[ToolSearch] != "custom search" {
+		t.Errorf("WithDescriptions() search = %q, want %q", toolkit.descriptions[ToolSearch], "custom search")
+	}
+	if toolkit.descriptions[ToolGetEntity] != "custom entity" {
+		t.Errorf("WithDescriptions() entity = %q, want %q", toolkit.descriptions[ToolGetEntity], "custom entity")
+	}
+}
+
+func TestWithDescriptions_Merge(t *testing.T) {
+	toolkit := &Toolkit{
+		descriptions:    make(map[ToolName]string),
+		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
+		registeredTools: make(map[ToolName]bool),
+	}
+
+	// First batch
+	WithDescriptions(map[ToolName]string{
+		ToolSearch:    "first search",
+		ToolGetEntity: "first entity",
+	})(toolkit)
+
+	// Second batch should merge (overwrite search, keep entity)
+	WithDescriptions(map[ToolName]string{
+		ToolSearch:    "second search",
+		ToolGetSchema: "second schema",
+	})(toolkit)
+
+	if toolkit.descriptions[ToolSearch] != "second search" {
+		t.Errorf("WithDescriptions() merge: search = %q, want %q", toolkit.descriptions[ToolSearch], "second search")
+	}
+	if toolkit.descriptions[ToolGetEntity] != "first entity" {
+		t.Errorf("WithDescriptions() merge: entity = %q, want %q", toolkit.descriptions[ToolGetEntity], "first entity")
+	}
+	if toolkit.descriptions[ToolGetSchema] != "second schema" {
+		t.Errorf("WithDescriptions() merge: schema = %q, want %q", toolkit.descriptions[ToolGetSchema], "second schema")
+	}
+}
+
 func TestMultipleToolMiddleware(t *testing.T) {
 	mw := BeforeFunc(func(ctx context.Context, _ *ToolContext) (context.Context, error) {
 		return ctx, nil

@@ -33,7 +33,7 @@ func (t *Toolkit) registerAddGlossaryTermTool(server *mcp.Server, cfg *toolConfi
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolAddGlossaryTerm),
-		Description: "Add a glossary term to a DataHub entity",
+		Description: t.getDescription(ToolAddGlossaryTerm, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddGlossaryTermInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
@@ -52,7 +52,7 @@ func (t *Toolkit) registerRemoveGlossaryTermTool(server *mcp.Server, cfg *toolCo
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolRemoveGlossaryTerm),
-		Description: "Remove a glossary term from a DataHub entity",
+		Description: t.getDescription(ToolRemoveGlossaryTerm, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveGlossaryTermInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

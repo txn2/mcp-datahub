@@ -26,7 +26,7 @@ func (t *Toolkit) registerGetGlossaryTermTool(server *mcp.Server, cfg *toolConfi
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolGetGlossaryTerm),
-		Description: "Get a glossary term definition and its related assets",
+		Description: t.getDescription(ToolGetGlossaryTerm, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetGlossaryTermInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

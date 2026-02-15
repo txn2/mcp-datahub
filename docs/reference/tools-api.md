@@ -113,6 +113,46 @@ Adds custom metadata to entity responses.
 func WithMetadataEnricher(e integration.MetadataEnricher) Option
 ```
 
+### WithDescriptions
+
+Overrides tool descriptions at the toolkit level.
+
+```go
+func WithDescriptions(descs map[ToolName]string) ToolkitOption
+```
+
+**Example:**
+
+```go
+toolkit := tools.NewToolkit(datahubClient, config,
+    tools.WithDescriptions(map[tools.ToolName]string{
+        tools.ToolSearch: "Search our internal data catalog",
+    }),
+)
+```
+
+### WithDescription
+
+Overrides the description for a single tool at registration time.
+
+```go
+func WithDescription(desc string) ToolOption
+```
+
+**Example:**
+
+```go
+toolkit.RegisterWith(server, tools.ToolSearch,
+    tools.WithDescription("Search our company's data catalog"),
+)
+```
+
+**Description Priority:**
+
+1. Per-registration `WithDescription()` (highest)
+2. Toolkit-level `WithDescriptions()` map
+3. Built-in default description (lowest)
+
 ## Tool Names
 
 Available tool name constants:
@@ -131,6 +171,15 @@ const (
     ToolListDataProducts ToolName = "datahub_list_data_products"
     ToolGetDataProduct   ToolName = "datahub_get_data_product"
     ToolListConnections  ToolName = "datahub_list_connections"
+
+    // Write tools (require WriteEnabled: true)
+    ToolUpdateDescription  ToolName = "datahub_update_description"
+    ToolAddTag             ToolName = "datahub_add_tag"
+    ToolRemoveTag          ToolName = "datahub_remove_tag"
+    ToolAddGlossaryTerm    ToolName = "datahub_add_glossary_term"
+    ToolRemoveGlossaryTerm ToolName = "datahub_remove_glossary_term"
+    ToolAddLink            ToolName = "datahub_add_link"
+    ToolRemoveLink         ToolName = "datahub_remove_link"
 )
 ```
 
@@ -159,6 +208,31 @@ Creates middleware that runs after tool execution.
 
 ```go
 func AfterFunc(fn func(ctx context.Context, tc *ToolContext, result *mcp.CallToolResult, err error) (*mcp.CallToolResult, error)) ToolMiddleware
+```
+
+## ToolContext
+
+### GetString
+
+Convenience method to get a string value from the `Extra` map.
+
+```go
+func (tc *ToolContext) GetString(key string) string
+```
+
+Returns the value as a string, or empty string if not found or not a string type.
+
+**Example:**
+
+```go
+func (m *MyMiddleware) Before(ctx context.Context, tc *tools.ToolContext) (context.Context, error) {
+    connection := tc.GetString("connection")
+    if connection == "" {
+        connection = "(default)"
+    }
+    log.Printf("tool=%s connection=%s", tc.ToolName, connection)
+    return ctx, nil
+}
 ```
 
 ## Helper Functions
@@ -763,6 +837,77 @@ if errors.Is(err, context.DeadlineExceeded) {
     // Handle timeout
 }
 ```
+
+---
+
+## Extensions Package
+
+The `extensions` package provides built-in middleware and config file support.
+
+### Config
+
+```go
+import "github.com/txn2/mcp-datahub/pkg/extensions"
+
+type Config struct {
+    EnableLogging   bool
+    EnableMetrics   bool
+    EnableMetadata  bool
+    EnableErrorHelp bool
+    LogOutput       io.Writer
+}
+```
+
+### DefaultConfig
+
+Returns default configuration (error hints enabled, everything else off):
+
+```go
+func DefaultConfig() Config
+```
+
+### FromEnv
+
+Loads extension configuration from `MCP_DATAHUB_EXT_*` environment variables:
+
+```go
+func FromEnv() Config
+```
+
+### BuildToolkitOptions
+
+Converts extension config into toolkit options:
+
+```go
+func BuildToolkitOptions(cfg Config) []tools.ToolkitOption
+```
+
+### LoadConfig
+
+Loads a full server config from a YAML or JSON file with environment variable overrides:
+
+```go
+func LoadConfig(path string) (ServerConfig, error)
+```
+
+### Built-in Middleware
+
+| Middleware | Description |
+|-----------|-------------|
+| `LoggingMiddleware` | Logs tool invocations and results with duration |
+| `MetricsMiddleware` | Collects call counts, error counts, and duration |
+| `ErrorHintMiddleware` | Appends helpful hints to error messages |
+| `MetadataMiddleware` | Appends execution metadata to successful results |
+
+### MetricsCollector Interface
+
+```go
+type MetricsCollector interface {
+    RecordCall(toolName string, duration time.Duration, success bool)
+}
+```
+
+`InMemoryCollector` is provided as a thread-safe in-memory implementation.
 
 ---
 

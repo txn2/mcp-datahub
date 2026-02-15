@@ -25,10 +25,8 @@ func (t *Toolkit) registerGetColumnLineageTool(server *mcp.Server, cfg *toolConf
 	wrappedHandler := t.wrapHandler(ToolGetColumnLineage, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: string(ToolGetColumnLineage),
-		Description: "Get fine-grained column-level lineage for a dataset. " +
-			"Returns mappings showing how downstream columns are derived from upstream columns. " +
-			"Useful for understanding data transformations at the field level.",
+		Name:        string(ToolGetColumnLineage),
+		Description: t.getDescription(ToolGetColumnLineage, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetColumnLineageInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

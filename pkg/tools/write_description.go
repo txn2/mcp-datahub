@@ -26,7 +26,7 @@ func (t *Toolkit) registerUpdateDescriptionTool(server *mcp.Server, cfg *toolCon
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolUpdateDescription),
-		Description: "Update the description of a DataHub entity",
+		Description: t.getDescription(ToolUpdateDescription, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input UpdateDescriptionInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

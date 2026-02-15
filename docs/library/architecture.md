@@ -23,6 +23,7 @@ flowchart TB
             types["types<br/>Domain types"]
             integration["integration<br/>Hook interfaces"]
             multiserver["multiserver<br/>Multi-server management"]
+            extensions["extensions<br/>Config file, logging, metrics, errors"]
         end
     end
 ```

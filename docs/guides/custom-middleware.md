@@ -6,6 +6,27 @@ Create middleware for cross-cutting concerns like logging, metrics, and caching.
 
 Implement custom middleware to extend tool behavior without modifying tool handlers.
 
+## Built-in Extensions
+
+Before writing custom middleware, check if the built-in `extensions` package covers your need:
+
+| Extension | Env Variable | Description |
+|-----------|-------------|-------------|
+| Logging | `MCP_DATAHUB_EXT_LOGGING` | Structured logging with tool name, connection, duration |
+| Metrics | `MCP_DATAHUB_EXT_METRICS` | Call counts, error counts, and timing via `MetricsCollector` interface |
+| Error Hints | `MCP_DATAHUB_EXT_ERRORS` | Appends helpful hints (e.g., "use datahub_search to find entities") |
+| Metadata | `MCP_DATAHUB_EXT_METADATA` | Appends execution metadata (tool name, timestamp) to results |
+
+```go
+import "github.com/txn2/mcp-datahub/pkg/extensions"
+
+cfg := extensions.FromEnv()
+opts := extensions.BuildToolkitOptions(cfg)
+toolkit := tools.NewToolkit(datahubClient, toolsCfg, opts...)
+```
+
+If you need behavior beyond what extensions provide, implement custom middleware as described below.
+
 ## Prerequisites
 
 - Understanding of the middleware pattern

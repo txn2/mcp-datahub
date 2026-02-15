@@ -36,10 +36,8 @@ func (t *Toolkit) registerListConnectionsTool(server *mcp.Server, cfg *toolConfi
 
 	// Register with MCP
 	mcp.AddTool(server, &mcp.Tool{
-		Name: string(ToolListConnections),
-		Description: "List all configured DataHub server connections. " +
-			"Use this to discover available connections before querying specific servers. " +
-			"Pass the connection name to other tools via the 'connection' parameter.",
+		Name:        string(ToolListConnections),
+		Description: t.getDescription(ToolListConnections, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListConnectionsInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

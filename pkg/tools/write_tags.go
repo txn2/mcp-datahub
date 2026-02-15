@@ -33,7 +33,7 @@ func (t *Toolkit) registerAddTagTool(server *mcp.Server, cfg *toolConfig) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolAddTag),
-		Description: "Add a tag to a DataHub entity",
+		Description: t.getDescription(ToolAddTag, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddTagInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
@@ -52,7 +52,7 @@ func (t *Toolkit) registerRemoveTagTool(server *mcp.Server, cfg *toolConfig) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolRemoveTag),
-		Description: "Remove a tag from a DataHub entity",
+		Description: t.getDescription(ToolRemoveTag, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveTagInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
