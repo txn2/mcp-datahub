@@ -43,6 +43,9 @@ type Toolkit struct {
 	// Annotation overrides (toolkit-level, set via WithAnnotations)
 	annotations map[ToolName]*mcp.ToolAnnotations
 
+	// Icon overrides (toolkit-level, set via WithIcons)
+	icons map[ToolName][]mcp.Icon
+
 	// Internal tracking
 	registeredTools map[ToolName]bool
 }
@@ -84,6 +87,7 @@ func newBaseToolkit(cfg Config) *Toolkit {
 		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
 		descriptions:    make(map[ToolName]string),
 		annotations:     make(map[ToolName]*mcp.ToolAnnotations),
+		icons:           make(map[ToolName][]mcp.Icon),
 		registeredTools: make(map[ToolName]bool),
 	}
 }

@@ -39,6 +39,7 @@ func (t *Toolkit) registerListConnectionsTool(server *mcp.Server, cfg *toolConfi
 		Name:        string(ToolListConnections),
 		Description: t.getDescription(ToolListConnections, cfg),
 		Annotations: t.getAnnotations(ToolListConnections, cfg),
+		Icons:       t.getIcons(ToolListConnections, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListConnectionsInput) (*mcp.CallToolResult, *ListConnectionsOutput, error) {
 		result, out, err := wrappedHandler(ctx, req, input)
 		if typed, ok := out.(*ListConnectionsOutput); ok {

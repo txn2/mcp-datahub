@@ -35,6 +35,7 @@ func (t *Toolkit) registerAddTagTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolAddTag),
 		Description: t.getDescription(ToolAddTag, cfg),
 		Annotations: t.getAnnotations(ToolAddTag, cfg),
+		Icons:       t.getIcons(ToolAddTag, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddTagInput) (*mcp.CallToolResult, *AddTagOutput, error) {
 		result, out, err := wrappedHandler(ctx, req, input)
 		if typed, ok := out.(*AddTagOutput); ok {
@@ -59,6 +60,7 @@ func (t *Toolkit) registerRemoveTagTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolRemoveTag),
 		Description: t.getDescription(ToolRemoveTag, cfg),
 		Annotations: t.getAnnotations(ToolRemoveTag, cfg),
+		Icons:       t.getIcons(ToolRemoveTag, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveTagInput) (*mcp.CallToolResult, *RemoveTagOutput, error) {
 		result, out, err := wrappedHandler(ctx, req, input)
 		if typed, ok := out.(*RemoveTagOutput); ok {

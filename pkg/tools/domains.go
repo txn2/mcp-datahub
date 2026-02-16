@@ -27,6 +27,7 @@ func (t *Toolkit) registerListDomainsTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolListDomains),
 		Description: t.getDescription(ToolListDomains, cfg),
 		Annotations: t.getAnnotations(ToolListDomains, cfg),
+		Icons:       t.getIcons(ToolListDomains, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListDomainsInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

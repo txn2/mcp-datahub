@@ -28,6 +28,7 @@ func (t *Toolkit) registerGetEntityTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolGetEntity),
 		Description: t.getDescription(ToolGetEntity, cfg),
 		Annotations: t.getAnnotations(ToolGetEntity, cfg),
+		Icons:       t.getIcons(ToolGetEntity, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetEntityInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

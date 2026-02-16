@@ -36,6 +36,7 @@ func (t *Toolkit) registerAddLinkTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolAddLink),
 		Description: t.getDescription(ToolAddLink, cfg),
 		Annotations: t.getAnnotations(ToolAddLink, cfg),
+		Icons:       t.getIcons(ToolAddLink, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddLinkInput) (*mcp.CallToolResult, *AddLinkOutput, error) {
 		result, out, err := wrappedHandler(ctx, req, input)
 		if typed, ok := out.(*AddLinkOutput); ok {
@@ -60,6 +61,7 @@ func (t *Toolkit) registerRemoveLinkTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolRemoveLink),
 		Description: t.getDescription(ToolRemoveLink, cfg),
 		Annotations: t.getAnnotations(ToolRemoveLink, cfg),
+		Icons:       t.getIcons(ToolRemoveLink, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveLinkInput) (*mcp.CallToolResult, *RemoveLinkOutput, error) {
 		result, out, err := wrappedHandler(ctx, req, input)
 		if typed, ok := out.(*RemoveLinkOutput); ok {

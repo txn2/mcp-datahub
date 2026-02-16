@@ -28,6 +28,7 @@ func (t *Toolkit) registerGetColumnLineageTool(server *mcp.Server, cfg *toolConf
 		Name:        string(ToolGetColumnLineage),
 		Description: t.getDescription(ToolGetColumnLineage, cfg),
 		Annotations: t.getAnnotations(ToolGetColumnLineage, cfg),
+		Icons:       t.getIcons(ToolGetColumnLineage, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetColumnLineageInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

@@ -35,6 +35,7 @@ func (t *Toolkit) registerSearchTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolSearch),
 		Description: t.getDescription(ToolSearch, cfg),
 		Annotations: t.getAnnotations(ToolSearch, cfg),
+		Icons:       t.getIcons(ToolSearch, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input SearchInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
