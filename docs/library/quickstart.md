@@ -108,6 +108,20 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{},
 )
 ```
 
+## With Annotation Overrides
+
+Customize MCP tool annotations (behavior hints for AI clients):
+
+```go
+toolkit := tools.NewToolkit(datahubClient, tools.Config{},
+    tools.WithAnnotations(map[tools.ToolName]*mcp.ToolAnnotations{
+        tools.ToolSearch: {ReadOnlyHint: true, OpenWorldHint: boolPtr(true)},
+    }),
+)
+```
+
+All tools ship with sensible defaults (read tools marked read-only, write tools marked non-destructive and idempotent). See the [Tools API Reference](../reference/tools-api.md#withannotations) for the full annotation API.
+
 ## With Extensions
 
 Enable built-in middleware for logging, metrics, and error hints:

@@ -139,6 +139,19 @@ Tool descriptions can be customized at three levels of priority:
 
 Descriptions can also be set via config file (`toolkit.descriptions` section) or the `Descriptions` field in `server.Options`.
 
+## Annotation Overrides
+
+MCP tool annotations (behavior hints per the MCP specification) follow the same three-level priority:
+
+1. **Per-registration** (highest): `toolkit.RegisterWith(server, tools.ToolSearch, tools.WithAnnotation(&mcp.ToolAnnotations{...}))`
+2. **Toolkit-level**: `tools.NewToolkit(client, cfg, tools.WithAnnotations(map[tools.ToolName]*mcp.ToolAnnotations{...}))`
+3. **Default**: Built-in annotations from `pkg/tools/annotations.go`
+
+Default annotations for all 19 tools:
+
+- **Read tools** (12): `ReadOnlyHint: true`, `IdempotentHint: true`, `OpenWorldHint: false`
+- **Write tools** (7): `DestructiveHint: false`, `IdempotentHint: true`, `OpenWorldHint: false`
+
 ## Extensions Package (`pkg/extensions/`)
 
 Optional middleware and config file support. All extensions are opt-in.

@@ -153,6 +153,61 @@ toolkit.RegisterWith(server, tools.ToolSearch,
 2. Toolkit-level `WithDescriptions()` map
 3. Built-in default description (lowest)
 
+### WithAnnotations
+
+Overrides MCP tool annotations at the toolkit level.
+
+```go
+func WithAnnotations(anns map[ToolName]*mcp.ToolAnnotations) ToolkitOption
+```
+
+**Example:**
+
+```go
+toolkit := tools.NewToolkit(datahubClient, config,
+    tools.WithAnnotations(map[tools.ToolName]*mcp.ToolAnnotations{
+        tools.ToolSearch: {ReadOnlyHint: true, OpenWorldHint: boolPtr(true)},
+    }),
+)
+```
+
+### WithAnnotation
+
+Overrides the annotations for a single tool at registration time.
+
+```go
+func WithAnnotation(ann *mcp.ToolAnnotations) ToolOption
+```
+
+**Example:**
+
+```go
+toolkit.RegisterWith(server, tools.ToolSearch,
+    tools.WithAnnotation(&mcp.ToolAnnotations{ReadOnlyHint: true}),
+)
+```
+
+**Annotation Priority:**
+
+1. Per-registration `WithAnnotation()` (highest)
+2. Toolkit-level `WithAnnotations()` map
+3. Built-in default annotations (lowest)
+
+### DefaultAnnotations
+
+Returns the default annotations for a tool by name. Returns nil for unknown tool names.
+
+```go
+func DefaultAnnotations(name ToolName) *mcp.ToolAnnotations
+```
+
+**Default Annotations:**
+
+| Tool Category | ReadOnlyHint | DestructiveHint | IdempotentHint | OpenWorldHint |
+|---------------|:------------:|:---------------:|:--------------:|:-------------:|
+| Read tools (12) | `true` | _(default)_ | `true` | `false` |
+| Write tools (7) | `false` | `false` | `true` | `false` |
+
 ## Tool Names
 
 Available tool name constants:
@@ -259,6 +314,74 @@ Creates an error result.
 
 ```go
 func ErrorResult(msg string) *mcp.CallToolResult
+```
+
+## Write Tool Output Types
+
+Write tools return typed output structs as the second return value from their handler functions. These provide structured access to operation results.
+
+### UpdateDescriptionOutput
+
+```go
+type UpdateDescriptionOutput struct {
+    URN    string `json:"urn"`
+    Aspect string `json:"aspect"`
+    Action string `json:"action"`
+}
+```
+
+### AddTagOutput / RemoveTagOutput
+
+```go
+type AddTagOutput struct {
+    URN    string `json:"urn"`
+    Tag    string `json:"tag"`
+    Aspect string `json:"aspect"`
+    Action string `json:"action"`
+}
+
+type RemoveTagOutput struct {
+    URN    string `json:"urn"`
+    Tag    string `json:"tag"`
+    Aspect string `json:"aspect"`
+    Action string `json:"action"`
+}
+```
+
+### AddGlossaryTermOutput / RemoveGlossaryTermOutput
+
+```go
+type AddGlossaryTermOutput struct {
+    URN    string `json:"urn"`
+    Term   string `json:"term"`
+    Aspect string `json:"aspect"`
+    Action string `json:"action"`
+}
+
+type RemoveGlossaryTermOutput struct {
+    URN    string `json:"urn"`
+    Term   string `json:"term"`
+    Aspect string `json:"aspect"`
+    Action string `json:"action"`
+}
+```
+
+### AddLinkOutput / RemoveLinkOutput
+
+```go
+type AddLinkOutput struct {
+    URN    string `json:"urn"`
+    URL    string `json:"url"`
+    Aspect string `json:"aspect"`
+    Action string `json:"action"`
+}
+
+type RemoveLinkOutput struct {
+    URN    string `json:"urn"`
+    URL    string `json:"url"`
+    Aspect string `json:"aspect"`
+    Action string `json:"action"`
+}
 ```
 
 ## Integration Package
