@@ -27,8 +27,15 @@ func (t *Toolkit) registerUpdateDescriptionTool(server *mcp.Server, cfg *toolCon
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolUpdateDescription),
 		Description: t.getDescription(ToolUpdateDescription, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input UpdateDescriptionInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
+		Annotations: t.getAnnotations(ToolUpdateDescription, cfg),
+	}, func(ctx context.Context, req *mcp.CallToolRequest,
+		input UpdateDescriptionInput,
+	) (*mcp.CallToolResult, *UpdateDescriptionOutput, error) {
+		result, out, err := wrappedHandler(ctx, req, input)
+		if typed, ok := out.(*UpdateDescriptionOutput); ok {
+			return result, typed, err
+		}
+		return result, nil, err
 	})
 }
 
@@ -49,15 +56,15 @@ func (t *Toolkit) handleUpdateDescription(
 		return ErrorResult("UpdateDescription failed: " + err.Error()), nil, nil
 	}
 
-	result := map[string]string{
-		"urn":    input.URN,
-		"aspect": "editableDatasetProperties",
-		"action": "updated",
+	output := UpdateDescriptionOutput{
+		URN:    input.URN,
+		Aspect: "editableDatasetProperties",
+		Action: "updated",
 	}
 
-	jsonResult, err := JSONResult(result)
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }

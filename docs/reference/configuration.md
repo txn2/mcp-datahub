@@ -180,6 +180,34 @@ Description priority (highest to lowest):
 2. Toolkit-level override via `WithDescriptions()`
 3. Built-in default description
 
+## Annotation Overrides
+
+Customize [MCP tool annotations](https://modelcontextprotocol.io/specification/2025-03-26/server/tools#annotations) (behavior hints for AI clients):
+
+```go
+toolkit := tools.NewToolkit(datahubClient, tools.Config{},
+    tools.WithAnnotations(map[tools.ToolName]*mcp.ToolAnnotations{
+        tools.ToolSearch: {ReadOnlyHint: true, OpenWorldHint: boolPtr(true)},
+    }),
+)
+```
+
+Or override a single tool at registration time:
+
+```go
+toolkit.RegisterWith(server, tools.ToolSearch,
+    tools.WithAnnotation(&mcp.ToolAnnotations{ReadOnlyHint: true}),
+)
+```
+
+Annotation priority (highest to lowest):
+
+1. Per-registration override via `WithAnnotation()`
+2. Toolkit-level override via `WithAnnotations()`
+3. Built-in default annotations
+
+All 19 tools ship with defaults: read tools are `ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: false`; write tools are `DestructiveHint: false, IdempotentHint: true, OpenWorldHint: false`.
+
 ## Extensions Configuration
 
 The `extensions` package provides built-in middleware and config file support.

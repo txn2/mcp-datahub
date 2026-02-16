@@ -57,6 +57,7 @@ Tools are functions that AI assistants can call. Each tool has:
 | Name | Unique identifier |
 | Description | What the tool does |
 | Input Schema | Parameters the tool accepts |
+| Annotations | Behavior hints (read-only, destructive, idempotent) |
 | Handler | Function that executes the tool |
 
 Example tool definition:
@@ -85,6 +86,19 @@ Example tool definition:
   }
 }
 ```
+
+### Tool Annotations
+
+Tool annotations are optional metadata that describe a tool's behavior to AI clients. mcp-datahub sets annotations on all 19 tools:
+
+| Annotation | Description |
+|------------|-------------|
+| `ReadOnlyHint` | Tool only reads data (all 12 read tools) |
+| `DestructiveHint` | Tool may destructively update (false for all write tools) |
+| `IdempotentHint` | Repeated calls produce the same result (all tools) |
+| `OpenWorldHint` | Tool interacts with external entities beyond the server (false for all tools) |
+
+MCP clients can use these hints to make informed decisions, such as auto-approving read-only tools or prompting for confirmation before write operations.
 
 ### Transport
 

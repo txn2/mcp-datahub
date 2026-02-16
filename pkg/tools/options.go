@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/txn2/mcp-datahub/pkg/integration"
 )
 
@@ -38,6 +40,7 @@ func WithDescriptions(descs map[ToolName]string) ToolkitOption {
 type toolConfig struct {
 	middlewares []ToolMiddleware
 	description *string
+	annotations *mcp.ToolAnnotations
 }
 
 // ToolOption configures a single tool registration.
@@ -56,6 +59,26 @@ func WithDescription(desc string) ToolOption {
 func WithPerToolMiddleware(mw ToolMiddleware) ToolOption {
 	return func(cfg *toolConfig) {
 		cfg.middlewares = append(cfg.middlewares, mw)
+	}
+}
+
+// WithAnnotations sets toolkit-level annotation overrides for multiple tools.
+// These take priority over default annotations but are overridden by
+// per-registration WithAnnotation options.
+func WithAnnotations(anns map[ToolName]*mcp.ToolAnnotations) ToolkitOption {
+	return func(t *Toolkit) {
+		for name, ann := range anns {
+			t.annotations[name] = ann
+		}
+	}
+}
+
+// WithAnnotation overrides the annotations for a single tool registration.
+// This is the highest priority override, taking precedence over both
+// toolkit-level WithAnnotations and default annotations.
+func WithAnnotation(ann *mcp.ToolAnnotations) ToolOption {
+	return func(cfg *toolConfig) {
+		cfg.annotations = ann
 	}
 }
 

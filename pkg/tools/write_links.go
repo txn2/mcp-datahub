@@ -35,8 +35,13 @@ func (t *Toolkit) registerAddLinkTool(server *mcp.Server, cfg *toolConfig) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolAddLink),
 		Description: t.getDescription(ToolAddLink, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddLinkInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
+		Annotations: t.getAnnotations(ToolAddLink, cfg),
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddLinkInput) (*mcp.CallToolResult, *AddLinkOutput, error) {
+		result, out, err := wrappedHandler(ctx, req, input)
+		if typed, ok := out.(*AddLinkOutput); ok {
+			return result, typed, err
+		}
+		return result, nil, err
 	})
 }
 
@@ -54,8 +59,13 @@ func (t *Toolkit) registerRemoveLinkTool(server *mcp.Server, cfg *toolConfig) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolRemoveLink),
 		Description: t.getDescription(ToolRemoveLink, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveLinkInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
+		Annotations: t.getAnnotations(ToolRemoveLink, cfg),
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveLinkInput) (*mcp.CallToolResult, *RemoveLinkOutput, error) {
+		result, out, err := wrappedHandler(ctx, req, input)
+		if typed, ok := out.(*RemoveLinkOutput); ok {
+			return result, typed, err
+		}
+		return result, nil, err
 	})
 }
 
@@ -77,18 +87,18 @@ func (t *Toolkit) handleAddLink(ctx context.Context, _ *mcp.CallToolRequest, inp
 		return ErrorResult("AddLink failed: " + err.Error()), nil, nil
 	}
 
-	result := map[string]string{
-		"urn":    input.URN,
-		"url":    input.URL,
-		"aspect": "institutionalMemory",
-		"action": "added",
+	output := AddLinkOutput{
+		URN:    input.URN,
+		URL:    input.URL,
+		Aspect: "institutionalMemory",
+		Action: "added",
 	}
 
-	jsonResult, err := JSONResult(result)
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }
 
 func (t *Toolkit) handleRemoveLink(ctx context.Context, _ *mcp.CallToolRequest, input RemoveLinkInput) (*mcp.CallToolResult, any, error) {
@@ -109,16 +119,16 @@ func (t *Toolkit) handleRemoveLink(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult("RemoveLink failed: " + err.Error()), nil, nil
 	}
 
-	result := map[string]string{
-		"urn":    input.URN,
-		"url":    input.URL,
-		"aspect": "institutionalMemory",
-		"action": "removed",
+	output := RemoveLinkOutput{
+		URN:    input.URN,
+		URL:    input.URL,
+		Aspect: "institutionalMemory",
+		Action: "removed",
 	}
 
-	jsonResult, err := JSONResult(result)
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }

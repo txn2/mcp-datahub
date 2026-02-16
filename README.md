@@ -92,6 +92,20 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{},
 )
 ```
 
+#### Customizing Tool Annotations
+
+Override [MCP tool annotations](https://modelcontextprotocol.io/specification/2025-03-26/server/tools#annotations) (behavior hints for AI clients):
+
+```go
+toolkit := tools.NewToolkit(datahubClient, tools.Config{},
+    tools.WithAnnotations(map[tools.ToolName]*mcp.ToolAnnotations{
+        tools.ToolSearch: {ReadOnlyHint: true, OpenWorldHint: boolPtr(true)},
+    }),
+)
+```
+
+All 19 tools ship with default annotations: read tools are marked `ReadOnlyHint: true`, write tools are marked `DestructiveHint: false` and `IdempotentHint: true`.
+
 #### Extensions (Logging, Metrics, Error Hints)
 
 Enable optional middleware via the extensions package:
