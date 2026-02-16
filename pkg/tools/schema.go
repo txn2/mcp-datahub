@@ -28,6 +28,7 @@ func (t *Toolkit) registerGetSchemaTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolGetSchema),
 		Description: t.getDescription(ToolGetSchema, cfg),
 		Annotations: t.getAnnotations(ToolGetSchema, cfg),
+		Icons:       t.getIcons(ToolGetSchema, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetSchemaInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

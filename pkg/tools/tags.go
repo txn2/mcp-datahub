@@ -28,6 +28,7 @@ func (t *Toolkit) registerListTagsTool(server *mcp.Server, cfg *toolConfig) {
 		Name:        string(ToolListTags),
 		Description: t.getDescription(ToolListTags, cfg),
 		Annotations: t.getAnnotations(ToolListTags, cfg),
+		Icons:       t.getIcons(ToolListTags, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListTagsInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

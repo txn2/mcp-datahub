@@ -28,6 +28,7 @@ func (t *Toolkit) registerGetGlossaryTermTool(server *mcp.Server, cfg *toolConfi
 		Name:        string(ToolGetGlossaryTerm),
 		Description: t.getDescription(ToolGetGlossaryTerm, cfg),
 		Annotations: t.getAnnotations(ToolGetGlossaryTerm, cfg),
+		Icons:       t.getIcons(ToolGetGlossaryTerm, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetGlossaryTermInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

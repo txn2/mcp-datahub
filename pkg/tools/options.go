@@ -41,6 +41,7 @@ type toolConfig struct {
 	middlewares []ToolMiddleware
 	description *string
 	annotations *mcp.ToolAnnotations
+	icons       []mcp.Icon
 }
 
 // ToolOption configures a single tool registration.
@@ -79,6 +80,26 @@ func WithAnnotations(anns map[ToolName]*mcp.ToolAnnotations) ToolkitOption {
 func WithAnnotation(ann *mcp.ToolAnnotations) ToolOption {
 	return func(cfg *toolConfig) {
 		cfg.annotations = ann
+	}
+}
+
+// WithIcons sets toolkit-level icon overrides for multiple tools.
+// These take priority over default icons but are overridden by
+// per-registration WithIcon options.
+func WithIcons(icons map[ToolName][]mcp.Icon) ToolkitOption {
+	return func(t *Toolkit) {
+		for name, ic := range icons {
+			t.icons[name] = ic
+		}
+	}
+}
+
+// WithIcon overrides the icons for a single tool registration.
+// This is the highest priority override, taking precedence over both
+// toolkit-level WithIcons and default icons.
+func WithIcon(icons []mcp.Icon) ToolOption {
+	return func(cfg *toolConfig) {
+		cfg.icons = icons
 	}
 }
 

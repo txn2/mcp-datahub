@@ -27,6 +27,7 @@ func (t *Toolkit) registerListDataProductsTool(server *mcp.Server, cfg *toolConf
 		Name:        string(ToolListDataProducts),
 		Description: t.getDescription(ToolListDataProducts, cfg),
 		Annotations: t.getAnnotations(ToolListDataProducts, cfg),
+		Icons:       t.getIcons(ToolListDataProducts, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListDataProductsInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
@@ -76,6 +77,7 @@ func (t *Toolkit) registerGetDataProductTool(server *mcp.Server, cfg *toolConfig
 		Name:        string(ToolGetDataProduct),
 		Description: t.getDescription(ToolGetDataProduct, cfg),
 		Annotations: t.getAnnotations(ToolGetDataProduct, cfg),
+		Icons:       t.getIcons(ToolGetDataProduct, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetDataProductInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

@@ -28,6 +28,7 @@ func (t *Toolkit) registerUpdateDescriptionTool(server *mcp.Server, cfg *toolCon
 		Name:        string(ToolUpdateDescription),
 		Description: t.getDescription(ToolUpdateDescription, cfg),
 		Annotations: t.getAnnotations(ToolUpdateDescription, cfg),
+		Icons:       t.getIcons(ToolUpdateDescription, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest,
 		input UpdateDescriptionInput,
 	) (*mcp.CallToolResult, *UpdateDescriptionOutput, error) {
