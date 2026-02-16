@@ -38,8 +38,13 @@ func (t *Toolkit) registerListConnectionsTool(server *mcp.Server, cfg *toolConfi
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolListConnections),
 		Description: t.getDescription(ToolListConnections, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListConnectionsInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
+		Annotations: t.getAnnotations(ToolListConnections, cfg),
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListConnectionsInput) (*mcp.CallToolResult, *ListConnectionsOutput, error) {
+		result, out, err := wrappedHandler(ctx, req, input)
+		if typed, ok := out.(*ListConnectionsOutput); ok {
+			return result, typed, err
+		}
+		return result, nil, err
 	})
 }
 
@@ -68,5 +73,5 @@ func (t *Toolkit) handleListConnections(_ context.Context, _ *mcp.CallToolReques
 		Content: []mcp.Content{
 			&mcp.TextContent{Text: string(data)},
 		},
-	}, nil, nil
+	}, &output, nil
 }

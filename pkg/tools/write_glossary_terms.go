@@ -34,8 +34,13 @@ func (t *Toolkit) registerAddGlossaryTermTool(server *mcp.Server, cfg *toolConfi
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolAddGlossaryTerm),
 		Description: t.getDescription(ToolAddGlossaryTerm, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddGlossaryTermInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
+		Annotations: t.getAnnotations(ToolAddGlossaryTerm, cfg),
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddGlossaryTermInput) (*mcp.CallToolResult, *AddGlossaryTermOutput, error) {
+		result, out, err := wrappedHandler(ctx, req, input)
+		if typed, ok := out.(*AddGlossaryTermOutput); ok {
+			return result, typed, err
+		}
+		return result, nil, err
 	})
 }
 
@@ -53,8 +58,15 @@ func (t *Toolkit) registerRemoveGlossaryTermTool(server *mcp.Server, cfg *toolCo
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolRemoveGlossaryTerm),
 		Description: t.getDescription(ToolRemoveGlossaryTerm, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveGlossaryTermInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
+		Annotations: t.getAnnotations(ToolRemoveGlossaryTerm, cfg),
+	}, func(ctx context.Context, req *mcp.CallToolRequest,
+		input RemoveGlossaryTermInput,
+	) (*mcp.CallToolResult, *RemoveGlossaryTermOutput, error) {
+		result, out, err := wrappedHandler(ctx, req, input)
+		if typed, ok := out.(*RemoveGlossaryTermOutput); ok {
+			return result, typed, err
+		}
+		return result, nil, err
 	})
 }
 
@@ -78,18 +90,18 @@ func (t *Toolkit) handleAddGlossaryTerm(
 		return ErrorResult("AddGlossaryTerm failed: " + err.Error()), nil, nil
 	}
 
-	result := map[string]string{
-		"urn":    input.URN,
-		"term":   input.TermURN,
-		"aspect": "glossaryTerms",
-		"action": "added",
+	output := AddGlossaryTermOutput{
+		URN:    input.URN,
+		Term:   input.TermURN,
+		Aspect: "glossaryTerms",
+		Action: "added",
 	}
 
-	jsonResult, err := JSONResult(result)
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }
 
 func (t *Toolkit) handleRemoveGlossaryTerm(
@@ -112,16 +124,16 @@ func (t *Toolkit) handleRemoveGlossaryTerm(
 		return ErrorResult("RemoveGlossaryTerm failed: " + err.Error()), nil, nil
 	}
 
-	result := map[string]string{
-		"urn":    input.URN,
-		"term":   input.TermURN,
-		"aspect": "glossaryTerms",
-		"action": "removed",
+	output := RemoveGlossaryTermOutput{
+		URN:    input.URN,
+		Term:   input.TermURN,
+		Aspect: "glossaryTerms",
+		Action: "removed",
 	}
 
-	jsonResult, err := JSONResult(result)
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }

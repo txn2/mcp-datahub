@@ -34,8 +34,13 @@ func (t *Toolkit) registerAddTagTool(server *mcp.Server, cfg *toolConfig) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolAddTag),
 		Description: t.getDescription(ToolAddTag, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddTagInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
+		Annotations: t.getAnnotations(ToolAddTag, cfg),
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddTagInput) (*mcp.CallToolResult, *AddTagOutput, error) {
+		result, out, err := wrappedHandler(ctx, req, input)
+		if typed, ok := out.(*AddTagOutput); ok {
+			return result, typed, err
+		}
+		return result, nil, err
 	})
 }
 
@@ -53,8 +58,13 @@ func (t *Toolkit) registerRemoveTagTool(server *mcp.Server, cfg *toolConfig) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(ToolRemoveTag),
 		Description: t.getDescription(ToolRemoveTag, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveTagInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
+		Annotations: t.getAnnotations(ToolRemoveTag, cfg),
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveTagInput) (*mcp.CallToolResult, *RemoveTagOutput, error) {
+		result, out, err := wrappedHandler(ctx, req, input)
+		if typed, ok := out.(*RemoveTagOutput); ok {
+			return result, typed, err
+		}
+		return result, nil, err
 	})
 }
 
@@ -76,18 +86,18 @@ func (t *Toolkit) handleAddTag(ctx context.Context, _ *mcp.CallToolRequest, inpu
 		return ErrorResult("AddTag failed: " + err.Error()), nil, nil
 	}
 
-	result := map[string]string{
-		"urn":    input.URN,
-		"tag":    input.TagURN,
-		"aspect": "globalTags",
-		"action": "added",
+	output := AddTagOutput{
+		URN:    input.URN,
+		Tag:    input.TagURN,
+		Aspect: "globalTags",
+		Action: "added",
 	}
 
-	jsonResult, err := JSONResult(result)
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }
 
 func (t *Toolkit) handleRemoveTag(ctx context.Context, _ *mcp.CallToolRequest, input RemoveTagInput) (*mcp.CallToolResult, any, error) {
@@ -108,16 +118,16 @@ func (t *Toolkit) handleRemoveTag(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult("RemoveTag failed: " + err.Error()), nil, nil
 	}
 
-	result := map[string]string{
-		"urn":    input.URN,
-		"tag":    input.TagURN,
-		"aspect": "globalTags",
-		"action": "removed",
+	output := RemoveTagOutput{
+		URN:    input.URN,
+		Tag:    input.TagURN,
+		Aspect: "globalTags",
+		Action: "removed",
 	}
 
-	jsonResult, err := JSONResult(result)
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }
