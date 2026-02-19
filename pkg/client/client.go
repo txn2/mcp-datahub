@@ -175,7 +175,7 @@ func (c *Client) doRequest(ctx context.Context, jsonBody []byte, result any) err
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req) //#nosec G704 -- URL is constructed from configured endpoint, not arbitrary user input
 	if err != nil {
 		return c.handleRequestError(ctx, err)
 	}

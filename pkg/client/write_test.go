@@ -889,6 +889,257 @@ func TestUpdateDescription_ServerError(t *testing.T) {
 	}
 }
 
+func TestUpdateColumnDescription(t *testing.T) {
+	existingAspect := `{"editableSchemaFieldInfo":[` +
+		`{"fieldPath":"id","description":"existing id desc",` +
+		`"globalTags":{"tags":[{"tag":"urn:li:tag:PII"}]}},` +
+		`{"fieldPath":"name","description":"existing name desc"}]}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			resp := aspectResponse{Value: json.RawMessage(existingAspect)}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
+
+		if proposal["aspectName"] != "editableSchemaMetadata" {
+			t.Errorf("expected aspect 'editableSchemaMetadata', got %v", proposal["aspectName"])
+		}
+
+		var schema editableSchemaAspect
+		if err := json.Unmarshal([]byte(aspectJSON), &schema); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
+
+		// Should still have 2 fields
+		if len(schema.EditableSchemaFieldInfo) != 2 {
+			t.Fatalf("expected 2 fields, got %d", len(schema.EditableSchemaFieldInfo))
+		}
+
+		// "id" field should have updated description and preserved tags
+		idField := schema.EditableSchemaFieldInfo[0]
+		if idField.FieldPath != "id" {
+			t.Errorf("expected fieldPath 'id', got %q", idField.FieldPath)
+		}
+		if idField.Description != "updated id desc" {
+			t.Errorf("expected 'updated id desc', got %q", idField.Description)
+		}
+		if idField.GlobalTags == nil {
+			t.Error("expected globalTags to be preserved")
+		}
+
+		// "name" field should be untouched
+		nameField := schema.EditableSchemaFieldInfo[1]
+		if nameField.Description != "existing name desc" {
+			t.Errorf("expected 'existing name desc', got %q", nameField.Description)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateColumnDescription(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"id", "updated id desc")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateColumnDescription_NewField(t *testing.T) {
+	existingAspect := `{"editableSchemaFieldInfo":[` +
+		`{"fieldPath":"id","description":"id desc"}]}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			resp := aspectResponse{Value: json.RawMessage(existingAspect)}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
+
+		var schema editableSchemaAspect
+		if err := json.Unmarshal([]byte(aspectJSON), &schema); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
+
+		// Should now have 2 fields (existing + new)
+		if len(schema.EditableSchemaFieldInfo) != 2 {
+			t.Fatalf("expected 2 fields, got %d", len(schema.EditableSchemaFieldInfo))
+		}
+
+		newField := schema.EditableSchemaFieldInfo[1]
+		if newField.FieldPath != "new_column" {
+			t.Errorf("expected fieldPath 'new_column', got %q", newField.FieldPath)
+		}
+		if newField.Description != "new column desc" {
+			t.Errorf("expected 'new column desc', got %q", newField.Description)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateColumnDescription(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"new_column", "new column desc")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateColumnDescription_NoExistingAspect(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
+
+		var schema editableSchemaAspect
+		if err := json.Unmarshal([]byte(aspectJSON), &schema); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
+
+		if len(schema.EditableSchemaFieldInfo) != 1 {
+			t.Fatalf("expected 1 field, got %d", len(schema.EditableSchemaFieldInfo))
+		}
+		if schema.EditableSchemaFieldInfo[0].FieldPath != "email" {
+			t.Errorf("expected fieldPath 'email', got %q", schema.EditableSchemaFieldInfo[0].FieldPath)
+		}
+		if schema.EditableSchemaFieldInfo[0].Description != "Email address" {
+			t.Errorf("expected 'Email address', got %q", schema.EditableSchemaFieldInfo[0].Description)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateColumnDescription(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"email", "Email address")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateColumnDescription_InvalidURN(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.UpdateColumnDescription(context.Background(), "not-a-urn", "col", "desc")
+	if err == nil {
+		t.Fatal("expected error for invalid URN")
+	}
+}
+
+func TestUpdateColumnDescription_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`server error`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateColumnDescription(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"col", "desc")
+	if err == nil {
+		t.Fatal("expected error for server error")
+	}
+}
+
+func TestReadEditableSchema_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		resp := aspectResponse{Value: json.RawMessage(`not valid json`)}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	_, err := c.readEditableSchema(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestUpdateColumnDescription_NullAspectValue(t *testing.T) {
+	// Tests the P0 fix: DataHub returns 200 with null value
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"value":null}`))
+			return
+		}
+
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
+
+		var schema editableSchemaAspect
+		if err := json.Unmarshal([]byte(aspectJSON), &schema); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
+		if len(schema.EditableSchemaFieldInfo) != 1 {
+			t.Fatalf("expected 1 field, got %d", len(schema.EditableSchemaFieldInfo))
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateColumnDescription(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"col", "new desc")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestEntityTypeFromURN(t *testing.T) {
 	tests := []struct {
 		name    string
