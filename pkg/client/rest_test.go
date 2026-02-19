@@ -158,6 +158,63 @@ func TestGetAspect_NotFound(t *testing.T) {
 	}
 }
 
+func TestGetAspect_NullValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		response string
+	}{
+		{"null value", `{"value":null}`},
+		{"empty object no value", `{}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tt.response))
+			}))
+			defer server.Close()
+
+			c := &Client{
+				endpoint:   server.URL + "/api/graphql",
+				token:      "test-token",
+				httpClient: server.Client(),
+				logger:     NopLogger{},
+			}
+
+			_, err := c.getAspect(context.Background(), "urn:li:dataset:test", "editableDatasetProperties")
+			if err != ErrNotFound {
+				t.Errorf("expected ErrNotFound, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestIsNullOrEmptyJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  json.RawMessage
+		want bool
+	}{
+		{"nil", nil, true},
+		{"empty bytes", json.RawMessage{}, true},
+		{"null literal", json.RawMessage(`null`), true},
+		{"null with spaces", json.RawMessage(`  null  `), true},
+		{"valid object", json.RawMessage(`{"key":"val"}`), false},
+		{"valid array", json.RawMessage(`[]`), false},
+		{"valid string", json.RawMessage(`"hello"`), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isNullOrEmptyJSON(tt.raw)
+			if got != tt.want {
+				t.Errorf("isNullOrEmptyJSON(%q) = %v, want %v", string(tt.raw), got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetAspect_Unauthorized(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)

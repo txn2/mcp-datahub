@@ -17,6 +17,20 @@ func entityTypeFromURN(urn string) (string, error) {
 	return parsed.EntityType, nil
 }
 
+// editableSchemaAspect is the REST API representation of editableSchemaMetadata.
+type editableSchemaAspect struct {
+	EditableSchemaFieldInfo []editableFieldInfo `json:"editableSchemaFieldInfo"`
+}
+
+// editableFieldInfo represents a field's editable metadata for REST API read-modify-write.
+// Uses json.RawMessage for tags and glossaryTerms to preserve existing data.
+type editableFieldInfo struct {
+	FieldPath     string          `json:"fieldPath"`
+	Description   string          `json:"description,omitempty"`
+	GlobalTags    json.RawMessage `json:"globalTags,omitempty"`
+	GlossaryTerms json.RawMessage `json:"glossaryTerms,omitempty"`
+}
+
 // editablePropertiesAspect represents the editableDatasetProperties aspect.
 type editablePropertiesAspect struct {
 	Description  string         `json:"description"`
@@ -335,4 +349,59 @@ func (c *Client) readInstitutionalMemory(ctx context.Context, urn string) (*inst
 		return nil, fmt.Errorf("parsing institutionalMemory: %w", err)
 	}
 	return &memory, nil
+}
+
+// UpdateColumnDescription sets the editable description for a specific column
+// using read-modify-write on the editableSchemaMetadata aspect.
+func (c *Client) UpdateColumnDescription(ctx context.Context, urn, fieldPath, description string) error {
+	entityType, err := entityTypeFromURN(urn)
+	if err != nil {
+		return fmt.Errorf("UpdateColumnDescription: %w", err)
+	}
+
+	schema, err := c.readEditableSchema(ctx, urn)
+	if err != nil {
+		return fmt.Errorf("UpdateColumnDescription: %w", err)
+	}
+
+	// Find or create the field entry
+	found := false
+	for i := range schema.EditableSchemaFieldInfo {
+		if schema.EditableSchemaFieldInfo[i].FieldPath == fieldPath {
+			schema.EditableSchemaFieldInfo[i].Description = description
+			found = true
+			break
+		}
+	}
+	if !found {
+		schema.EditableSchemaFieldInfo = append(schema.EditableSchemaFieldInfo, editableFieldInfo{
+			FieldPath:   fieldPath,
+			Description: description,
+		})
+	}
+
+	return c.postIngestProposal(ctx, ingestProposal{
+		EntityType: entityType,
+		EntityURN:  urn,
+		AspectName: "editableSchemaMetadata",
+		Aspect:     schema,
+	})
+}
+
+// readEditableSchema reads the current editableSchemaMetadata aspect.
+// Returns an empty aspect if none exists (not an error).
+func (c *Client) readEditableSchema(ctx context.Context, urn string) (*editableSchemaAspect, error) {
+	raw, err := c.getAspect(ctx, urn, "editableSchemaMetadata")
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return &editableSchemaAspect{}, nil
+		}
+		return nil, fmt.Errorf("reading editableSchemaMetadata: %w", err)
+	}
+
+	var schema editableSchemaAspect
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		return nil, fmt.Errorf("parsing editableSchemaMetadata: %w", err)
+	}
+	return &schema, nil
 }

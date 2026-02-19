@@ -58,7 +58,7 @@ func (c *Client) getAspect(ctx context.Context, entityURN, aspectName string) (j
 
 	c.setRESTHeaders(req)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req) //#nosec G704 -- URL is constructed from configured endpoint, not arbitrary user input
 	if err != nil {
 		return nil, fmt.Errorf("REST GET failed: %w", err)
 	}
@@ -82,6 +82,13 @@ func (c *Client) getAspect(ctx context.Context, entityURN, aspectName string) (j
 	var aspectResp aspectResponse
 	if err := json.Unmarshal(body, &aspectResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal aspect response: %w", err)
+	}
+
+	// DataHub may return 200 OK with a null or empty value when the entity
+	// exists but the requested aspect has never been written. Treat this the
+	// same as 404 so callers initialize a default struct.
+	if isNullOrEmptyJSON(aspectResp.Value) {
+		return nil, ErrNotFound
 	}
 
 	return aspectResp.Value, nil
@@ -125,7 +132,7 @@ func (c *Client) postIngestProposal(ctx context.Context, proposal ingestProposal
 	c.setRESTHeaders(req)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req) //#nosec G704 -- URL is constructed from configured endpoint, not arbitrary user input
 	if err != nil {
 		return fmt.Errorf("REST POST failed: %w", err)
 	}
@@ -149,6 +156,17 @@ func (c *Client) postIngestProposal(ctx context.Context, proposal ingestProposal
 func (c *Client) setRESTHeaders(req *http.Request) {
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("X-RestLi-Protocol-Version", "2.0.0")
+}
+
+// isNullOrEmptyJSON returns true if the raw JSON message is nil, empty,
+// or the JSON literal "null". This covers cases where DataHub returns
+// 200 OK but the aspect value is absent.
+func isNullOrEmptyJSON(raw json.RawMessage) bool {
+	if len(raw) == 0 {
+		return true
+	}
+	trimmed := bytes.TrimSpace(raw)
+	return len(trimmed) == 0 || string(trimmed) == "null"
 }
 
 // checkRESTStatus validates REST API response status codes.
