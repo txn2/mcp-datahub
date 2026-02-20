@@ -502,6 +502,113 @@ func TestPostIngestProposal_RateLimited(t *testing.T) {
 	}
 }
 
+func TestEscapeNonASCII(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "pure ASCII unchanged",
+			input: `{"description":"hello world"}`,
+			want:  `{"description":"hello world"}`,
+		},
+		{
+			name:  "em dash escaped",
+			input: "{\"description\":\"before \u2014 after\"}",
+			want:  `{"description":"before \u2014 after"}`,
+		},
+		{
+			name:  "en dash escaped",
+			input: "{\"description\":\"before \u2013 after\"}",
+			want:  `{"description":"before \u2013 after"}`,
+		},
+		{
+			name:  "bullet escaped",
+			input: "{\"description\":\"\u2022 item\"}",
+			want:  `{"description":"\u2022 item"}`,
+		},
+		{
+			name:  "accented char escaped",
+			input: "{\"name\":\"caf\u00e9\"}",
+			want:  `{"name":"caf\u00e9"}`,
+		},
+		{
+			name:  "multiple non-ASCII",
+			input: "{\"a\":\"\u2014\",\"b\":\"\u2022\"}",
+			want:  `{"a":"\u2014","b":"\u2022"}`,
+		},
+		{
+			name:  "empty input",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "CJK character",
+			input: "{\"v\":\"\u4e16\"}",
+			want:  `{"v":"\u4e16"}`,
+		},
+		{
+			name:  "supplementary character surrogate pair",
+			input: "{\"v\":\"\U0001F600\"}",
+			want:  `{"v":"\ud83d\ude00"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := escapeNonASCII([]byte(tt.input))
+			if got != tt.want {
+				t.Errorf("escapeNonASCII(%q)\n got  %q\n want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPostIngestProposal_NonASCIIEscaped(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
+
+		// The inner JSON must not contain raw non-ASCII bytes.
+		for i := 0; i < len(aspectJSON); i++ {
+			if aspectJSON[i] > 0x7F {
+				t.Errorf("aspect value contains non-ASCII byte 0x%02x at position %d", aspectJSON[i], i)
+				break
+			}
+		}
+
+		// The escaped \u2014 must be parseable by JSON.
+		var m map[string]any
+		if err := json.Unmarshal([]byte(aspectJSON), &m); err != nil {
+			t.Fatalf("failed to parse inner aspect JSON: %v", err)
+		}
+		desc, _ := m["description"].(string)
+		if desc != "before \u2014 after" {
+			t.Errorf("expected em dash in parsed description, got %q", desc)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.postIngestProposal(context.Background(), ingestProposal{
+		EntityType: "dataset",
+		EntityURN:  "urn:li:dataset:test",
+		AspectName: "editableDatasetProperties",
+		Aspect:     map[string]any{"description": "before \u2014 after"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestCheckRESTStatus(t *testing.T) {
 	c := &Client{logger: NopLogger{}}
 
