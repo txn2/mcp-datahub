@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 )
 
 // entityTypeFromURN derives the DataHub entity type string from a parsed URN.
@@ -169,8 +170,10 @@ func (c *Client) readGlobalTags(ctx context.Context, urn string) (*globalTagsAsp
 }
 
 // glossaryTermsAspect represents the glossaryTerms aspect structure.
+// Per GlossaryTerms.pdl, auditStamp is a required field.
 type glossaryTermsAspect struct {
-	Terms []termAssociation `json:"terms"`
+	Terms      []termAssociation `json:"terms"`
+	AuditStamp auditStampRaw     `json:"auditStamp"`
 }
 
 // termAssociation represents a glossary term association.
@@ -198,6 +201,7 @@ func (c *Client) AddGlossaryTerm(ctx context.Context, urn, termURN string) error
 	}
 
 	terms.Terms = append(terms.Terms, termAssociation{URN: termURN})
+	terms.AuditStamp = newAuditStamp()
 
 	return c.postIngestProposal(ctx, ingestProposal{
 		EntityType: entityType,
@@ -226,6 +230,7 @@ func (c *Client) RemoveGlossaryTerm(ctx context.Context, urn, termURN string) er
 		}
 	}
 	terms.Terms = filtered
+	terms.AuditStamp = newAuditStamp()
 
 	return c.postIngestProposal(ctx, ingestProposal{
 		EntityType: entityType,
@@ -258,16 +263,26 @@ type institutionalMemoryAspect struct {
 }
 
 // linkElement represents a link in the institutionalMemory aspect.
+// Per InstitutionalMemoryMetadata.pdl, the audit stamp field is "createStamp".
 type linkElement struct {
 	URL         string        `json:"url"`
 	Description string        `json:"description"`
-	Created     auditStampRaw `json:"created"`
+	CreateStamp auditStampRaw `json:"createStamp"`
 }
 
 // auditStampRaw represents an audit stamp with millisecond timestamp.
+// Per AuditStamp.pdl: time (epoch ms) and actor (entity URN) are required.
 type auditStampRaw struct {
 	Time  int64  `json:"time"`
 	Actor string `json:"actor"`
+}
+
+// newAuditStamp creates an audit stamp with the current time.
+func newAuditStamp() auditStampRaw {
+	return auditStampRaw{
+		Time:  time.Now().UnixMilli(),
+		Actor: "urn:li:corpuser:datahub",
+	}
 }
 
 // AddLink adds a link to an entity using read-modify-write on institutionalMemory.
@@ -292,10 +307,7 @@ func (c *Client) AddLink(ctx context.Context, urn, linkURL, description string) 
 	memory.Elements = append(memory.Elements, linkElement{
 		URL:         linkURL,
 		Description: description,
-		Created: auditStampRaw{
-			Time:  0, // DataHub will fill this in
-			Actor: "urn:li:corpuser:datahub",
-		},
+		CreateStamp: newAuditStamp(),
 	})
 
 	return c.postIngestProposal(ctx, ingestProposal{
