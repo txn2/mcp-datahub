@@ -325,7 +325,7 @@ func TestAddGlossaryTerm(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			resp := aspectResponse{
-				Value: json.RawMessage(`{"terms":[{"urn":"urn:li:glossaryTerm:existing"}]}`),
+				Value: json.RawMessage(`{"terms":[{"urn":"urn:li:glossaryTerm:existing"}],"auditStamp":{"time":1000,"actor":"urn:li:corpuser:admin"}}`),
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
@@ -341,6 +341,13 @@ func TestAddGlossaryTerm(t *testing.T) {
 		}
 		if proposal["aspectName"] != "glossaryTerms" {
 			t.Errorf("expected aspect 'glossaryTerms', got %v", proposal["aspectName"])
+		}
+		// Per GlossaryTerms.pdl, auditStamp is required and must have valid time
+		if terms.AuditStamp.Time <= 0 {
+			t.Error("expected auditStamp.time > 0")
+		}
+		if terms.AuditStamp.Actor == "" {
+			t.Error("expected auditStamp.actor to be non-empty")
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -365,7 +372,7 @@ func TestAddGlossaryTerm_Duplicate(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			resp := aspectResponse{
-				Value: json.RawMessage(`{"terms":[{"urn":"urn:li:glossaryTerm:existing"}]}`),
+				Value: json.RawMessage(`{"terms":[{"urn":"urn:li:glossaryTerm:existing"}],"auditStamp":{"time":1000,"actor":"urn:li:corpuser:admin"}}`),
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
@@ -394,8 +401,11 @@ func TestAddGlossaryTerm_Duplicate(t *testing.T) {
 func TestRemoveGlossaryTerm(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
+			termsJSON := `{"terms":[{"urn":"urn:li:glossaryTerm:keep"},` +
+				`{"urn":"urn:li:glossaryTerm:remove"}],` +
+				`"auditStamp":{"time":1000,"actor":"urn:li:corpuser:admin"}}`
 			resp := aspectResponse{
-				Value: json.RawMessage(`{"terms":[{"urn":"urn:li:glossaryTerm:keep"},{"urn":"urn:li:glossaryTerm:remove"}]}`),
+				Value: json.RawMessage(termsJSON),
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
@@ -408,6 +418,9 @@ func TestRemoveGlossaryTerm(t *testing.T) {
 		}
 		if len(terms.Terms) != 1 {
 			t.Errorf("expected 1 term after removal, got %d", len(terms.Terms))
+		}
+		if terms.AuditStamp.Time <= 0 {
+			t.Error("expected auditStamp.time > 0 on write")
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -433,7 +446,7 @@ func TestAddLink(t *testing.T) {
 		if r.Method == http.MethodGet {
 			linkJSON := `{"elements":[{"url":"https://existing.com",` +
 				`"description":"existing",` +
-				`"created":{"time":0,"actor":"urn:li:corpuser:datahub"}}]}`
+				`"createStamp":{"time":1000,"actor":"urn:li:corpuser:datahub"}}]}`
 			resp := aspectResponse{
 				Value: json.RawMessage(linkJSON),
 			}
@@ -451,6 +464,14 @@ func TestAddLink(t *testing.T) {
 		}
 		if len(memory.Elements) != 2 {
 			t.Errorf("expected 2 links, got %d", len(memory.Elements))
+		}
+		// New link should have a real timestamp (not 0)
+		newLink := memory.Elements[1]
+		if newLink.CreateStamp.Time <= 0 {
+			t.Error("expected createStamp.time > 0 for new link")
+		}
+		if newLink.CreateStamp.Actor != "urn:li:corpuser:datahub" {
+			t.Errorf("expected actor 'urn:li:corpuser:datahub', got %q", newLink.CreateStamp.Actor)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -476,7 +497,7 @@ func TestAddLink_Duplicate(t *testing.T) {
 		if r.Method == http.MethodGet {
 			linkJSON := `{"elements":[{"url":"https://existing.com",` +
 				`"description":"existing",` +
-				`"created":{"time":0,"actor":"urn:li:corpuser:datahub"}}]}`
+				`"createStamp":{"time":0,"actor":"urn:li:corpuser:datahub"}}]}`
 			resp := aspectResponse{
 				Value: json.RawMessage(linkJSON),
 			}
@@ -509,9 +530,9 @@ func TestRemoveLink(t *testing.T) {
 		if r.Method == http.MethodGet {
 			linkJSON := `{"elements":[` +
 				`{"url":"https://keep.com","description":"keep",` +
-				`"created":{"time":0,"actor":"urn:li:corpuser:datahub"}},` +
+				`"createStamp":{"time":0,"actor":"urn:li:corpuser:datahub"}},` +
 				`{"url":"https://remove.com","description":"remove",` +
-				`"created":{"time":0,"actor":"urn:li:corpuser:datahub"}}]}`
+				`"createStamp":{"time":0,"actor":"urn:li:corpuser:datahub"}}]}`
 			resp := aspectResponse{
 				Value: json.RawMessage(linkJSON),
 			}
@@ -814,6 +835,9 @@ func TestAddGlossaryTerm_NoExistingTerms(t *testing.T) {
 		}
 		if len(terms.Terms) != 1 {
 			t.Errorf("expected 1 term, got %d", len(terms.Terms))
+		}
+		if terms.AuditStamp.Time <= 0 {
+			t.Error("expected auditStamp.time > 0")
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
