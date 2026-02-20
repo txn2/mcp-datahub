@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 )
 
 // restBaseURL derives the REST API base URL from the GraphQL endpoint.
@@ -108,7 +109,7 @@ func (c *Client) postIngestProposal(ctx context.Context, proposal ingestProposal
 		return fmt.Errorf("failed to marshal aspect: %w", err)
 	}
 	proposal.Aspect = genericAspect{
-		Value:       string(aspectJSON),
+		Value:       escapeNonASCII(aspectJSON),
 		ContentType: "application/json",
 	}
 
@@ -167,6 +168,45 @@ func isNullOrEmptyJSON(raw json.RawMessage) bool {
 	}
 	trimmed := bytes.TrimSpace(raw)
 	return len(trimmed) == 0 || string(trimmed) == "null"
+}
+
+// escapeNonASCII converts non-ASCII characters in JSON bytes to \uXXXX escape
+// sequences. DataHub's GenericAspect.value is typed as "bytes" in the PDL schema,
+// and RestLi uses Avro-style encoding where only characters U+0000–U+00FF are
+// allowed. Characters like em dash (U+2014) cause ingestProposal validation
+// failures unless escaped. Since non-ASCII characters in JSON can only appear
+// inside string values, escaping all non-ASCII runes is safe.
+func escapeNonASCII(data []byte) string {
+	// Fast path: if all bytes are ASCII, skip allocation.
+	allASCII := true
+	for _, b := range data {
+		if b > 0x7F {
+			allASCII = false
+			break
+		}
+	}
+	if allASCII {
+		return string(data)
+	}
+
+	var buf strings.Builder
+	buf.Grow(len(data))
+	for i := 0; i < len(data); {
+		r, size := utf8.DecodeRune(data[i:])
+		if r > 0x7F {
+			if r <= 0xFFFF {
+				fmt.Fprintf(&buf, "\\u%04x", r)
+			} else {
+				// Supplementary character: encode as surrogate pair.
+				r -= 0x10000
+				fmt.Fprintf(&buf, "\\u%04x\\u%04x", 0xD800+(r>>10), 0xDC00+(r&0x3FF))
+			}
+		} else {
+			buf.WriteByte(data[i])
+		}
+		i += size
+	}
+	return buf.String()
 }
 
 // checkRESTStatus validates REST API response status codes.
