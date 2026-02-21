@@ -581,6 +581,60 @@ query getColumnLineage($urn: String!) {
 }
 `
 
+	// CreateQueryMutation creates a new Query entity.
+	CreateQueryMutation = `
+mutation createQuery($input: CreateQueryInput!) {
+  createQuery(input: $input) {
+    urn
+    properties {
+      name
+      description
+      source
+      statement {
+        value
+        language
+      }
+      created {
+        time
+        actor
+      }
+    }
+    subjects {
+      datasets {
+        dataset {
+          urn
+        }
+      }
+    }
+  }
+}
+`
+
+	// UpdateQueryMutation updates an existing Query entity.
+	UpdateQueryMutation = `
+mutation updateQuery($urn: String!, $input: UpdateQueryInput!) {
+  updateQuery(urn: $urn, input: $input) {
+    urn
+    properties {
+      name
+      description
+      source
+      statement {
+        value
+        language
+      }
+    }
+  }
+}
+`
+
+	// DeleteQueryMutation deletes a Query entity.
+	DeleteQueryMutation = `
+mutation deleteQuery($urn: String!) {
+  deleteQuery(urn: $urn)
+}
+`
+
 	// BatchGetSchemasQuery retrieves schemas for multiple datasets by URN.
 	BatchGetSchemasQuery = `
 query batchGetSchemas($urns: [String!]!) {

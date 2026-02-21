@@ -422,3 +422,107 @@ func TestIntegrationRemoveLink(t *testing.T) {
 		t.Errorf("link %s still present after RemoveLink", linkURL)
 	}
 }
+
+func TestIntegrationCreateQuery(t *testing.T) {
+	skipIfNoEnv(t)
+	c := testClient(t)
+	ctx := testCtx(t)
+
+	queryName := fmt.Sprintf("inttest_query_%s", nanos())
+
+	var createdURN string
+
+	// Register cleanup before the write
+	t.Cleanup(func() {
+		if createdURN == "" {
+			return
+		}
+		cleanCtx, cleanCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanCancel()
+		if err := c.DeleteQuery(cleanCtx, createdURN); err != nil {
+			t.Logf("cleanup: failed to delete query: %v", err)
+		}
+	})
+
+	// Create query
+	query, err := c.CreateQuery(ctx, CreateQueryInput{
+		Name:      queryName,
+		Statement: "SELECT 1 AS integration_test",
+	})
+	if err != nil {
+		t.Fatalf("CreateQuery: %v", err)
+	}
+
+	createdURN = query.URN
+	if createdURN == "" {
+		t.Fatal("expected non-empty URN from CreateQuery")
+	}
+	if query.Name != queryName {
+		t.Errorf("expected Name %q, got %q", queryName, query.Name)
+	}
+	if query.Statement != "SELECT 1 AS integration_test" {
+		t.Errorf("unexpected Statement: %q", query.Statement)
+	}
+}
+
+func TestIntegrationUpdateQuery(t *testing.T) {
+	skipIfNoEnv(t)
+	c := testClient(t)
+	ctx := testCtx(t)
+
+	queryName := fmt.Sprintf("inttest_query_%s", nanos())
+
+	// Setup: create a query first
+	query, err := c.CreateQuery(ctx, CreateQueryInput{
+		Name:      queryName,
+		Statement: "SELECT 1",
+	})
+	if err != nil {
+		t.Fatalf("setup CreateQuery: %v", err)
+	}
+
+	// Register cleanup
+	t.Cleanup(func() {
+		cleanCtx, cleanCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanCancel()
+		if err := c.DeleteQuery(cleanCtx, query.URN); err != nil {
+			t.Logf("cleanup: failed to delete query: %v", err)
+		}
+	})
+
+	// Update the query
+	updatedName := queryName + "_updated"
+	updated, err := c.UpdateQuery(ctx, UpdateQueryInput{
+		URN:       query.URN,
+		Name:      updatedName,
+		Statement: "SELECT 2",
+	})
+	if err != nil {
+		t.Fatalf("UpdateQuery: %v", err)
+	}
+	if updated.URN != query.URN {
+		t.Errorf("expected URN %q, got %q", query.URN, updated.URN)
+	}
+}
+
+func TestIntegrationDeleteQuery(t *testing.T) {
+	skipIfNoEnv(t)
+	c := testClient(t)
+	ctx := testCtx(t)
+
+	queryName := fmt.Sprintf("inttest_query_%s", nanos())
+
+	// Create a query to delete
+	query, err := c.CreateQuery(ctx, CreateQueryInput{
+		Name:      queryName,
+		Statement: "SELECT 1",
+	})
+	if err != nil {
+		t.Fatalf("setup CreateQuery: %v", err)
+	}
+
+	// Delete the query
+	if err := c.DeleteQuery(ctx, query.URN); err != nil {
+		t.Fatalf("DeleteQuery: %v", err)
+	}
+}
