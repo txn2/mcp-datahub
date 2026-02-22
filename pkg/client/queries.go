@@ -600,10 +600,8 @@ mutation createQuery($input: CreateQueryInput!) {
       }
     }
     subjects {
-      datasets {
-        dataset {
-          urn
-        }
+      dataset {
+        urn
       }
     }
   }
