@@ -63,9 +63,9 @@ type deleteQueryResponse struct {
 
 // queryEntityResponse is the nested query entity returned by mutations.
 type queryEntityResponse struct {
-	URN        string                 `json:"urn"`
-	Properties *queryPropertiesRaw    `json:"properties"`
-	Subjects   *querySubjectsRawOuter `json:"subjects"`
+	URN        string              `json:"urn"`
+	Properties *queryPropertiesRaw `json:"properties"`
+	Subjects   []querySubjectRaw   `json:"subjects"`
 }
 
 // queryPropertiesRaw maps the GraphQL QueryProperties type.
@@ -89,13 +89,8 @@ type auditStampGQL struct {
 	Actor string `json:"actor"`
 }
 
-// querySubjectsRawOuter maps the QuerySubjects type.
-type querySubjectsRawOuter struct {
-	Datasets []queryDatasetRef `json:"datasets"`
-}
-
-// queryDatasetRef maps QuerySubjects.datasets[].dataset.
-type queryDatasetRef struct {
+// querySubjectRaw maps the QuerySubject type (one per subject).
+type querySubjectRaw struct {
 	Dataset struct {
 		URN string `json:"urn"`
 	} `json:"dataset"`
@@ -123,15 +118,11 @@ func (c *Client) CreateQuery(ctx context.Context, input CreateQueryInput) (*type
 		},
 	}
 
-	if len(input.DatasetURNs) > 0 {
-		datasets := make([]map[string]string, len(input.DatasetURNs))
-		for i, urn := range input.DatasetURNs {
-			datasets[i] = map[string]string{"datasetUrn": urn}
-		}
-		gqlInput["subjects"] = map[string]any{
-			"datasets": datasets,
-		}
+	subjects := make([]map[string]string, len(input.DatasetURNs))
+	for i, urn := range input.DatasetURNs {
+		subjects[i] = map[string]string{"datasetUrn": urn}
 	}
+	gqlInput["subjects"] = subjects
 
 	variables := map[string]any{"input": gqlInput}
 
@@ -178,13 +169,11 @@ func (c *Client) UpdateQuery(ctx context.Context, input UpdateQueryInput) (*type
 	}
 
 	if input.DatasetURNs != nil {
-		datasets := make([]map[string]string, len(input.DatasetURNs))
+		subjects := make([]map[string]string, len(input.DatasetURNs))
 		for i, urn := range input.DatasetURNs {
-			datasets[i] = map[string]string{"datasetUrn": urn}
+			subjects[i] = map[string]string{"datasetUrn": urn}
 		}
-		gqlInput["subjects"] = map[string]any{
-			"datasets": datasets,
-		}
+		gqlInput["subjects"] = subjects
 	}
 
 	variables := map[string]any{

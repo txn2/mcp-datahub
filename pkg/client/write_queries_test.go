@@ -81,21 +81,27 @@ func TestCreateQuery_WithDatasetURNs(t *testing.T) {
 			t.Fatalf("failed to decode request: %v", err)
 		}
 
-		// Verify subjects are passed through
+		// Verify subjects are passed as a flat array
 		inputRaw, ok := req.Variables["input"].(map[string]any)
 		if !ok {
 			t.Fatal("expected input variable")
 		}
-		subjects, ok := inputRaw["subjects"].(map[string]any)
+		subjects, ok := inputRaw["subjects"].([]any)
 		if !ok {
-			t.Fatal("expected subjects in input")
+			t.Fatalf("expected subjects as array in input, got %T", inputRaw["subjects"])
 		}
-		datasets, ok := subjects["datasets"].([]any)
-		if !ok {
-			t.Fatal("expected datasets in subjects")
+		if len(subjects) != 2 {
+			t.Errorf("expected 2 subjects, got %d", len(subjects))
 		}
-		if len(datasets) != 2 {
-			t.Errorf("expected 2 datasets, got %d", len(datasets))
+		// Verify each subject has datasetUrn
+		for i, s := range subjects {
+			subj, ok := s.(map[string]any)
+			if !ok {
+				t.Fatalf("subject[%d]: expected map, got %T", i, s)
+			}
+			if _, ok := subj["datasetUrn"]; !ok {
+				t.Errorf("subject[%d]: missing datasetUrn field", i)
+			}
 		}
 
 		resp := `{
@@ -270,16 +276,12 @@ func TestUpdateQuery_WithDatasetURNs(t *testing.T) {
 		if !ok {
 			t.Fatal("expected input variable")
 		}
-		subjects, ok := inputRaw["subjects"].(map[string]any)
+		subjects, ok := inputRaw["subjects"].([]any)
 		if !ok {
-			t.Fatal("expected subjects in input")
+			t.Fatalf("expected subjects as array in input, got %T", inputRaw["subjects"])
 		}
-		datasets, ok := subjects["datasets"].([]any)
-		if !ok {
-			t.Fatal("expected datasets in subjects")
-		}
-		if len(datasets) != 1 {
-			t.Errorf("expected 1 dataset, got %d", len(datasets))
+		if len(subjects) != 1 {
+			t.Errorf("expected 1 subject, got %d", len(subjects))
 		}
 
 		resp := `{"data":{"updateQuery":{"urn":"urn:li:query:abc123",` +
