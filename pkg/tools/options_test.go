@@ -147,6 +147,114 @@ func TestWithDescriptions_Merge(t *testing.T) {
 	}
 }
 
+func TestWithTitle(t *testing.T) {
+	cfg := &toolConfig{}
+	opt := WithTitle("My Custom Title")
+	opt(cfg)
+
+	if cfg.title == nil {
+		t.Fatal("WithTitle() should set title pointer")
+	}
+	if *cfg.title != "My Custom Title" {
+		t.Errorf("WithTitle() title = %q, want %q", *cfg.title, "My Custom Title")
+	}
+}
+
+func TestWithTitles(t *testing.T) {
+	toolkit := &Toolkit{
+		titles:          make(map[ToolName]string),
+		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
+		registeredTools: make(map[ToolName]bool),
+	}
+
+	titles := map[ToolName]string{
+		ToolSearch:    "Custom Search",
+		ToolGetEntity: "Custom Entity",
+	}
+
+	opt := WithTitles(titles)
+	opt(toolkit)
+
+	if toolkit.titles[ToolSearch] != "Custom Search" {
+		t.Errorf("WithTitles() search = %q, want %q", toolkit.titles[ToolSearch], "Custom Search")
+	}
+	if toolkit.titles[ToolGetEntity] != "Custom Entity" {
+		t.Errorf("WithTitles() entity = %q, want %q", toolkit.titles[ToolGetEntity], "Custom Entity")
+	}
+}
+
+func TestWithTitles_Merge(t *testing.T) {
+	toolkit := &Toolkit{
+		titles:          make(map[ToolName]string),
+		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
+		registeredTools: make(map[ToolName]bool),
+	}
+
+	WithTitles(map[ToolName]string{
+		ToolSearch:    "first search",
+		ToolGetEntity: "first entity",
+	})(toolkit)
+
+	WithTitles(map[ToolName]string{
+		ToolSearch:    "second search",
+		ToolGetSchema: "second schema",
+	})(toolkit)
+
+	if toolkit.titles[ToolSearch] != "second search" {
+		t.Errorf("WithTitles() merge: search = %q, want %q", toolkit.titles[ToolSearch], "second search")
+	}
+	if toolkit.titles[ToolGetEntity] != "first entity" {
+		t.Errorf("WithTitles() merge: entity = %q, want %q", toolkit.titles[ToolGetEntity], "first entity")
+	}
+	if toolkit.titles[ToolGetSchema] != "second schema" {
+		t.Errorf("WithTitles() merge: schema = %q, want %q", toolkit.titles[ToolGetSchema], "second schema")
+	}
+}
+
+func TestWithOutputSchema(t *testing.T) {
+	customSchema := map[string]any{"type": "object"}
+	cfg := &toolConfig{}
+	opt := WithOutputSchema(customSchema)
+	opt(cfg)
+
+	if cfg.outputSchema == nil {
+		t.Fatal("WithOutputSchema() should set outputSchema")
+	}
+	got, ok := cfg.outputSchema.(map[string]any)
+	if !ok {
+		t.Fatal("outputSchema type assertion failed")
+	}
+	if got["type"] != "object" {
+		t.Errorf("WithOutputSchema() type = %v, want %q", got["type"], "object")
+	}
+}
+
+func TestWithOutputSchemas(t *testing.T) {
+	toolkit := &Toolkit{
+		outputSchemas:   make(map[ToolName]any),
+		toolMiddlewares: make(map[ToolName][]ToolMiddleware),
+		registeredTools: make(map[ToolName]bool),
+	}
+
+	schemas := map[ToolName]any{
+		ToolSearch:    map[string]any{"type": "object", "title": "search"},
+		ToolGetEntity: map[string]any{"type": "object", "title": "entity"},
+	}
+
+	opt := WithOutputSchemas(schemas)
+	opt(toolkit)
+
+	if toolkit.outputSchemas[ToolSearch] == nil {
+		t.Error("WithOutputSchemas() should set ToolSearch schema")
+	}
+	if toolkit.outputSchemas[ToolGetEntity] == nil {
+		t.Error("WithOutputSchemas() should set ToolGetEntity schema")
+	}
+	if toolkit.outputSchemas[ToolGetSchema] != nil {
+		t.Error("WithOutputSchemas() should not set ToolGetSchema schema")
+	}
+}
+
 func TestMultipleToolMiddleware(t *testing.T) {
 	mw := BeforeFunc(func(ctx context.Context, _ *ToolContext) (context.Context, error) {
 		return ctx, nil

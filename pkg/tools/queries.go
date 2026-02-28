@@ -25,10 +25,12 @@ func (t *Toolkit) registerGetQueriesTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolGetQueries, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolGetQueries),
-		Description: t.getDescription(ToolGetQueries, cfg),
-		Annotations: t.getAnnotations(ToolGetQueries, cfg),
-		Icons:       t.getIcons(ToolGetQueries, cfg),
+		Name:         string(ToolGetQueries),
+		Description:  t.getDescription(ToolGetQueries, cfg),
+		Annotations:  t.getAnnotations(ToolGetQueries, cfg),
+		Icons:        t.getIcons(ToolGetQueries, cfg),
+		Title:        t.getTitle(ToolGetQueries, cfg),
+		OutputSchema: t.getOutputSchema(ToolGetQueries, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetQueriesInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

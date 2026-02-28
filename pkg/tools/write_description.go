@@ -25,10 +25,12 @@ func (t *Toolkit) registerUpdateDescriptionTool(server *mcp.Server, cfg *toolCon
 	wrappedHandler := t.wrapHandler(ToolUpdateDescription, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolUpdateDescription),
-		Description: t.getDescription(ToolUpdateDescription, cfg),
-		Annotations: t.getAnnotations(ToolUpdateDescription, cfg),
-		Icons:       t.getIcons(ToolUpdateDescription, cfg),
+		Name:         string(ToolUpdateDescription),
+		Description:  t.getDescription(ToolUpdateDescription, cfg),
+		Annotations:  t.getAnnotations(ToolUpdateDescription, cfg),
+		Icons:        t.getIcons(ToolUpdateDescription, cfg),
+		Title:        t.getTitle(ToolUpdateDescription, cfg),
+		OutputSchema: t.getOutputSchema(ToolUpdateDescription, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest,
 		input UpdateDescriptionInput,
 	) (*mcp.CallToolResult, *UpdateDescriptionOutput, error) {

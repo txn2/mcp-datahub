@@ -24,10 +24,12 @@ func (t *Toolkit) registerListDomainsTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolListDomains, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolListDomains),
-		Description: t.getDescription(ToolListDomains, cfg),
-		Annotations: t.getAnnotations(ToolListDomains, cfg),
-		Icons:       t.getIcons(ToolListDomains, cfg),
+		Name:         string(ToolListDomains),
+		Description:  t.getDescription(ToolListDomains, cfg),
+		Annotations:  t.getAnnotations(ToolListDomains, cfg),
+		Icons:        t.getIcons(ToolListDomains, cfg),
+		Title:        t.getTitle(ToolListDomains, cfg),
+		OutputSchema: t.getOutputSchema(ToolListDomains, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListDomainsInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

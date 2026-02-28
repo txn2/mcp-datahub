@@ -24,10 +24,12 @@ func (t *Toolkit) registerListDataProductsTool(server *mcp.Server, cfg *toolConf
 	wrappedHandler := t.wrapHandler(ToolListDataProducts, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolListDataProducts),
-		Description: t.getDescription(ToolListDataProducts, cfg),
-		Annotations: t.getAnnotations(ToolListDataProducts, cfg),
-		Icons:       t.getIcons(ToolListDataProducts, cfg),
+		Name:         string(ToolListDataProducts),
+		Description:  t.getDescription(ToolListDataProducts, cfg),
+		Annotations:  t.getAnnotations(ToolListDataProducts, cfg),
+		Icons:        t.getIcons(ToolListDataProducts, cfg),
+		Title:        t.getTitle(ToolListDataProducts, cfg),
+		OutputSchema: t.getOutputSchema(ToolListDataProducts, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListDataProductsInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
@@ -74,10 +76,12 @@ func (t *Toolkit) registerGetDataProductTool(server *mcp.Server, cfg *toolConfig
 	wrappedHandler := t.wrapHandler(ToolGetDataProduct, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolGetDataProduct),
-		Description: t.getDescription(ToolGetDataProduct, cfg),
-		Annotations: t.getAnnotations(ToolGetDataProduct, cfg),
-		Icons:       t.getIcons(ToolGetDataProduct, cfg),
+		Name:         string(ToolGetDataProduct),
+		Description:  t.getDescription(ToolGetDataProduct, cfg),
+		Annotations:  t.getAnnotations(ToolGetDataProduct, cfg),
+		Icons:        t.getIcons(ToolGetDataProduct, cfg),
+		Title:        t.getTitle(ToolGetDataProduct, cfg),
+		OutputSchema: t.getOutputSchema(ToolGetDataProduct, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetDataProductInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

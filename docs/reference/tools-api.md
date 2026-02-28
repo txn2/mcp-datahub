@@ -205,8 +205,88 @@ func DefaultAnnotations(name ToolName) *mcp.ToolAnnotations
 
 | Tool Category | ReadOnlyHint | DestructiveHint | IdempotentHint | OpenWorldHint |
 |---------------|:------------:|:---------------:|:--------------:|:-------------:|
-| Read tools (12) | `true` | _(default)_ | `true` | `false` |
-| Write tools (7) | `false` | `false` | `true` | `false` |
+| Read tools (12) | `true` | _(default)_ | `true` | `true` |
+| Write tools (7) | `false` | `false` | `true` | `true` |
+
+`OpenWorldHint` is `true` for all tools because every tool communicates with an external DataHub instance.
+
+### WithTitles
+
+Overrides tool display names at the toolkit level. Titles appear in MCP clients (e.g., Claude Desktop) instead of raw tool names.
+
+```go
+func WithTitles(titles map[ToolName]string) ToolkitOption
+```
+
+**Example:**
+
+```go
+toolkit := tools.NewToolkit(datahubClient, config,
+    tools.WithTitles(map[tools.ToolName]string{
+        tools.ToolSearch: "Search Our Catalog",
+    }),
+)
+```
+
+### WithTitle
+
+Overrides the display title for a single tool at registration time.
+
+```go
+func WithTitle(title string) ToolOption
+```
+
+**Example:**
+
+```go
+toolkit.RegisterWith(server, tools.ToolSearch,
+    tools.WithTitle("Search Our Catalog"),
+)
+```
+
+**Title Priority:**
+
+1. Per-registration `WithTitle()` (highest)
+2. Toolkit-level `WithTitles()` map
+3. Built-in default title (lowest)
+
+### DefaultTitle
+
+Returns the default display title for a tool by name. Returns empty string for unknown tool names.
+
+```go
+func DefaultTitle(name ToolName) string
+```
+
+### WithOutputSchemas
+
+Overrides the output JSON Schema for multiple tools at the toolkit level.
+
+```go
+func WithOutputSchemas(schemas map[ToolName]any) ToolkitOption
+```
+
+### WithOutputSchema
+
+Overrides the output JSON Schema for a single tool at registration time.
+
+```go
+func WithOutputSchema(schema any) ToolOption
+```
+
+**OutputSchema Priority:**
+
+1. Per-registration `WithOutputSchema()` (highest)
+2. Toolkit-level `WithOutputSchemas()` map
+3. Built-in default output schema (lowest)
+
+### DefaultOutputSchema
+
+Returns the default output JSON Schema for a tool by name. Returns nil for unknown tool names.
+
+```go
+func DefaultOutputSchema(name ToolName) json.RawMessage
+```
 
 ## Tool Names
 

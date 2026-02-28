@@ -33,10 +33,12 @@ func (t *Toolkit) registerAddLinkTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolAddLink, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolAddLink),
-		Description: t.getDescription(ToolAddLink, cfg),
-		Annotations: t.getAnnotations(ToolAddLink, cfg),
-		Icons:       t.getIcons(ToolAddLink, cfg),
+		Name:         string(ToolAddLink),
+		Description:  t.getDescription(ToolAddLink, cfg),
+		Annotations:  t.getAnnotations(ToolAddLink, cfg),
+		Icons:        t.getIcons(ToolAddLink, cfg),
+		Title:        t.getTitle(ToolAddLink, cfg),
+		OutputSchema: t.getOutputSchema(ToolAddLink, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddLinkInput) (*mcp.CallToolResult, *AddLinkOutput, error) {
 		result, out, err := wrappedHandler(ctx, req, input)
 		if typed, ok := out.(*AddLinkOutput); ok {
@@ -58,10 +60,12 @@ func (t *Toolkit) registerRemoveLinkTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolRemoveLink, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolRemoveLink),
-		Description: t.getDescription(ToolRemoveLink, cfg),
-		Annotations: t.getAnnotations(ToolRemoveLink, cfg),
-		Icons:       t.getIcons(ToolRemoveLink, cfg),
+		Name:         string(ToolRemoveLink),
+		Description:  t.getDescription(ToolRemoveLink, cfg),
+		Annotations:  t.getAnnotations(ToolRemoveLink, cfg),
+		Icons:        t.getIcons(ToolRemoveLink, cfg),
+		Title:        t.getTitle(ToolRemoveLink, cfg),
+		OutputSchema: t.getOutputSchema(ToolRemoveLink, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input RemoveLinkInput) (*mcp.CallToolResult, *RemoveLinkOutput, error) {
 		result, out, err := wrappedHandler(ctx, req, input)
 		if typed, ok := out.(*RemoveLinkOutput); ok {

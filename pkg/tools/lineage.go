@@ -30,10 +30,12 @@ func (t *Toolkit) registerGetLineageTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolGetLineage, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolGetLineage),
-		Description: t.getDescription(ToolGetLineage, cfg),
-		Annotations: t.getAnnotations(ToolGetLineage, cfg),
-		Icons:       t.getIcons(ToolGetLineage, cfg),
+		Name:         string(ToolGetLineage),
+		Description:  t.getDescription(ToolGetLineage, cfg),
+		Annotations:  t.getAnnotations(ToolGetLineage, cfg),
+		Icons:        t.getIcons(ToolGetLineage, cfg),
+		Title:        t.getTitle(ToolGetLineage, cfg),
+		OutputSchema: t.getOutputSchema(ToolGetLineage, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetLineageInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

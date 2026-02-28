@@ -32,10 +32,12 @@ func (t *Toolkit) registerAddGlossaryTermTool(server *mcp.Server, cfg *toolConfi
 	wrappedHandler := t.wrapHandler(ToolAddGlossaryTerm, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolAddGlossaryTerm),
-		Description: t.getDescription(ToolAddGlossaryTerm, cfg),
-		Annotations: t.getAnnotations(ToolAddGlossaryTerm, cfg),
-		Icons:       t.getIcons(ToolAddGlossaryTerm, cfg),
+		Name:         string(ToolAddGlossaryTerm),
+		Description:  t.getDescription(ToolAddGlossaryTerm, cfg),
+		Annotations:  t.getAnnotations(ToolAddGlossaryTerm, cfg),
+		Icons:        t.getIcons(ToolAddGlossaryTerm, cfg),
+		Title:        t.getTitle(ToolAddGlossaryTerm, cfg),
+		OutputSchema: t.getOutputSchema(ToolAddGlossaryTerm, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input AddGlossaryTermInput) (*mcp.CallToolResult, *AddGlossaryTermOutput, error) {
 		result, out, err := wrappedHandler(ctx, req, input)
 		if typed, ok := out.(*AddGlossaryTermOutput); ok {
@@ -57,10 +59,12 @@ func (t *Toolkit) registerRemoveGlossaryTermTool(server *mcp.Server, cfg *toolCo
 	wrappedHandler := t.wrapHandler(ToolRemoveGlossaryTerm, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolRemoveGlossaryTerm),
-		Description: t.getDescription(ToolRemoveGlossaryTerm, cfg),
-		Annotations: t.getAnnotations(ToolRemoveGlossaryTerm, cfg),
-		Icons:       t.getIcons(ToolRemoveGlossaryTerm, cfg),
+		Name:         string(ToolRemoveGlossaryTerm),
+		Description:  t.getDescription(ToolRemoveGlossaryTerm, cfg),
+		Annotations:  t.getAnnotations(ToolRemoveGlossaryTerm, cfg),
+		Icons:        t.getIcons(ToolRemoveGlossaryTerm, cfg),
+		Title:        t.getTitle(ToolRemoveGlossaryTerm, cfg),
+		OutputSchema: t.getOutputSchema(ToolRemoveGlossaryTerm, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest,
 		input RemoveGlossaryTermInput,
 	) (*mcp.CallToolResult, *RemoveGlossaryTermOutput, error) {
