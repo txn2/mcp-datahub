@@ -46,6 +46,12 @@ type Toolkit struct {
 	// Icon overrides (toolkit-level, set via WithIcons)
 	icons map[ToolName][]mcp.Icon
 
+	// Title overrides (toolkit-level, set via WithTitles)
+	titles map[ToolName]string
+
+	// OutputSchema overrides (toolkit-level, set via WithOutputSchemas)
+	outputSchemas map[ToolName]any
+
 	// Internal tracking
 	registeredTools map[ToolName]bool
 }
@@ -88,6 +94,8 @@ func newBaseToolkit(cfg Config) *Toolkit {
 		descriptions:    make(map[ToolName]string),
 		annotations:     make(map[ToolName]*mcp.ToolAnnotations),
 		icons:           make(map[ToolName][]mcp.Icon),
+		titles:          make(map[ToolName]string),
+		outputSchemas:   make(map[ToolName]any),
 		registeredTools: make(map[ToolName]bool),
 	}
 }

@@ -100,34 +100,38 @@ export DATAHUB_TOKEN=your_token
 
 ## Available Tools (19 total: 12 read + 7 write)
 
+Each tool has a `Title` (human-readable display name shown in MCP clients like Claude Desktop),
+an `OutputSchema` (JSON Schema describing the response structure), and `Annotations`.
+All are customizable via the three-tier priority pattern.
+
 ### Read Tools
 
-| Tool | Description |
-|------|-------------|
-| `datahub_search` | Search entities by query and type |
-| `datahub_get_entity` | Get entity metadata by URN |
-| `datahub_get_schema` | Get dataset schema |
-| `datahub_get_lineage` | Get upstream/downstream lineage |
-| `datahub_get_column_lineage` | Get fine-grained column-level lineage |
-| `datahub_get_queries` | Get associated SQL queries |
-| `datahub_get_glossary_term` | Get glossary term details |
-| `datahub_list_tags` | List available tags |
-| `datahub_list_domains` | List data domains |
-| `datahub_list_data_products` | List data products |
-| `datahub_get_data_product` | Get data product details |
-| `datahub_list_connections` | List configured DataHub server connections |
+| Tool | Title | Description |
+|------|-------|-------------|
+| `datahub_search` | Search Catalog | Search entities by query and type |
+| `datahub_get_entity` | Get Entity | Get entity metadata by URN |
+| `datahub_get_schema` | Get Schema | Get dataset schema |
+| `datahub_get_lineage` | Get Lineage | Get upstream/downstream lineage |
+| `datahub_get_column_lineage` | Get Column Lineage | Get fine-grained column-level lineage |
+| `datahub_get_queries` | Get Queries | Get associated SQL queries |
+| `datahub_get_glossary_term` | Get Glossary Term | Get glossary term details |
+| `datahub_list_tags` | List Tags | List available tags |
+| `datahub_list_domains` | List Domains | List data domains |
+| `datahub_list_data_products` | List Data Products | List data products |
+| `datahub_get_data_product` | Get Data Product | Get data product details |
+| `datahub_list_connections` | List Connections | List configured DataHub server connections |
 
 ### Write Tools (require `WriteEnabled: true`)
 
-| Tool | Description |
-|------|-------------|
-| `datahub_update_description` | Update entity description |
-| `datahub_add_tag` | Add a tag to an entity |
-| `datahub_remove_tag` | Remove a tag from an entity |
-| `datahub_add_glossary_term` | Add a glossary term to an entity |
-| `datahub_remove_glossary_term` | Remove a glossary term from an entity |
-| `datahub_add_link` | Add a link to an entity |
-| `datahub_remove_link` | Remove a link from an entity |
+| Tool | Title | Description |
+|------|-------|-------------|
+| `datahub_update_description` | Update Description | Update entity description |
+| `datahub_add_tag` | Add Tag | Add a tag to an entity |
+| `datahub_remove_tag` | Remove Tag | Remove a tag from an entity |
+| `datahub_add_glossary_term` | Add Glossary Term | Add a glossary term to an entity |
+| `datahub_remove_glossary_term` | Remove Glossary Term | Remove a glossary term from an entity |
+| `datahub_add_link` | Add Link | Add a link to an entity |
+| `datahub_remove_link` | Remove Link | Remove a link from an entity |
 
 ## Description Overrides
 
@@ -139,6 +143,22 @@ Tool descriptions can be customized at three levels of priority:
 
 Descriptions can also be set via config file (`toolkit.descriptions` section) or the `Descriptions` field in `server.Options`.
 
+## Title Overrides
+
+Tool display names (shown in MCP clients) follow the same three-level priority:
+
+1. **Per-registration** (highest): `toolkit.RegisterWith(server, tools.ToolSearch, tools.WithTitle("My Search"))`
+2. **Toolkit-level**: `tools.NewToolkit(client, cfg, tools.WithTitles(map[tools.ToolName]string{...}))`
+3. **Default**: Built-in titles from `pkg/tools/titles.go`
+
+## OutputSchema Overrides
+
+Tool output schemas (JSON Schema describing the response) follow the same three-level priority:
+
+1. **Per-registration** (highest): `toolkit.RegisterWith(server, tools.ToolSearch, tools.WithOutputSchema(schema))`
+2. **Toolkit-level**: `tools.NewToolkit(client, cfg, tools.WithOutputSchemas(map[tools.ToolName]any{...}))`
+3. **Default**: Built-in schemas from `pkg/tools/output_schemas.go`
+
 ## Annotation Overrides
 
 MCP tool annotations (behavior hints per the MCP specification) follow the same three-level priority:
@@ -149,8 +169,10 @@ MCP tool annotations (behavior hints per the MCP specification) follow the same 
 
 Default annotations for all 19 tools:
 
-- **Read tools** (12): `ReadOnlyHint: true`, `IdempotentHint: true`, `OpenWorldHint: false`
-- **Write tools** (7): `DestructiveHint: false`, `IdempotentHint: true`, `OpenWorldHint: false`
+- **Read tools** (12): `ReadOnlyHint: true`, `IdempotentHint: true`, `OpenWorldHint: true`
+- **Write tools** (7): `DestructiveHint: false`, `IdempotentHint: true`, `OpenWorldHint: true`
+
+`OpenWorldHint: true` is correct because all tools communicate with an external DataHub instance.
 
 ## Extensions Package (`pkg/extensions/`)
 

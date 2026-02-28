@@ -25,10 +25,12 @@ func (t *Toolkit) registerGetEntityTool(server *mcp.Server, cfg *toolConfig) {
 	wrappedHandler := t.wrapHandler(ToolGetEntity, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolGetEntity),
-		Description: t.getDescription(ToolGetEntity, cfg),
-		Annotations: t.getAnnotations(ToolGetEntity, cfg),
-		Icons:       t.getIcons(ToolGetEntity, cfg),
+		Name:         string(ToolGetEntity),
+		Description:  t.getDescription(ToolGetEntity, cfg),
+		Annotations:  t.getAnnotations(ToolGetEntity, cfg),
+		Icons:        t.getIcons(ToolGetEntity, cfg),
+		Title:        t.getTitle(ToolGetEntity, cfg),
+		OutputSchema: t.getOutputSchema(ToolGetEntity, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetEntityInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

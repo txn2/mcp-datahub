@@ -25,10 +25,12 @@ func (t *Toolkit) registerGetGlossaryTermTool(server *mcp.Server, cfg *toolConfi
 	wrappedHandler := t.wrapHandler(ToolGetGlossaryTerm, baseHandler, cfg)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        string(ToolGetGlossaryTerm),
-		Description: t.getDescription(ToolGetGlossaryTerm, cfg),
-		Annotations: t.getAnnotations(ToolGetGlossaryTerm, cfg),
-		Icons:       t.getIcons(ToolGetGlossaryTerm, cfg),
+		Name:         string(ToolGetGlossaryTerm),
+		Description:  t.getDescription(ToolGetGlossaryTerm, cfg),
+		Annotations:  t.getAnnotations(ToolGetGlossaryTerm, cfg),
+		Icons:        t.getIcons(ToolGetGlossaryTerm, cfg),
+		Title:        t.getTitle(ToolGetGlossaryTerm, cfg),
+		OutputSchema: t.getOutputSchema(ToolGetGlossaryTerm, cfg),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetGlossaryTermInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})

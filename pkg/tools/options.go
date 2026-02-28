@@ -38,10 +38,12 @@ func WithDescriptions(descs map[ToolName]string) ToolkitOption {
 
 // toolConfig holds per-registration configuration.
 type toolConfig struct {
-	middlewares []ToolMiddleware
-	description *string
-	annotations *mcp.ToolAnnotations
-	icons       []mcp.Icon
+	middlewares  []ToolMiddleware
+	description  *string
+	annotations  *mcp.ToolAnnotations
+	icons        []mcp.Icon
+	title        *string
+	outputSchema any
 }
 
 // ToolOption configures a single tool registration.
@@ -100,6 +102,46 @@ func WithIcons(icons map[ToolName][]mcp.Icon) ToolkitOption {
 func WithIcon(icons []mcp.Icon) ToolOption {
 	return func(cfg *toolConfig) {
 		cfg.icons = icons
+	}
+}
+
+// WithTitles sets toolkit-level title overrides for multiple tools.
+// These take priority over default titles but are overridden by
+// per-registration WithTitle options.
+func WithTitles(titles map[ToolName]string) ToolkitOption {
+	return func(t *Toolkit) {
+		for name, title := range titles {
+			t.titles[name] = title
+		}
+	}
+}
+
+// WithTitle overrides the display title for a single tool registration.
+// This is the highest priority override, taking precedence over both
+// toolkit-level WithTitles and default titles.
+func WithTitle(title string) ToolOption {
+	return func(cfg *toolConfig) {
+		cfg.title = &title
+	}
+}
+
+// WithOutputSchemas sets toolkit-level output schema overrides for multiple tools.
+// These take priority over default output schemas but are overridden by
+// per-registration WithOutputSchema options.
+func WithOutputSchemas(schemas map[ToolName]any) ToolkitOption {
+	return func(t *Toolkit) {
+		for name, schema := range schemas {
+			t.outputSchemas[name] = schema
+		}
+	}
+}
+
+// WithOutputSchema overrides the output schema for a single tool registration.
+// This is the highest priority override, taking precedence over both
+// toolkit-level WithOutputSchemas and default output schemas.
+func WithOutputSchema(schema any) ToolOption {
+	return func(cfg *toolConfig) {
+		cfg.outputSchema = schema
 	}
 }
 

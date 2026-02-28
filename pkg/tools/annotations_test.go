@@ -71,8 +71,8 @@ func TestDefaultAnnotations_ReadOnlyTools(t *testing.T) {
 			if !ann.IdempotentHint {
 				t.Errorf("expected IdempotentHint=true for %s", name)
 			}
-			if ann.OpenWorldHint == nil || *ann.OpenWorldHint {
-				t.Errorf("expected OpenWorldHint=false for %s", name)
+			if ann.OpenWorldHint == nil || !*ann.OpenWorldHint {
+				t.Errorf("expected OpenWorldHint=true for %s", name)
 			}
 		})
 	}
@@ -97,8 +97,8 @@ func TestDefaultAnnotations_WriteTools(t *testing.T) {
 			if !ann.IdempotentHint {
 				t.Errorf("expected IdempotentHint=true for %s", name)
 			}
-			if ann.OpenWorldHint == nil || *ann.OpenWorldHint {
-				t.Errorf("expected OpenWorldHint=false for %s", name)
+			if ann.OpenWorldHint == nil || !*ann.OpenWorldHint {
+				t.Errorf("expected OpenWorldHint=true for %s", name)
 			}
 		})
 	}

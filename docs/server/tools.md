@@ -11,7 +11,9 @@ All tools include [MCP tool annotations](https://modelcontextprotocol.io/specifi
 | `ReadOnlyHint` | `true` | `false` | Whether the tool only reads data |
 | `DestructiveHint` | _(default)_ | `false` | Whether the tool may destructively update |
 | `IdempotentHint` | `true` | `true` | Whether repeated calls produce the same result |
-| `OpenWorldHint` | `false` | `false` | Whether the tool interacts with external entities |
+| `OpenWorldHint` | `true` | `true` | Whether the tool interacts with external entities |
+
+`OpenWorldHint` is `true` for all tools because every tool communicates with an external DataHub instance.
 
 These annotations help MCP clients make informed decisions about tool invocation (e.g., auto-approving read-only tools). Library users can override annotations per-tool or per-toolkit; see the [Tools API Reference](../reference/tools-api.md#withannotations).
 
