@@ -2,8 +2,11 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
 // GetEntityInput is the input for the get_entity tool.
@@ -41,7 +44,6 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult("urn parameter is required"), nil, nil
 	}
 
-	// Get client for the specified connection
 	datahubClient, err := t.getClient(input.Connection)
 	if err != nil {
 		return ErrorResult("Connection error: " + err.Error()), nil, nil
@@ -52,44 +54,40 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult("GetEntity failed for " + input.URN + ": " + err.Error()), nil, nil
 	}
 
-	// Check for nil entity (should not happen if no error, but defensive)
 	if entity == nil {
 		return ErrorResult("GetEntity returned nil for " + input.URN), nil, nil
 	}
 
-	// Build response - include query context if provider configured
 	if t.queryProvider != nil {
-		response := map[string]any{
-			"entity": entity,
-		}
-
-		// Add table resolution as a fully-qualified string (matches outputSchema type: string).
-		if table, tableErr := t.queryProvider.ResolveTable(ctx, input.URN); tableErr == nil && table != nil {
-			response["query_table"] = table.String()
-		}
-
-		// Add query examples
-		if examples, examplesErr := t.queryProvider.GetQueryExamples(ctx, input.URN); examplesErr == nil && len(examples) > 0 {
-			response["query_examples"] = examples
-		}
-
-		// Add availability status
-		if avail, availErr := t.queryProvider.GetTableAvailability(ctx, input.URN); availErr == nil && avail != nil {
-			response["query_availability"] = avail
-		}
-
-		jsonResult, jsonErr := JSONResult(response)
-		if jsonErr != nil {
-			return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
-		}
-		return jsonResult, response, nil
+		return t.enrichEntityWithQueryContext(ctx, entity, input.URN)
 	}
 
-	// No query provider - return entity only
-	jsonResult, err := JSONResult(entity)
+	return formatJSONResult(entity)
+}
+
+// enrichEntityWithQueryContext flattens entity fields to top level and appends
+// query provider data at the same level (matches OutputSchema).
+// Entity.Properties is map[string]any, so json.Marshal can fail for pathological
+// values (e.g. channels). Unmarshal of the resulting JSON into map[string]any
+// is always safe and its error is intentionally ignored (check-blank: false).
+func (t *Toolkit) enrichEntityWithQueryContext(ctx context.Context, entity *types.Entity, urn string) (*mcp.CallToolResult, any, error) {
+	entityJSON, err := json.Marshal(entity)
 	if err != nil {
-		return ErrorResult("failed to format result: " + err.Error()), nil, nil
+		return ErrorResult("failed to flatten entity: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, entity, nil
+	response := map[string]any{}
+	_ = json.Unmarshal(entityJSON, &response)
+
+	if table, tableErr := t.queryProvider.ResolveTable(ctx, urn); tableErr == nil && table != nil {
+		response["query_table"] = table.String()
+	}
+	if examples, examplesErr := t.queryProvider.GetQueryExamples(ctx, urn); examplesErr == nil && len(examples) > 0 {
+		response["query_examples"] = examples
+	}
+	if avail, availErr := t.queryProvider.GetTableAvailability(ctx, urn); availErr == nil && avail != nil {
+		response["query_availability"] = avail
+	}
+
+	return formatJSONResult(response)
 }

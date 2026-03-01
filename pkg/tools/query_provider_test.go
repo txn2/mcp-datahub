@@ -294,10 +294,10 @@ func TestHandleGetEntity_WithQueryProvider_NilResults(t *testing.T) {
 		t.Fatal("expected success result")
 	}
 
-	// Should still have entity but no query fields
+	// Should still have entity fields at top level, no wrapper key
 	text := extractResultText(t, result)
-	if !strings.Contains(text, "entity") {
-		t.Error("expected entity in result")
+	if !strings.Contains(text, "urn") {
+		t.Error("expected entity urn field in result")
 	}
 }
 
@@ -358,6 +358,56 @@ func TestHandleGetEntity_WithQueryProvider_Errors(t *testing.T) {
 	// Should still succeed even with provider errors
 	if result.IsError {
 		t.Error("should succeed even with provider errors")
+	}
+}
+
+func TestEnrichEntityWithQueryContext_MarshalError(t *testing.T) {
+	mock := &mockClient{}
+	provider := &fullMockQueryProvider{}
+	toolkit := NewToolkit(mock, DefaultConfig(), WithQueryProvider(provider))
+
+	// Entity with a channel value in Properties cannot be marshaled to JSON.
+	entity := &types.Entity{
+		URN: "urn:li:dataset:test",
+		Properties: map[string]any{
+			"bad": make(chan int),
+		},
+	}
+
+	result, _, err := toolkit.enrichEntityWithQueryContext(context.Background(), entity, "urn:li:dataset:test")
+	if err != nil {
+		t.Fatalf("unexpected Go error: %v", err)
+	}
+	if !result.IsError {
+		t.Error("expected error result for unmarshalable entity")
+	}
+}
+
+func TestEnrichLineageWithQueryContext_MarshalError(t *testing.T) {
+	mock := &mockClient{}
+	provider := &fullMockQueryProvider{}
+	toolkit := NewToolkit(mock, DefaultConfig(), WithQueryProvider(provider))
+
+	// LineageEdge with a channel value in Properties cannot be marshaled to JSON.
+	lineage := &types.LineageResult{
+		Start: "urn:li:dataset:test",
+		Edges: []types.LineageEdge{
+			{
+				Source: "urn:li:dataset:a",
+				Target: "urn:li:dataset:b",
+				Properties: map[string]any{
+					"bad": make(chan int),
+				},
+			},
+		},
+	}
+
+	result, _, err := toolkit.enrichLineageWithQueryContext(context.Background(), lineage)
+	if err != nil {
+		t.Fatalf("unexpected Go error: %v", err)
+	}
+	if !result.IsError {
+		t.Error("expected error result for unmarshalable lineage")
 	}
 }
 
@@ -492,8 +542,8 @@ func TestHandleGetLineage_WithQueryProvider(t *testing.T) {
 	}
 
 	text := extractResultText(t, result)
-	if !strings.Contains(text, "lineage") {
-		t.Error("expected lineage in result")
+	if !strings.Contains(text, "start") {
+		t.Error("expected start field in result")
 	}
 	if !strings.Contains(text, "execution_context") {
 		t.Error("expected execution_context in result")

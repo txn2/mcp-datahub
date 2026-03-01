@@ -163,16 +163,30 @@ var schemaGetSchema = json.RawMessage(`{
 var schemaGetLineage = json.RawMessage(`{
   "type": "object",
   "properties": {
-    "urn":       {"type": "string"},
+    "start":     {"type": "string", "description": "URN of the queried entity"},
     "direction": {"type": "string", "description": "Lineage direction: UPSTREAM or DOWNSTREAM"},
-    "entities": {
+    "depth":     {"type": "integer", "description": "Depth of lineage traversal"},
+    "nodes": {
       "type": ["array", "null"],
       "items": {
         "type": "object",
         "properties": {
-          "urn":  {"type": "string"},
-          "name": {"type": "string"},
-          "type": {"type": "string"}
+          "urn":      {"type": "string"},
+          "name":     {"type": "string"},
+          "type":     {"type": "string"},
+          "platform": {"type": "string"},
+          "level":    {"type": "integer"}
+        }
+      }
+    },
+    "edges": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {"type": "string"},
+          "target": {"type": "string"},
+          "type":   {"type": "string"}
         }
       }
     },
@@ -329,6 +343,11 @@ var schemaGetDataProduct = json.RawMessage(`{
       "type": ["array", "null"],
       "description": "URNs of constituent datasets",
       "items": {"type": "string"}
+    },
+    "properties": {
+      "type": ["object", "null"],
+      "additionalProperties": {"type": "string"},
+      "description": "Optional: additional metadata properties"
     }
   }
 }`)
