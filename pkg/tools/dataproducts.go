@@ -49,12 +49,13 @@ func (t *Toolkit) handleListDataProducts(
 		return ErrorResult(err.Error()), nil, nil
 	}
 
-	jsonResult, err := JSONResult(products)
+	output := ListDataProductsOutput{DataProducts: products}
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }
 
 // GetDataProductInput is the input for the get_data_product tool.
@@ -110,5 +111,5 @@ func (t *Toolkit) handleGetDataProduct(
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, product, nil
 }

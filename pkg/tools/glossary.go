@@ -59,5 +59,5 @@ func (t *Toolkit) handleGetGlossaryTerm(
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, term, nil
 }

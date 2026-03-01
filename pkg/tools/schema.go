@@ -67,7 +67,7 @@ func (t *Toolkit) handleGetSchema(ctx context.Context, _ *mcp.CallToolRequest, i
 		if jsonErr != nil {
 			return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
 		}
-		return jsonResult, nil, nil
+		return jsonResult, response, nil
 	}
 
 	// No query provider - return schema only
@@ -76,5 +76,5 @@ func (t *Toolkit) handleGetSchema(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, schema, nil
 }

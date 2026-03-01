@@ -85,7 +85,7 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		if jsonErr != nil {
 			return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
 		}
-		return jsonResult, nil, nil
+		return jsonResult, response, nil
 	}
 
 	// No query provider - return lineage only
@@ -94,7 +94,7 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, lineage, nil
 }
 
 // collectLineageURNs extracts all URNs from a lineage result.

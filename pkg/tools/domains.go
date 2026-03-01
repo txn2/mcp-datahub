@@ -47,10 +47,11 @@ func (t *Toolkit) handleListDomains(ctx context.Context, _ *mcp.CallToolRequest,
 		return ErrorResult(err.Error()), nil, nil
 	}
 
-	jsonResult, err := JSONResult(domains)
+	output := ListDomainsOutput{Domains: domains}
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }
