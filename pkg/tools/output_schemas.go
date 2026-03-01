@@ -94,11 +94,49 @@ var schemaGetEntity = json.RawMessage(`{
     "name":        {"type": "string"},
     "type":        {"type": "string"},
     "description": {"type": "string"},
-    "owners":      {"type": "array", "items": {"type": "string"}},
-    "tags":        {"type": "array", "items": {"type": "string"}},
-    "domain":      {"type": "string"},
-    "deprecated":  {"type": "boolean"},
-    "query_table": {"type": "string", "description": "Optional: resolved query engine table path"}
+    "platform":    {"type": "string"},
+    "owners": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "urn":  {"type": "string"},
+          "name": {"type": "string"},
+          "type": {"type": "string"}
+        }
+      }
+    },
+    "tags": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "urn":         {"type": "string"},
+          "name":        {"type": "string"},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "domain": {
+      "type": ["object", "null"],
+      "properties": {
+        "urn":         {"type": "string"},
+        "name":        {"type": "string"},
+        "description": {"type": "string"}
+      }
+    },
+    "deprecation": {
+      "type": ["object", "null"],
+      "properties": {
+        "deprecated":        {"type": "boolean"},
+        "note":              {"type": "string"},
+        "actor":             {"type": "string"},
+        "decommission_time": {"type": "integer"}
+      }
+    },
+    "query_table":        {"type": "string", "description": "Optional: fully-qualified query engine table path"},
+    "query_availability": {"type": "object", "description": "Optional: query engine availability details"},
+    "query_examples":     {"type": "array",  "description": "Optional: example SQL queries"}
   }
 }`)
 
@@ -140,8 +178,7 @@ var schemaGetLineage = json.RawMessage(`{
     },
     "execution_context": {
       "type": "object",
-      "description": "Optional: query engine context per entity URN",
-      "additionalProperties": {"type": "object"}
+      "description": "Optional: query engine execution context for lineage bridging"
     }
   }
 }`)
@@ -269,10 +306,16 @@ var schemaGetDataProduct = json.RawMessage(`{
     "urn":         {"type": "string"},
     "name":        {"type": "string"},
     "description": {"type": "string"},
-    "domain":      {"type": "string"},
-    "owners":      {"type": "array", "items": {"type": "string"}},
-    "assets": {
-      "type": "array",
+    "domain": {
+      "type": ["object", "null"],
+      "properties": {
+        "urn":         {"type": "string"},
+        "name":        {"type": "string"},
+        "description": {"type": "string"}
+      }
+    },
+    "owners": {
+      "type": ["array", "null"],
       "items": {
         "type": "object",
         "properties": {
@@ -281,6 +324,11 @@ var schemaGetDataProduct = json.RawMessage(`{
           "type": {"type": "string"}
         }
       }
+    },
+    "assets": {
+      "type": ["array", "null"],
+      "description": "URNs of constituent datasets",
+      "items": {"type": "string"}
     }
   }
 }`)

@@ -63,9 +63,9 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 			"entity": entity,
 		}
 
-		// Add table resolution
+		// Add table resolution as a fully-qualified string (matches outputSchema type: string).
 		if table, tableErr := t.queryProvider.ResolveTable(ctx, input.URN); tableErr == nil && table != nil {
-			response["query_table"] = table
+			response["query_table"] = table.String()
 		}
 
 		// Add query examples
