@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/txn2/mcp-datahub/pkg/client"
+	"github.com/txn2/mcp-datahub/pkg/integration"
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
@@ -389,5 +390,147 @@ func TestListDataProductsOutput_WrapsProductsCorrectly(t *testing.T) {
 	output := ListDataProductsOutput{DataProducts: products}
 	if len(output.DataProducts) != 1 {
 		t.Errorf("ListDataProductsOutput.DataProducts length = %d, want 1", len(output.DataProducts))
+	}
+}
+
+// TestResponseShape_GetEntity_WithQueryProvider verifies that handleGetEntity with a query
+// provider returns entity fields at the TOP LEVEL — not nested under an "entity" wrapper key.
+// The Anthropic proxy rejects responses where the structured output shape diverges from OutputSchema.
+func TestResponseShape_GetEntity_WithQueryProvider(t *testing.T) {
+	entity := &types.Entity{URN: "urn:li:dataset:test", Name: "Test", Type: "DATASET"}
+	mock := &mockClient{
+		getEntityFunc: func(_ context.Context, _ string) (*types.Entity, error) {
+			return entity, nil
+		},
+	}
+
+	provider := &fullMockQueryProvider{
+		resolveTableFn: func(_ context.Context, _ string) (*integration.TableIdentifier, error) {
+			return &integration.TableIdentifier{Catalog: "cat", Schema: "sch", Table: "tbl"}, nil
+		},
+	}
+
+	toolkit := NewToolkit(mock, DefaultConfig(), WithQueryProvider(provider))
+	_, out, err := toolkit.handleGetEntity(context.Background(), nil, GetEntityInput{URN: "urn:li:dataset:test"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out == nil {
+		t.Fatal("structured output is nil")
+	}
+
+	outMap, ok := out.(map[string]any)
+	if !ok {
+		t.Fatalf("structured output type = %T, want map[string]any", out)
+	}
+
+	// Entity fields must be at top level — NOT nested under "entity"
+	if _, hasEntityKey := outMap["entity"]; hasEntityKey {
+		t.Error("response must not have an 'entity' wrapper key — entity fields must be at top level")
+	}
+	if _, hasURN := outMap["urn"]; !hasURN {
+		t.Error("expected 'urn' at top level of response")
+	}
+	if _, hasQueryTable := outMap["query_table"]; !hasQueryTable {
+		t.Error("expected 'query_table' at top level of response")
+	}
+}
+
+// TestResponseShape_GetLineage_WithQueryProvider verifies that handleGetLineage with a query
+// provider returns lineage fields at the TOP LEVEL — not nested under a "lineage" wrapper key.
+func TestResponseShape_GetLineage_WithQueryProvider(t *testing.T) {
+	lineage := &types.LineageResult{
+		Start:     "urn:li:dataset:test",
+		Direction: "DOWNSTREAM",
+		Nodes:     []types.LineageNode{{URN: "urn:li:dataset:up", Name: "upstream"}},
+	}
+	mock := &mockClient{
+		getLineageFunc: func(_ context.Context, _ string, _ ...client.LineageOption) (*types.LineageResult, error) {
+			return lineage, nil
+		},
+	}
+
+	provider := &fullMockQueryProvider{
+		getExecutionContextFn: func(_ context.Context, _ []string) (*integration.ExecutionContext, error) {
+			return &integration.ExecutionContext{Source: "trino"}, nil
+		},
+	}
+
+	toolkit := NewToolkit(mock, DefaultConfig(), WithQueryProvider(provider))
+	_, out, err := toolkit.handleGetLineage(context.Background(), nil, GetLineageInput{URN: "urn:li:dataset:test"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out == nil {
+		t.Fatal("structured output is nil")
+	}
+
+	outMap, ok := out.(map[string]any)
+	if !ok {
+		t.Fatalf("structured output type = %T, want map[string]any", out)
+	}
+
+	// Lineage fields must be at top level — NOT nested under "lineage"
+	if _, hasLineageKey := outMap["lineage"]; hasLineageKey {
+		t.Error("response must not have a 'lineage' wrapper key — lineage fields must be at top level")
+	}
+	if _, hasStart := outMap["start"]; !hasStart {
+		t.Error("expected 'start' at top level of response")
+	}
+	if _, hasNodes := outMap["nodes"]; !hasNodes {
+		t.Error("expected 'nodes' at top level of response")
+	}
+	if _, hasExecCtx := outMap["execution_context"]; !hasExecCtx {
+		t.Error("expected 'execution_context' at top level of response")
+	}
+}
+
+// TestResponseShape_Search_WithQueryProvider verifies that formatSearchResult with a query
+// provider returns search fields at the TOP LEVEL — not nested under a "result" wrapper key.
+func TestResponseShape_Search_WithQueryProvider(t *testing.T) {
+	mock := &mockClient{
+		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+			return &types.SearchResult{
+				Total:    1,
+				Entities: []types.SearchEntity{{URN: "urn:li:dataset:test", Name: "Test"}},
+			}, nil
+		},
+	}
+
+	provider := &fullMockQueryProvider{
+		getTableAvailabilityFn: func(_ context.Context, _ string) (*integration.TableAvailability, error) {
+			return &integration.TableAvailability{
+				Available: true,
+				Table:     &integration.TableIdentifier{Catalog: "cat", Schema: "sch", Table: "tbl"},
+			}, nil
+		},
+	}
+
+	toolkit := NewToolkit(mock, DefaultConfig(), WithQueryProvider(provider))
+	_, out, err := toolkit.handleSearch(context.Background(), nil, SearchInput{Query: "test"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out == nil {
+		t.Fatal("structured output is nil")
+	}
+
+	outMap, ok := out.(map[string]any)
+	if !ok {
+		t.Fatalf("structured output type = %T, want map[string]any", out)
+	}
+
+	// Search fields must be at top level — NOT nested under "result"
+	if _, hasResultKey := outMap["result"]; hasResultKey {
+		t.Error("response must not have a 'result' wrapper key — search fields must be at top level")
+	}
+	if _, hasEntities := outMap["entities"]; !hasEntities {
+		t.Error("expected 'entities' at top level of response")
+	}
+	if _, hasTotal := outMap["total"]; !hasTotal {
+		t.Error("expected 'total' at top level of response")
+	}
+	if _, hasQueryCtx := outMap["query_context"]; !hasQueryCtx {
+		t.Error("expected 'query_context' at top level of response")
 	}
 }

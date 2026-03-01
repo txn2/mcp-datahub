@@ -7,6 +7,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/txn2/mcp-datahub/pkg/client"
+	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
 // GetLineageInput is the input for the get_lineage tool.
@@ -46,7 +47,6 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult("urn parameter is required"), nil, nil
 	}
 
-	// Get client for the specified connection
 	datahubClient, err := t.getClient(input.Connection)
 	if err != nil {
 		return ErrorResult("Connection error: " + err.Error()), nil, nil
@@ -65,36 +65,33 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult(err.Error()), nil, nil
 	}
 
-	// Build response - include execution context if provider configured
 	if t.queryProvider != nil {
-		response := map[string]any{
-			"lineage": lineage,
-		}
-
-		// Collect all URNs from lineage
-		urns := collectLineageURNs(lineage)
-
-		// Get execution context for lineage bridge
-		if len(urns) > 0 {
-			if execCtx, execErr := t.queryProvider.GetExecutionContext(ctx, urns); execErr == nil && execCtx != nil {
-				response["execution_context"] = execCtx
-			}
-		}
-
-		jsonResult, jsonErr := JSONResult(response)
-		if jsonErr != nil {
-			return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
-		}
-		return jsonResult, response, nil
+		return t.enrichLineageWithQueryContext(ctx, lineage)
 	}
 
-	// No query provider - return lineage only
-	jsonResult, err := JSONResult(lineage)
+	return formatJSONResult(lineage)
+}
+
+// enrichLineageWithQueryContext flattens lineage fields to top level and appends
+// query execution context at the same level (matches OutputSchema).
+func (t *Toolkit) enrichLineageWithQueryContext(ctx context.Context, lineage *types.LineageResult) (*mcp.CallToolResult, any, error) {
+	lineageJSON, err := json.Marshal(lineage)
 	if err != nil {
-		return ErrorResult("failed to format result: " + err.Error()), nil, nil
+		return ErrorResult("failed to marshal lineage: " + err.Error()), nil, nil
+	}
+	response := map[string]any{}
+	if err = json.Unmarshal(lineageJSON, &response); err != nil {
+		return ErrorResult("failed to build response: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, lineage, nil
+	urns := collectLineageURNs(lineage)
+	if len(urns) > 0 {
+		if execCtx, execErr := t.queryProvider.GetExecutionContext(ctx, urns); execErr == nil && execCtx != nil {
+			response["execution_context"] = execCtx
+		}
+	}
+
+	return formatJSONResult(response)
 }
 
 // collectLineageURNs extracts all URNs from a lineage result.

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -81,10 +82,16 @@ func (t *Toolkit) formatSearchResult(ctx context.Context, result *types.SearchRe
 	queryContext := t.buildQueryContext(ctx, result)
 
 	if len(queryContext) > 0 {
-		response := map[string]any{
-			"result":        result,
-			"query_context": queryContext,
+		// Flatten result fields to top level (matches OutputSchema)
+		resultJSON, jsonErr := json.Marshal(result)
+		if jsonErr != nil {
+			return ErrorResult("failed to marshal result: " + jsonErr.Error()), nil, nil
 		}
+		response := map[string]any{}
+		if jsonErr = json.Unmarshal(resultJSON, &response); jsonErr != nil {
+			return ErrorResult("failed to build response: " + jsonErr.Error()), nil, nil
+		}
+		response["query_context"] = queryContext
 		return formatJSONResult(response)
 	}
 

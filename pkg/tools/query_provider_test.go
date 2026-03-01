@@ -294,10 +294,10 @@ func TestHandleGetEntity_WithQueryProvider_NilResults(t *testing.T) {
 		t.Fatal("expected success result")
 	}
 
-	// Should still have entity but no query fields
+	// Should still have entity fields at top level, no wrapper key
 	text := extractResultText(t, result)
-	if !strings.Contains(text, "entity") {
-		t.Error("expected entity in result")
+	if !strings.Contains(text, "urn") {
+		t.Error("expected entity urn field in result")
 	}
 }
 
@@ -492,8 +492,8 @@ func TestHandleGetLineage_WithQueryProvider(t *testing.T) {
 	}
 
 	text := extractResultText(t, result)
-	if !strings.Contains(text, "lineage") {
-		t.Error("expected lineage in result")
+	if !strings.Contains(text, "start") {
+		t.Error("expected start field in result")
 	}
 	if !strings.Contains(text, "execution_context") {
 		t.Error("expected execution_context in result")
