@@ -1,5 +1,22 @@
 package tools
 
+import "github.com/txn2/mcp-datahub/pkg/types"
+
+// ListDomainsOutput is the structured output of the datahub_list_domains tool.
+type ListDomainsOutput struct {
+	Domains []types.Domain `json:"domains"`
+}
+
+// ListTagsOutput is the structured output of the datahub_list_tags tool.
+type ListTagsOutput struct {
+	Tags []types.Tag `json:"tags"`
+}
+
+// ListDataProductsOutput is the structured output of the datahub_list_data_products tool.
+type ListDataProductsOutput struct {
+	DataProducts []types.DataProduct `json:"data_products"`
+}
+
 // UpdateDescriptionOutput is the structured output of the datahub_update_description tool.
 type UpdateDescriptionOutput struct {
 	URN    string `json:"urn"`

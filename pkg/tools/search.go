@@ -113,10 +113,12 @@ func (t *Toolkit) buildQueryContext(ctx context.Context, result *types.SearchRes
 }
 
 // formatJSONResult is a helper to format and return JSON results.
+// data is returned as-is as the structured output second return value so that
+// go-sdk populates structuredContent when the tool declares an outputSchema.
 func formatJSONResult(data any) (*mcp.CallToolResult, any, error) {
 	jsonResult, err := JSONResult(data)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
-	return jsonResult, nil, nil
+	return jsonResult, data, nil
 }

@@ -48,10 +48,11 @@ func (t *Toolkit) handleListTags(ctx context.Context, _ *mcp.CallToolRequest, in
 		return ErrorResult(err.Error()), nil, nil
 	}
 
-	jsonResult, err := JSONResult(tags)
+	output := ListTagsOutput{Tags: tags}
+	jsonResult, err := JSONResult(output)
 	if err != nil {
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, &output, nil
 }

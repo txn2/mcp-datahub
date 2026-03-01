@@ -57,5 +57,5 @@ func (t *Toolkit) handleGetQueries(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, queries, nil
 }

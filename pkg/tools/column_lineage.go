@@ -61,5 +61,5 @@ func (t *Toolkit) handleGetColumnLineage(
 		return ErrorResult("failed to format result: " + err.Error()), nil, nil
 	}
 
-	return jsonResult, nil, nil
+	return jsonResult, columnLineage, nil
 }

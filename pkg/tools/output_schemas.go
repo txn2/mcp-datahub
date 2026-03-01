@@ -107,7 +107,7 @@ var schemaGetSchema = json.RawMessage(`{
   "properties": {
     "urn":   {"type": "string"},
     "fields": {
-      "type": "array",
+      "type": ["array", "null"],
       "items": {
         "type": "object",
         "properties": {
@@ -126,9 +126,9 @@ var schemaGetLineage = json.RawMessage(`{
   "type": "object",
   "properties": {
     "urn":       {"type": "string"},
-    "direction": {"type": "string", "enum": ["upstream", "downstream"]},
+    "direction": {"type": "string", "description": "Lineage direction: UPSTREAM or DOWNSTREAM"},
     "entities": {
-      "type": "array",
+      "type": ["array", "null"],
       "items": {
         "type": "object",
         "properties": {
@@ -175,9 +175,9 @@ var schemaGetColumnLineage = json.RawMessage(`{
 var schemaGetQueries = json.RawMessage(`{
   "type": "object",
   "properties": {
-    "urn": {"type": "string"},
+    "total": {"type": "integer", "description": "Total number of queries"},
     "queries": {
-      "type": "array",
+      "type": ["array", "null"],
       "items": {
         "type": "object",
         "properties": {
