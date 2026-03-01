@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -78,18 +77,18 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 }
 
 // formatSearchResult formats search results, enriching with query context if available.
+// SearchResult contains only concrete types (no any fields), so direct field mapping
+// is used instead of a json roundtrip — no marshal error path is possible.
 func (t *Toolkit) formatSearchResult(ctx context.Context, result *types.SearchResult) (*mcp.CallToolResult, any, error) {
 	queryContext := t.buildQueryContext(ctx, result)
 
 	if len(queryContext) > 0 {
-		// Flatten result fields to top level (matches OutputSchema)
-		resultJSON, jsonErr := json.Marshal(result)
-		if jsonErr != nil {
-			return ErrorResult("failed to marshal result: " + jsonErr.Error()), nil, nil
-		}
-		response := map[string]any{}
-		if jsonErr = json.Unmarshal(resultJSON, &response); jsonErr != nil {
-			return ErrorResult("failed to build response: " + jsonErr.Error()), nil, nil
+		// Build flat response matching OutputSchema (entities/total at top level)
+		response := map[string]any{
+			"total":    result.Total,
+			"entities": result.Entities,
+			"offset":   result.Offset,
+			"limit":    result.Limit,
 		}
 		response["query_context"] = queryContext
 		return formatJSONResult(response)

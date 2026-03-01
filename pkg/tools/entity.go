@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
 // GetEntityInput is the input for the get_entity tool.
@@ -65,15 +67,17 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 
 // enrichEntityWithQueryContext flattens entity fields to top level and appends
 // query provider data at the same level (matches OutputSchema).
-func (t *Toolkit) enrichEntityWithQueryContext(ctx context.Context, entity any, urn string) (*mcp.CallToolResult, any, error) {
+// Entity.Properties is map[string]any, so json.Marshal can fail for pathological
+// values (e.g. channels). Unmarshal of the resulting JSON into map[string]any
+// is always safe and its error is intentionally ignored (check-blank: false).
+func (t *Toolkit) enrichEntityWithQueryContext(ctx context.Context, entity *types.Entity, urn string) (*mcp.CallToolResult, any, error) {
 	entityJSON, err := json.Marshal(entity)
 	if err != nil {
-		return ErrorResult("failed to marshal entity: " + err.Error()), nil, nil
+		return ErrorResult("failed to flatten entity: " + err.Error()), nil, nil
 	}
+
 	response := map[string]any{}
-	if err = json.Unmarshal(entityJSON, &response); err != nil {
-		return ErrorResult("failed to build response: " + err.Error()), nil, nil
-	}
+	_ = json.Unmarshal(entityJSON, &response)
 
 	if table, tableErr := t.queryProvider.ResolveTable(ctx, urn); tableErr == nil && table != nil {
 		response["query_table"] = table.String()

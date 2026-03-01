@@ -74,15 +74,16 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 
 // enrichLineageWithQueryContext flattens lineage fields to top level and appends
 // query execution context at the same level (matches OutputSchema).
+// LineageEdge.Properties is map[string]any, so json.Marshal can fail for pathological
+// values (e.g. channels). Unmarshal of the resulting JSON into map[string]any
+// is always safe and its error is intentionally ignored (check-blank: false).
 func (t *Toolkit) enrichLineageWithQueryContext(ctx context.Context, lineage *types.LineageResult) (*mcp.CallToolResult, any, error) {
 	lineageJSON, err := json.Marshal(lineage)
 	if err != nil {
 		return ErrorResult("failed to marshal lineage: " + err.Error()), nil, nil
 	}
 	response := map[string]any{}
-	if err = json.Unmarshal(lineageJSON, &response); err != nil {
-		return ErrorResult("failed to build response: " + err.Error()), nil, nil
-	}
+	_ = json.Unmarshal(lineageJSON, &response)
 
 	urns := collectLineageURNs(lineage)
 	if len(urns) > 0 {

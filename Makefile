@@ -39,6 +39,10 @@ coverage-html: coverage
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE) -o coverage.html
 
 ## Patch coverage (only changed lines vs main branch)
+## Uses coverage block ranges and execution counts to match Codecov patch behaviour:
+##   - enumerates ALL added lines in each hunk (not just hunk-start lines)
+##   - skips non-executable lines (blank, comment, import) that don't appear in coverage.out
+##   - counts a line as covered only when its block has execution count > 0
 PATCH_THRESHOLD := 80
 patch-coverage:
 	@MERGE_BASE=$$(git merge-base main HEAD 2>/dev/null || echo "HEAD"); \
@@ -50,25 +54,18 @@ patch-coverage:
 		echo "No non-test Go files changed, skipping patch coverage"; exit 0; \
 	fi; \
 	echo "Changed files: $$CHANGED_FILES"; \
+	$(GOTEST) -coverprofile=$(COVERAGE_FILE) -covermode=atomic ./... > /dev/null 2>&1; \
 	TOTAL=0; COVERED=0; \
 	for FILE in $$CHANGED_FILES; do \
 		if [ ! -f "$$FILE" ]; then continue; fi; \
-		PKG=$$(dirname "$$FILE"); \
-		$(GOTEST) -coverprofile=patch_cov.tmp -covermode=atomic "./$$PKG" > /dev/null 2>&1 || true; \
-		if [ -f patch_cov.tmp ]; then \
-			FILE_COV=$$($(GOCMD) tool cover -func=patch_cov.tmp 2>/dev/null | grep "$$FILE" || true); \
-			rm -f patch_cov.tmp; \
-		fi; \
-	done; \
-	$(GOTEST) -coverprofile=$(COVERAGE_FILE) -covermode=atomic ./... > /dev/null 2>&1; \
-	for FILE in $$CHANGED_FILES; do \
-		LINES=$$(git diff --unified=0 "$$MERGE_BASE"...HEAD -- "$$FILE" | \
-			grep '^@@' | sed 's/.*+\([0-9]*\).*/\1/' || true); \
-		for LINE in $$LINES; do \
+		for LINE in $$(git diff --unified=0 "$$MERGE_BASE"...HEAD -- "$$FILE" | \
+			awk '/^@@/{n=split(substr($$3,2),a,",");s=a[1]+0;c=(n>1)?a[2]+0:1;for(i=s;i<s+c;i++)print i}'); do \
+			BLOCK=$$(awk -v f="$$FILE" -v l="$$LINE" \
+				'index($$1,f){split($$1,a,":");split(a[2],b,",");split(b[1],c,".");split(b[2],d,".");if(l+0>=c[1]+0&&l+0<=d[1]+0){print $$3;exit}}' \
+				$(COVERAGE_FILE)); \
+			[ -z "$$BLOCK" ] && continue; \
 			TOTAL=$$((TOTAL + 1)); \
-			if grep -q "$$FILE:$$LINE" $(COVERAGE_FILE) 2>/dev/null; then \
-				COVERED=$$((COVERED + 1)); \
-			fi; \
+			[ "$$BLOCK" -gt 0 ] 2>/dev/null && COVERED=$$((COVERED + 1)); \
 		done; \
 	done; \
 	if [ "$$TOTAL" -eq 0 ]; then \
@@ -127,7 +124,7 @@ clean:
 	rm -f $(BINARY_NAME) $(COVERAGE_FILE) coverage.html bench.txt cpu.prof mem.prof
 	$(GOCMD) clean -cache -testcache
 
-verify: tidy lint test coverage security deadcode build-check
+verify: tidy lint test coverage patch-coverage security deadcode build-check
 	@echo "All verification checks passed."
 
 help:

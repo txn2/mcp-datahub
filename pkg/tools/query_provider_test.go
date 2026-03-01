@@ -361,6 +361,56 @@ func TestHandleGetEntity_WithQueryProvider_Errors(t *testing.T) {
 	}
 }
 
+func TestEnrichEntityWithQueryContext_MarshalError(t *testing.T) {
+	mock := &mockClient{}
+	provider := &fullMockQueryProvider{}
+	toolkit := NewToolkit(mock, DefaultConfig(), WithQueryProvider(provider))
+
+	// Entity with a channel value in Properties cannot be marshaled to JSON.
+	entity := &types.Entity{
+		URN: "urn:li:dataset:test",
+		Properties: map[string]any{
+			"bad": make(chan int),
+		},
+	}
+
+	result, _, err := toolkit.enrichEntityWithQueryContext(context.Background(), entity, "urn:li:dataset:test")
+	if err != nil {
+		t.Fatalf("unexpected Go error: %v", err)
+	}
+	if !result.IsError {
+		t.Error("expected error result for unmarshalable entity")
+	}
+}
+
+func TestEnrichLineageWithQueryContext_MarshalError(t *testing.T) {
+	mock := &mockClient{}
+	provider := &fullMockQueryProvider{}
+	toolkit := NewToolkit(mock, DefaultConfig(), WithQueryProvider(provider))
+
+	// LineageEdge with a channel value in Properties cannot be marshaled to JSON.
+	lineage := &types.LineageResult{
+		Start: "urn:li:dataset:test",
+		Edges: []types.LineageEdge{
+			{
+				Source: "urn:li:dataset:a",
+				Target: "urn:li:dataset:b",
+				Properties: map[string]any{
+					"bad": make(chan int),
+				},
+			},
+		},
+	}
+
+	result, _, err := toolkit.enrichLineageWithQueryContext(context.Background(), lineage)
+	if err != nil {
+		t.Fatalf("unexpected Go error: %v", err)
+	}
+	if !result.IsError {
+		t.Error("expected error result for unmarshalable lineage")
+	}
+}
+
 // Tests for QueryProvider integration in schema handler.
 
 func TestHandleGetSchema_WithQueryProvider(t *testing.T) {
