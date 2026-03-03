@@ -104,7 +104,7 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{},
 )
 ```
 
-All 19 tools ship with default annotations: read tools are marked `ReadOnlyHint: true`, write tools are marked `DestructiveHint: false` and `IdempotentHint: true`.
+All 16 tools (plus 4 deprecated aliases) ship with default annotations: read tools are marked `ReadOnlyHint: true`, write tools are marked `DestructiveHint: false` and `IdempotentHint: true`.
 
 #### Extensions (Logging, Metrics, Error Hints)
 
@@ -240,15 +240,21 @@ See the [library documentation](https://mcp-datahub.txn2.com/library/) for compl
 | `datahub_search` | Search for datasets, dashboards, pipelines by query and entity type |
 | `datahub_get_entity` | Get entity metadata by URN (description, owners, tags, domain) |
 | `datahub_get_schema` | Get dataset schema with field types and descriptions |
-| `datahub_get_lineage` | Get upstream/downstream data lineage |
-| `datahub_get_column_lineage` | Get fine-grained column-level lineage mappings |
+| `datahub_get_lineage` | Get upstream/downstream lineage (supports `level=column` for column-level) |
 | `datahub_get_queries` | Get SQL queries associated with a dataset |
+| `datahub_browse` | Browse catalog: list tags, domains, or data products |
 | `datahub_get_glossary_term` | Get glossary term definition and properties |
-| `datahub_list_tags` | List available tags in the catalog |
-| `datahub_list_domains` | List data domains |
-| `datahub_list_data_products` | List data products |
 | `datahub_get_data_product` | Get data product details (owners, domain, properties) |
 | `datahub_list_connections` | List configured DataHub server connections (multi-server mode) |
+
+### Deprecated Aliases (kept for one release cycle)
+
+| Alias | Replacement |
+|-------|-------------|
+| `datahub_list_tags` | `datahub_browse` with `what=tags` |
+| `datahub_list_domains` | `datahub_browse` with `what=domains` |
+| `datahub_list_data_products` | `datahub_browse` with `what=data_products` |
+| `datahub_get_column_lineage` | `datahub_get_lineage` with `level=column` |
 
 ### Write Tools (require `DATAHUB_WRITE_ENABLED=true`)
 

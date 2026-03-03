@@ -1,6 +1,6 @@
 # Available Tools
 
-mcp-datahub provides 19 MCP tools for interacting with DataHub (12 read + 7 write).
+mcp-datahub provides 16 MCP tools for interacting with DataHub (9 read + 7 write), plus 4 deprecated aliases kept for one release cycle.
 
 ## Tool Annotations
 
@@ -292,15 +292,16 @@ Get schema fields for a dataset with descriptions.
 
 ## datahub_get_lineage
 
-Get upstream and downstream lineage for an entity.
+Get upstream and downstream lineage for an entity. Supports both dataset-level and column-level lineage via the `level` parameter.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `urn` | string | Yes | Entity URN |
-| `direction` | string | No | UPSTREAM, DOWNSTREAM, or BOTH (default: BOTH) |
-| `depth` | integer | No | Maximum traversal depth (default: 3, max: 5) |
+| `level` | string | No | Granularity: `dataset` or `column` (default: `dataset`) |
+| `direction` | string | No | UPSTREAM, DOWNSTREAM, or BOTH (default: BOTH, dataset level only) |
+| `depth` | integer | No | Maximum traversal depth (default: 3, max: 5, dataset level only) |
 | `connection` | string | No | Named connection to use |
 
 **Example Request:**
@@ -367,24 +368,16 @@ Get upstream and downstream lineage for an entity.
 - Understanding data flow
 - Discovering related datasets
 
----
+### Column-Level Lineage (level=column)
 
-## datahub_get_column_lineage
-
-Get fine-grained column-level lineage mappings for a dataset.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `urn` | string | Yes | Dataset URN |
-| `connection` | string | No | Named connection to use |
+When `level=column` is specified, returns fine-grained column-level lineage mappings instead of dataset-level lineage. The `direction` and `depth` parameters are ignored for column-level lineage.
 
 **Example Request:**
 
 ```json
 {
-  "urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.analytics.customer_metrics,PROD)"
+  "urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,prod.analytics.customer_metrics,PROD)",
+  "level": "column"
 }
 ```
 
@@ -427,13 +420,6 @@ Get fine-grained column-level lineage mappings for a dataset.
 | `transform` | Transformation type (IDENTITY, AGGREGATE, etc.) |
 | `query` | Optional SQL query that defines the transformation |
 | `confidence_score` | Optional confidence score (0-1) for inferred lineage |
-
-**Common Use Cases:**
-
-- Fine-grained impact analysis for column changes
-- Understanding column-level data transformations
-- Tracing data from source to derived columns
-- Data quality root cause analysis at column level
 
 ---
 
@@ -515,44 +501,47 @@ Get glossary term definition and related assets.
 
 ---
 
-## datahub_list_tags
+## datahub_browse
 
-List available tags in the catalog.
+Browse the catalog to list tags, domains, or data products. Consolidates the former `datahub_list_tags`, `datahub_list_domains`, and `datahub_list_data_products` tools.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `filter` | string | No | Filter tags by name pattern |
+| `what` | string | Yes | What to browse: `tags`, `domains`, or `data_products` |
+| `filter` | string | No | Optional filter string (tags only) |
 | `connection` | string | No | Named connection to use |
 
-**Example Response:**
+**Example Request (tags):**
+
+```json
+{
+  "what": "tags"
+}
+```
+
+**Example Response (tags):**
 
 ```json
 {
   "tags": [
     {"name": "pii", "urn": "urn:li:tag:pii", "description": "Contains personally identifiable information"},
     {"name": "deprecated", "urn": "urn:li:tag:deprecated", "description": "This asset is deprecated"},
-    {"name": "certified", "urn": "urn:li:tag:certified", "description": "Quality certified dataset"},
-    {"name": "sensitive", "urn": "urn:li:tag:sensitive", "description": "Contains sensitive data"}
-  ],
-  "count": 4
+    {"name": "certified", "urn": "urn:li:tag:certified", "description": "Quality certified dataset"}
+  ]
 }
 ```
 
----
+**Example Request (domains):**
 
-## datahub_list_domains
+```json
+{
+  "what": "domains"
+}
+```
 
-List data domains in the organization.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `connection` | string | No | Named connection to use |
-
-**Example Response:**
+**Example Response (domains):**
 
 ```json
 {
@@ -568,35 +557,24 @@ List data domains in the organization.
       "name": "Marketing",
       "description": "Marketing campaigns and analytics",
       "entityCount": 32
-    },
-    {
-      "urn": "urn:li:domain:finance",
-      "name": "Finance",
-      "description": "Financial reporting and accounting",
-      "entityCount": 28
     }
-  ],
-  "count": 3
+  ]
 }
 ```
 
----
-
-## datahub_list_data_products
-
-List all data products in the catalog.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `connection` | string | No | Named connection to use |
-
-**Example Response:**
+**Example Request (data_products):**
 
 ```json
 {
-  "dataProducts": [
+  "what": "data_products"
+}
+```
+
+**Example Response (data_products):**
+
+```json
+{
+  "data_products": [
     {
       "urn": "urn:li:dataProduct:customer-360",
       "name": "Customer 360",
@@ -609,8 +587,7 @@ List all data products in the catalog.
       "description": "Revenue metrics and forecasting data",
       "domain": "Finance"
     }
-  ],
-  "count": 2
+  ]
 }
 ```
 
@@ -764,6 +741,19 @@ Remove a link from an entity.
 | `urn` | string | Yes | Entity URN |
 | `link_url` | string | Yes | URL to remove |
 | `connection` | string | No | Named connection to use |
+
+---
+
+## Deprecated Aliases
+
+The following tool names are kept as aliases for one release cycle. They delegate to the consolidated tools above.
+
+| Deprecated Tool | Replacement |
+|----------------|-------------|
+| `datahub_list_tags` | `datahub_browse` with `what=tags` |
+| `datahub_list_domains` | `datahub_browse` with `what=domains` |
+| `datahub_list_data_products` | `datahub_browse` with `what=data_products` |
+| `datahub_get_column_lineage` | `datahub_get_lineage` with `level=column` |
 
 ---
 

@@ -97,13 +97,10 @@ Unlike other MCP servers, mcp-datahub is designed as a composable Go library. Im
 | `datahub_search` | Search across all DataHub assets |
 | `datahub_get_entity` | Get entity metadata by URN |
 | `datahub_get_schema` | Get dataset schema with field details |
-| `datahub_get_lineage` | Explore upstream/downstream dependencies |
-| `datahub_get_column_lineage` | Get fine-grained column-level lineage |
+| `datahub_get_lineage` | Explore upstream/downstream dependencies (supports `level=column`) |
 | `datahub_get_queries` | Get SQL queries associated with a dataset |
+| `datahub_browse` | Browse catalog: list tags, domains, or data products |
 | `datahub_get_glossary_term` | Get term definition and relationships |
-| `datahub_list_tags` | List available tags in the catalog |
-| `datahub_list_domains` | List organizational domains |
-| `datahub_list_data_products` | List data products in catalog |
 | `datahub_get_data_product` | Get data product details and assets |
 | `datahub_list_connections` | List configured server connections |
 
