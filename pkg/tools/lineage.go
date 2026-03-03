@@ -54,6 +54,11 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult("Connection error: " + err.Error()), nil, nil
 	}
 
+	// Validate level parameter
+	if input.Level != "" && input.Level != "dataset" && input.Level != "column" {
+		return ErrorResult("invalid level: " + input.Level + " (valid: dataset, column)"), nil, nil
+	}
+
 	// Column-level lineage path
 	if input.Level == "column" {
 		return t.handleColumnLineagePath(ctx, datahubClient, input.URN)

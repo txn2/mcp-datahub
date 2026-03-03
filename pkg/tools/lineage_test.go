@@ -193,3 +193,13 @@ func TestHandleGetLineage_DefaultLevel(t *testing.T) {
 		t.Error("dataset level should use dataset-level lineage")
 	}
 }
+
+func TestHandleGetLineage_InvalidLevel(t *testing.T) {
+	mock := &mockClient{}
+	toolkit := NewToolkit(mock, DefaultConfig())
+
+	result, _, _ := toolkit.handleGetLineage(context.Background(), nil, GetLineageInput{URN: "urn:li:dataset:test", Level: "invalid"})
+	if !result.IsError {
+		t.Error("invalid level should return error result")
+	}
+}

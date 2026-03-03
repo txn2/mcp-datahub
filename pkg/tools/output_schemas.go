@@ -165,12 +165,14 @@ var schemaGetSchema = json.RawMessage(`{
 
 var schemaGetLineage = json.RawMessage(`{
   "type": "object",
+  "description": "Dataset-level (default): start/direction/depth/nodes/edges. Column-level (level=column): urn/columns.",
   "properties": {
-    "start":     {"type": "string", "description": "URN of the queried entity"},
-    "direction": {"type": "string", "description": "Lineage direction: UPSTREAM or DOWNSTREAM"},
-    "depth":     {"type": "integer", "description": "Depth of lineage traversal"},
+    "start":     {"type": "string", "description": "URN of the queried entity (dataset level)"},
+    "direction": {"type": "string", "description": "Lineage direction: UPSTREAM or DOWNSTREAM (dataset level)"},
+    "depth":     {"type": "integer", "description": "Depth of lineage traversal (dataset level)"},
     "nodes": {
       "type": ["array", "null"],
+      "description": "Lineage nodes (dataset level)",
       "items": {
         "type": "object",
         "properties": {
@@ -184,6 +186,7 @@ var schemaGetLineage = json.RawMessage(`{
     },
     "edges": {
       "type": ["array", "null"],
+      "description": "Lineage edges (dataset level)",
       "items": {
         "type": "object",
         "properties": {
@@ -195,7 +198,28 @@ var schemaGetLineage = json.RawMessage(`{
     },
     "execution_context": {
       "type": "object",
-      "description": "Optional: query engine execution context for lineage bridging"
+      "description": "Optional: query engine execution context for lineage bridging (dataset level)"
+    },
+    "urn": {"type": "string", "description": "Dataset URN (column level)"},
+    "columns": {
+      "type": "array",
+      "description": "Column-level lineage mappings (column level)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "downstreamColumn": {"type": "string"},
+          "upstreamColumns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "datasetUrn": {"type": "string"},
+                "column":     {"type": "string"}
+              }
+            }
+          }
+        }
+      }
     }
   }
 }`)

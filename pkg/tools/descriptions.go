@@ -52,8 +52,8 @@ var defaultDescriptions = map[ToolName]string{
 
 	ToolGetDataProduct: "Get full details of a data product including its constituent datasets, owners, and " +
 		"domain. Data products group related datasets for a specific business use case. " +
-		"Use after datahub_list_data_products to drill into a specific product and discover " +
-		"all its member datasets. Useful for answering \"what data do we have about [topic]?\"",
+		"Use after datahub_browse with what=data_products to drill into a specific product " +
+		"and discover all its member datasets. Useful for answering \"what data do we have about [topic]?\"",
 
 	ToolListConnections: "List all configured DataHub server connections. " +
 		"Use this to discover available connections before querying specific servers. " +
