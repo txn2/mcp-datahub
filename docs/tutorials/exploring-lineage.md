@@ -215,7 +215,7 @@ For fine-grained analysis, explore how individual columns are derived. Ask:
 
 > "Show me the column-level lineage for customer_metrics"
 
-The AI uses `datahub_get_column_lineage`:
+The AI uses `datahub_get_lineage` with `level=column`:
 
 ```json
 {

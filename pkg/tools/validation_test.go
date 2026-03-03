@@ -68,13 +68,13 @@ func TestInputTypeValidation(t *testing.T) {
 			},
 		},
 		{
-			name: "ListTags invalid type",
+			name: "Browse invalid type",
 			handler: func(ctx context.Context, req *mcp.CallToolRequest, input any) (*mcp.CallToolResult, any, error) {
-				tagsInput, ok := input.(ListTagsInput)
+				browseInput, ok := input.(BrowseInput)
 				if !ok {
 					return ErrorResult("internal error: invalid input type"), nil, nil
 				}
-				return toolkit.handleListTags(ctx, req, tagsInput)
+				return toolkit.handleBrowse(ctx, req, browseInput)
 			},
 		},
 		{

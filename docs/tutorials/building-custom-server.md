@@ -164,13 +164,12 @@ Available tool constants:
 | `tools.ToolSearch` | `datahub_search` |
 | `tools.ToolGetEntity` | `datahub_get_entity` |
 | `tools.ToolGetSchema` | `datahub_get_schema` |
-| `tools.ToolGetLineage` | `datahub_get_lineage` |
+| `tools.ToolGetLineage` | `datahub_get_lineage` (supports `level=column`) |
 | `tools.ToolGetQueries` | `datahub_get_queries` |
+| `tools.ToolBrowse` | `datahub_browse` (list tags, domains, or data products) |
 | `tools.ToolGetGlossaryTerm` | `datahub_get_glossary_term` |
-| `tools.ToolListTags` | `datahub_list_tags` |
-| `tools.ToolListDomains` | `datahub_list_domains` |
-| `tools.ToolListDataProducts` | `datahub_list_data_products` |
 | `tools.ToolGetDataProduct` | `datahub_get_data_product` |
+| `tools.ToolListConnections` | `datahub_list_connections` |
 
 ## Step 7: Add Logging Middleware
 

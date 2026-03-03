@@ -2,20 +2,28 @@ package tools
 
 import "github.com/txn2/mcp-datahub/pkg/types"
 
-// ListDomainsOutput is the structured output of the datahub_list_domains tool.
-type ListDomainsOutput struct {
-	Domains []types.Domain `json:"domains"`
+// BrowseOutput is the structured output of the datahub_browse tool.
+// Exactly one of Tags, Domains, or DataProducts is populated per call.
+type BrowseOutput struct {
+	Tags         []types.Tag         `json:"tags,omitempty"`
+	Domains      []types.Domain      `json:"domains,omitempty"`
+	DataProducts []types.DataProduct `json:"data_products,omitempty"`
 }
 
-// ListTagsOutput is the structured output of the datahub_list_tags tool.
-type ListTagsOutput struct {
-	Tags []types.Tag `json:"tags"`
-}
+// ListDomainsOutput is the structured output of the deprecated datahub_list_domains tool.
+//
+// Deprecated: use BrowseOutput instead.
+type ListDomainsOutput = BrowseOutput
 
-// ListDataProductsOutput is the structured output of the datahub_list_data_products tool.
-type ListDataProductsOutput struct {
-	DataProducts []types.DataProduct `json:"data_products"`
-}
+// ListTagsOutput is the structured output of the deprecated datahub_list_tags tool.
+//
+// Deprecated: use BrowseOutput instead.
+type ListTagsOutput = BrowseOutput
+
+// ListDataProductsOutput is the structured output of the deprecated datahub_list_data_products tool.
+//
+// Deprecated: use BrowseOutput instead.
+type ListDataProductsOutput = BrowseOutput
 
 // UpdateDescriptionOutput is the structured output of the datahub_update_description tool.
 type UpdateDescriptionOutput struct {

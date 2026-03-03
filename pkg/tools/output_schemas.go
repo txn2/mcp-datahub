@@ -6,18 +6,21 @@ import "encoding/json"
 // These declare the structure of the JSON objects returned by each tool to MCP clients.
 // Schemas are top-level objects; not exhaustive — they describe the primary response shape.
 var defaultOutputSchemas = map[ToolName]json.RawMessage{
-	ToolSearch:           schemaSearch,
-	ToolGetEntity:        schemaGetEntity,
-	ToolGetSchema:        schemaGetSchema,
-	ToolGetLineage:       schemaGetLineage,
+	ToolSearch:          schemaSearch,
+	ToolGetEntity:       schemaGetEntity,
+	ToolGetSchema:       schemaGetSchema,
+	ToolGetLineage:      schemaGetLineage,
+	ToolGetQueries:      schemaGetQueries,
+	ToolBrowse:          schemaBrowse,
+	ToolGetGlossaryTerm: schemaGetGlossaryTerm,
+	ToolGetDataProduct:  schemaGetDataProduct,
+	ToolListConnections: schemaListConnections,
+
+	// Deprecated tool schemas (kept for one release cycle)
 	ToolGetColumnLineage: schemaGetColumnLineage,
-	ToolGetQueries:       schemaGetQueries,
-	ToolGetGlossaryTerm:  schemaGetGlossaryTerm,
 	ToolListTags:         schemaListTags,
 	ToolListDomains:      schemaListDomains,
 	ToolListDataProducts: schemaListDataProducts,
-	ToolGetDataProduct:   schemaGetDataProduct,
-	ToolListConnections:  schemaListConnections,
 	// Write tools
 	ToolUpdateDescription:  schemaUpdateDescription,
 	ToolAddTag:             schemaAddTag,
@@ -162,12 +165,14 @@ var schemaGetSchema = json.RawMessage(`{
 
 var schemaGetLineage = json.RawMessage(`{
   "type": "object",
+  "description": "Dataset-level (default): start/direction/depth/nodes/edges. Column-level (level=column): urn/columns.",
   "properties": {
-    "start":     {"type": "string", "description": "URN of the queried entity"},
-    "direction": {"type": "string", "description": "Lineage direction: UPSTREAM or DOWNSTREAM"},
-    "depth":     {"type": "integer", "description": "Depth of lineage traversal"},
+    "start":     {"type": "string", "description": "URN of the queried entity (dataset level)"},
+    "direction": {"type": "string", "description": "Lineage direction: UPSTREAM or DOWNSTREAM (dataset level)"},
+    "depth":     {"type": "integer", "description": "Depth of lineage traversal (dataset level)"},
     "nodes": {
       "type": ["array", "null"],
+      "description": "Lineage nodes (dataset level)",
       "items": {
         "type": "object",
         "properties": {
@@ -181,6 +186,7 @@ var schemaGetLineage = json.RawMessage(`{
     },
     "edges": {
       "type": ["array", "null"],
+      "description": "Lineage edges (dataset level)",
       "items": {
         "type": "object",
         "properties": {
@@ -192,7 +198,28 @@ var schemaGetLineage = json.RawMessage(`{
     },
     "execution_context": {
       "type": "object",
-      "description": "Optional: query engine execution context for lineage bridging"
+      "description": "Optional: query engine execution context for lineage bridging (dataset level)"
+    },
+    "urn": {"type": "string", "description": "Dataset URN (column level)"},
+    "columns": {
+      "type": "array",
+      "description": "Column-level lineage mappings (column level)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "downstreamColumn": {"type": "string"},
+          "upstreamColumns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "datasetUrn": {"type": "string"},
+                "column":     {"type": "string"}
+              }
+            }
+          }
+        }
+      }
     }
   }
 }`)
@@ -256,6 +283,49 @@ var schemaGetGlossaryTerm = json.RawMessage(`{
         "properties": {
           "urn":    {"type": "string"},
           "column": {"type": "string"}
+        }
+      }
+    }
+  }
+}`)
+
+var schemaBrowse = json.RawMessage(`{
+  "type": "object",
+  "properties": {
+    "tags": {
+      "type": "array",
+      "description": "Tags (present when what=tags)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "urn":         {"type": "string"},
+          "name":        {"type": "string"},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "domains": {
+      "type": "array",
+      "description": "Domains (present when what=domains)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "urn":         {"type": "string"},
+          "name":        {"type": "string"},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "data_products": {
+      "type": "array",
+      "description": "Data products (present when what=data_products)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "urn":         {"type": "string"},
+          "name":        {"type": "string"},
+          "description": {"type": "string"},
+          "domain":      {"type": "string"}
         }
       }
     }

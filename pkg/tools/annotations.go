@@ -15,18 +15,21 @@ func boolPtr(b bool) *bool {
 //   - OpenWorldHint (*bool, default true): tool interacts with external entities
 var defaultAnnotations = map[ToolName]*mcp.ToolAnnotations{
 	// Read-only tools
-	ToolSearch:           {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolGetEntity:        {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolGetSchema:        {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolGetLineage:       {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolSearch:          {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolGetEntity:       {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolGetSchema:       {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolGetLineage:      {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolGetQueries:      {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolBrowse:          {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolGetGlossaryTerm: {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolGetDataProduct:  {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolListConnections: {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+
+	// Deprecated tool annotations (kept for one release cycle)
 	ToolGetColumnLineage: {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolGetQueries:       {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolGetGlossaryTerm:  {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 	ToolListTags:         {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 	ToolListDomains:      {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 	ToolListDataProducts: {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolGetDataProduct:   {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolListConnections:  {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 
 	// Write tools
 	ToolUpdateDescription:  {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},

@@ -22,14 +22,14 @@ var defaultDescriptions = map[ToolName]string{
 		"For row counts and query examples, use datahub_get_entity instead.",
 
 	ToolGetLineage: "Get upstream or downstream lineage for a DataHub entity. " +
-		"When a QueryProvider is configured, includes execution_context " +
-		"mapping URNs to query engine tables.",
+		"Set level=column for column-level lineage showing which upstream columns feed each downstream column. " +
+		"Default (dataset) returns dataset-level relationships with direction and depth control. " +
+		"When a QueryProvider is configured, includes execution_context mapping URNs to query engine tables.",
 
-	ToolGetColumnLineage: "Get column-level lineage showing exactly which upstream columns feed each downstream " +
-		"column. Use this when a user asks \"where does this column come from?\" or when you " +
-		"need to trace a specific metric through transformations. More precise than " +
-		"datahub_get_lineage which shows dataset-level relationships. Essential for debugging " +
-		"data quality issues in derived tables and views.",
+	// Deprecated: use ToolGetLineage with level=column
+	ToolGetColumnLineage: "Deprecated: use datahub_get_lineage with level=column. " +
+		"Get column-level lineage showing exactly which upstream columns feed each downstream " +
+		"column.",
 
 	ToolGetQueries: "Get saved SQL queries linked to a dataset — including view definitions, common query " +
 		"patterns, and example queries. For database views (v_* prefix), this returns the " +
@@ -41,14 +41,19 @@ var defaultDescriptions = map[ToolName]string{
 		"definition, or when a user asks \"what does [business term] mean?\" Returns the " +
 		"canonical business definition plus all tables and columns that use this term.",
 
-	ToolListTags:         "List available tags in the DataHub catalog",
-	ToolListDomains:      "List data domains in the DataHub catalog",
-	ToolListDataProducts: "List data products in the DataHub catalog. Data products group datasets for specific business use cases.",
+	ToolBrowse: "Browse the DataHub catalog by category. Set what=tags to list tags, " +
+		"what=domains to list data domains, or what=data_products to list data products. " +
+		"Use the optional filter parameter (tags only) to narrow results.",
+
+	// Deprecated: use ToolBrowse with what=tags/domains/data_products
+	ToolListTags:         "Deprecated: use datahub_browse with what=tags. List available tags in the DataHub catalog.",
+	ToolListDomains:      "Deprecated: use datahub_browse with what=domains. List data domains in the DataHub catalog.",
+	ToolListDataProducts: "Deprecated: use datahub_browse with what=data_products. List data products in the DataHub catalog.",
 
 	ToolGetDataProduct: "Get full details of a data product including its constituent datasets, owners, and " +
 		"domain. Data products group related datasets for a specific business use case. " +
-		"Use after datahub_list_data_products to drill into a specific product and discover " +
-		"all its member datasets. Useful for answering \"what data do we have about [topic]?\"",
+		"Use after datahub_browse with what=data_products to drill into a specific product " +
+		"and discover all its member datasets. Useful for answering \"what data do we have about [topic]?\"",
 
 	ToolListConnections: "List all configured DataHub server connections. " +
 		"Use this to discover available connections before querying specific servers. " +

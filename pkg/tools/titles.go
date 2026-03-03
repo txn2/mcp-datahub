@@ -5,18 +5,21 @@ package tools
 // Display name precedence in the SDK: Tool.Title > ToolAnnotations.Title > Tool.Name.
 var defaultTitles = map[ToolName]string{
 	// Read tools
-	ToolSearch:           "Search Catalog",
-	ToolGetEntity:        "Get Entity",
-	ToolGetSchema:        "Get Schema",
-	ToolGetLineage:       "Get Lineage",
+	ToolSearch:          "Search Catalog",
+	ToolGetEntity:       "Get Entity",
+	ToolGetSchema:       "Get Schema",
+	ToolGetLineage:      "Get Lineage",
+	ToolGetQueries:      "Get Queries",
+	ToolBrowse:          "Browse Catalog",
+	ToolGetGlossaryTerm: "Get Glossary Term",
+	ToolGetDataProduct:  "Get Data Product",
+	ToolListConnections: "List Connections",
+
+	// Deprecated tool titles (kept for one release cycle)
 	ToolGetColumnLineage: "Get Column Lineage",
-	ToolGetQueries:       "Get Queries",
-	ToolGetGlossaryTerm:  "Get Glossary Term",
 	ToolListTags:         "List Tags",
 	ToolListDomains:      "List Domains",
 	ToolListDataProducts: "List Data Products",
-	ToolGetDataProduct:   "Get Data Product",
-	ToolListConnections:  "List Connections",
 
 	// Write tools
 	ToolUpdateDescription:  "Update Description",

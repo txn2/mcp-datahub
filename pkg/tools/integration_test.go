@@ -44,6 +44,9 @@ func createTestMockClient() *mockClient {
 		getDataProductFunc: func(_ context.Context, urn string) (*types.DataProduct, error) {
 			return &types.DataProduct{URN: urn, Name: "test"}, nil
 		},
+		getColumnLineageFunc: func(_ context.Context, urn string) (*types.ColumnLineage, error) {
+			return &types.ColumnLineage{DatasetURN: urn}, nil
+		},
 	}
 }
 
@@ -108,14 +111,20 @@ func TestToolsViaServer(t *testing.T) {
 	}{
 		{"search", ToolSearch, map[string]any{"query": "test"}},
 		{"get_entity", ToolGetEntity, map[string]any{"urn": "urn:li:dataset:test"}},
-		{"list_domains", ToolListDomains, map[string]any{}},
-		{"list_tags", ToolListTags, map[string]any{}},
 		{"get_schema", ToolGetSchema, map[string]any{"urn": "urn:li:dataset:test"}},
 		{"get_lineage", ToolGetLineage, map[string]any{"urn": "urn:li:dataset:test"}},
+		{"get_lineage_column", ToolGetLineage, map[string]any{"urn": "urn:li:dataset:test", "level": "column"}},
 		{"get_queries", ToolGetQueries, map[string]any{"urn": "urn:li:dataset:test"}},
+		{"browse_tags", ToolBrowse, map[string]any{"what": "tags"}},
+		{"browse_domains", ToolBrowse, map[string]any{"what": "domains"}},
+		{"browse_data_products", ToolBrowse, map[string]any{"what": "data_products"}},
 		{"get_glossary_term", ToolGetGlossaryTerm, map[string]any{"urn": "urn:li:glossaryTerm:test"}},
-		{"list_data_products", ToolListDataProducts, map[string]any{}},
 		{"get_data_product", ToolGetDataProduct, map[string]any{"urn": "urn:li:dataProduct:test"}},
+		// Deprecated aliases still work
+		{"deprecated_list_tags", ToolListTags, map[string]any{}},
+		{"deprecated_list_domains", ToolListDomains, map[string]any{}},
+		{"deprecated_list_data_products", ToolListDataProducts, map[string]any{}},
+		{"deprecated_get_column_lineage", ToolGetColumnLineage, map[string]any{"urn": "urn:li:dataset:test"}},
 	}
 
 	for _, tt := range tests {

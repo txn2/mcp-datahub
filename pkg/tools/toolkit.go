@@ -131,9 +131,11 @@ func (t *Toolkit) buildIntegrationMiddleware() {
 }
 
 // RegisterAll adds all DataHub tools to the given MCP server.
+// Also registers deprecated aliases for one release cycle.
 // If WriteEnabled is true, also registers write tools.
 func (t *Toolkit) RegisterAll(server *mcp.Server) {
 	t.Register(server, AllTools()...)
+	t.Register(server, DeprecatedTools()...)
 	if t.isWriteEnabled() {
 		t.Register(server, WriteTools()...)
 	}
@@ -162,18 +164,22 @@ type toolRegistrar func(server *mcp.Server, cfg *toolConfig)
 func (t *Toolkit) toolRegistry() map[ToolName]toolRegistrar {
 	return map[ToolName]toolRegistrar{
 		// Read tools
-		ToolSearch:           t.registerSearchTool,
-		ToolGetEntity:        t.registerGetEntityTool,
-		ToolGetSchema:        t.registerGetSchemaTool,
-		ToolGetLineage:       t.registerGetLineageTool,
+		ToolSearch:          t.registerSearchTool,
+		ToolGetEntity:       t.registerGetEntityTool,
+		ToolGetSchema:       t.registerGetSchemaTool,
+		ToolGetLineage:      t.registerGetLineageTool,
+		ToolGetQueries:      t.registerGetQueriesTool,
+		ToolBrowse:          t.registerBrowseTool,
+		ToolGetGlossaryTerm: t.registerGetGlossaryTermTool,
+		ToolGetDataProduct:  t.registerGetDataProductTool,
+		ToolListConnections: t.registerListConnectionsTool,
+
+		// Deprecated aliases (kept for one release cycle)
 		ToolGetColumnLineage: t.registerGetColumnLineageTool,
-		ToolGetQueries:       t.registerGetQueriesTool,
-		ToolGetGlossaryTerm:  t.registerGetGlossaryTermTool,
 		ToolListTags:         t.registerListTagsTool,
 		ToolListDomains:      t.registerListDomainsTool,
 		ToolListDataProducts: t.registerListDataProductsTool,
-		ToolGetDataProduct:   t.registerGetDataProductTool,
-		ToolListConnections:  t.registerListConnectionsTool,
+
 		// Write tools
 		ToolUpdateDescription:  t.registerUpdateDescriptionTool,
 		ToolAddTag:             t.registerAddTagTool,

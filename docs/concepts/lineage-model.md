@@ -179,7 +179,7 @@ datahub_get_lineage urn="urn:li:dataset:..." direction="BOTH" depth=2
 ### Column-Level Lineage Query
 
 ```
-datahub_get_column_lineage urn="urn:li:dataset:..."
+datahub_get_lineage urn="urn:li:dataset:..." level="column"
 ```
 
 Column-level lineage returns fine-grained mappings:

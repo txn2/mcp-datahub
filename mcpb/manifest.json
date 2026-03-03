@@ -65,27 +65,19 @@
     },
     {
       "name": "datahub_get_lineage",
-      "description": "Get upstream or downstream lineage for an entity"
+      "description": "Get upstream or downstream lineage for an entity (supports level=column for column-level lineage)"
     },
     {
       "name": "datahub_get_queries",
       "description": "Get SQL queries associated with a dataset"
     },
     {
+      "name": "datahub_browse",
+      "description": "Browse catalog: list tags, domains, or data products"
+    },
+    {
       "name": "datahub_get_glossary_term",
       "description": "Get a glossary term definition and its related assets"
-    },
-    {
-      "name": "datahub_list_tags",
-      "description": "List available tags in the DataHub catalog"
-    },
-    {
-      "name": "datahub_list_domains",
-      "description": "List data domains in the DataHub catalog"
-    },
-    {
-      "name": "datahub_list_data_products",
-      "description": "List data products in the DataHub catalog"
     },
     {
       "name": "datahub_get_data_product",

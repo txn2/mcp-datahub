@@ -89,14 +89,14 @@ Example tool definition:
 
 ### Tool Annotations
 
-Tool annotations are optional metadata that describe a tool's behavior to AI clients. mcp-datahub sets annotations on all 19 tools:
+Tool annotations are optional metadata that describe a tool's behavior to AI clients. mcp-datahub sets annotations on all 16 tools (plus 4 deprecated aliases):
 
 | Annotation | Description |
 |------------|-------------|
-| `ReadOnlyHint` | Tool only reads data (all 12 read tools) |
+| `ReadOnlyHint` | Tool only reads data (all 9 read tools) |
 | `DestructiveHint` | Tool may destructively update (false for all write tools) |
 | `IdempotentHint` | Repeated calls produce the same result (all tools) |
-| `OpenWorldHint` | Tool interacts with external entities beyond the server (false for all tools) |
+| `OpenWorldHint` | Tool interacts with external entities beyond the server (true for all tools) |
 
 MCP clients can use these hints to make informed decisions, such as auto-approving read-only tools or prompting for confirmation before write operations.
 

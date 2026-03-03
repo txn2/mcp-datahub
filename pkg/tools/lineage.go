@@ -12,9 +12,11 @@ import (
 
 // GetLineageInput is the input for the get_lineage tool.
 type GetLineageInput struct {
-	URN       string `json:"urn" jsonschema_description:"The DataHub URN of the entity"`
-	Direction string `json:"direction,omitempty" jsonschema_description:"Lineage direction: UPSTREAM or DOWNSTREAM (default: DOWNSTREAM)"`
-	Depth     int    `json:"depth,omitempty" jsonschema_description:"Maximum depth of lineage traversal (default: 1, max: 5)"`
+	URN string `json:"urn" jsonschema_description:"The DataHub URN of the entity"`
+	//nolint:lll // struct tag cannot be split
+	Level     string `json:"level,omitempty" jsonschema_description:"Granularity: dataset or column (default: dataset)" jsonschema_enum:"dataset,column"`
+	Direction string `json:"direction,omitempty" jsonschema_description:"UPSTREAM or DOWNSTREAM (default: DOWNSTREAM, dataset level only)"`
+	Depth     int    `json:"depth,omitempty" jsonschema_description:"Max depth of lineage traversal (default: 1, max: 5, dataset level only)"`
 	// Connection is the named connection to use. Empty uses the default connection.
 	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
@@ -52,6 +54,16 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 		return ErrorResult("Connection error: " + err.Error()), nil, nil
 	}
 
+	// Validate level parameter
+	if input.Level != "" && input.Level != "dataset" && input.Level != "column" {
+		return ErrorResult("invalid level: " + input.Level + " (valid: dataset, column)"), nil, nil
+	}
+
+	// Column-level lineage path
+	if input.Level == "column" {
+		return t.handleColumnLineagePath(ctx, datahubClient, input.URN)
+	}
+
 	var opts []client.LineageOption
 	if input.Direction != "" {
 		opts = append(opts, client.WithDirection(input.Direction))
@@ -70,6 +82,23 @@ func (t *Toolkit) handleGetLineage(ctx context.Context, _ *mcp.CallToolRequest, 
 	}
 
 	return formatJSONResult(lineage)
+}
+
+// handleColumnLineagePath handles column-level lineage requests.
+func (t *Toolkit) handleColumnLineagePath(
+	ctx context.Context, datahubClient DataHubClient, urn string,
+) (*mcp.CallToolResult, any, error) {
+	columnLineage, err := datahubClient.GetColumnLineage(ctx, urn)
+	if err != nil {
+		return ErrorResult(err.Error()), nil, nil
+	}
+
+	jsonResult, jsonErr := JSONResult(columnLineage)
+	if jsonErr != nil {
+		return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
+	}
+
+	return jsonResult, columnLineage, nil
 }
 
 // enrichLineageWithQueryContext flattens lineage fields to top level and appends

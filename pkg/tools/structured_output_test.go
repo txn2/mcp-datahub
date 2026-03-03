@@ -16,7 +16,7 @@ import (
 // When a tool declares outputSchema in tools/list, MCP hosts expect
 // structuredContent in tools/call responses. go-sdk only populates
 // structuredContent when the handler returns a non-nil second value.
-func TestStructuredOutput_ListDomains(t *testing.T) {
+func TestStructuredOutput_BrowseDomains(t *testing.T) {
 	domains := []types.Domain{
 		{URN: "urn:li:domain:test", Name: "Test"},
 	}
@@ -27,23 +27,23 @@ func TestStructuredOutput_ListDomains(t *testing.T) {
 	}
 
 	toolkit := NewToolkit(mock, DefaultConfig())
-	_, out, err := toolkit.handleListDomains(context.Background(), nil, ListDomainsInput{})
+	_, out, err := toolkit.handleBrowse(context.Background(), nil, BrowseInput{What: "domains"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if out == nil {
-		t.Fatal("handleListDomains structured output is nil, want non-nil")
+		t.Fatal("handleBrowse(domains) structured output is nil, want non-nil")
 	}
-	output, ok := out.(*ListDomainsOutput)
+	output, ok := out.(*BrowseOutput)
 	if !ok {
-		t.Fatalf("structured output type = %T, want *ListDomainsOutput", out)
+		t.Fatalf("structured output type = %T, want *BrowseOutput", out)
 	}
 	if len(output.Domains) != 1 || output.Domains[0].URN != "urn:li:domain:test" {
 		t.Errorf("structured output domains = %v, want 1 domain with correct URN", output.Domains)
 	}
 }
 
-func TestStructuredOutput_ListTags(t *testing.T) {
+func TestStructuredOutput_BrowseTags(t *testing.T) {
 	tags := []types.Tag{
 		{URN: "urn:li:tag:PII", Name: "PII"},
 	}
@@ -54,23 +54,23 @@ func TestStructuredOutput_ListTags(t *testing.T) {
 	}
 
 	toolkit := NewToolkit(mock, DefaultConfig())
-	_, out, err := toolkit.handleListTags(context.Background(), nil, ListTagsInput{})
+	_, out, err := toolkit.handleBrowse(context.Background(), nil, BrowseInput{What: "tags"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if out == nil {
-		t.Fatal("handleListTags structured output is nil, want non-nil")
+		t.Fatal("handleBrowse(tags) structured output is nil, want non-nil")
 	}
-	output, ok := out.(*ListTagsOutput)
+	output, ok := out.(*BrowseOutput)
 	if !ok {
-		t.Fatalf("structured output type = %T, want *ListTagsOutput", out)
+		t.Fatalf("structured output type = %T, want *BrowseOutput", out)
 	}
 	if len(output.Tags) != 1 || output.Tags[0].Name != "PII" {
 		t.Errorf("structured output tags = %v, want 1 tag", output.Tags)
 	}
 }
 
-func TestStructuredOutput_ListDataProducts(t *testing.T) {
+func TestStructuredOutput_BrowseDataProducts(t *testing.T) {
 	products := []types.DataProduct{
 		{URN: "urn:li:dataProduct:test", Name: "Test Product"},
 	}
@@ -81,16 +81,16 @@ func TestStructuredOutput_ListDataProducts(t *testing.T) {
 	}
 
 	toolkit := NewToolkit(mock, DefaultConfig())
-	_, out, err := toolkit.handleListDataProducts(context.Background(), nil, ListDataProductsInput{})
+	_, out, err := toolkit.handleBrowse(context.Background(), nil, BrowseInput{What: "data_products"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if out == nil {
-		t.Fatal("handleListDataProducts structured output is nil, want non-nil")
+		t.Fatal("handleBrowse(data_products) structured output is nil, want non-nil")
 	}
-	output, ok := out.(*ListDataProductsOutput)
+	output, ok := out.(*BrowseOutput)
 	if !ok {
-		t.Fatalf("structured output type = %T, want *ListDataProductsOutput", out)
+		t.Fatalf("structured output type = %T, want *BrowseOutput", out)
 	}
 	if len(output.DataProducts) != 1 || output.DataProducts[0].URN != "urn:li:dataProduct:test" {
 		t.Errorf("structured output data_products = %v, want 1 product", output.DataProducts)
@@ -115,7 +115,7 @@ func TestStructuredOutput_GetDataProduct(t *testing.T) {
 	}
 }
 
-func TestStructuredOutput_GetColumnLineage(t *testing.T) {
+func TestStructuredOutput_GetLineageColumnLevel(t *testing.T) {
 	lineage := &types.ColumnLineage{
 		DatasetURN: "urn:li:dataset:test",
 		Mappings:   []types.ColumnLineageMapping{{DownstreamColumn: "col1"}},
@@ -127,12 +127,12 @@ func TestStructuredOutput_GetColumnLineage(t *testing.T) {
 	}
 
 	toolkit := NewToolkit(mock, DefaultConfig())
-	_, out, err := toolkit.handleGetColumnLineage(context.Background(), nil, GetColumnLineageInput{URN: "urn:li:dataset:test"})
+	_, out, err := toolkit.handleGetLineage(context.Background(), nil, GetLineageInput{URN: "urn:li:dataset:test", Level: "column"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if out == nil {
-		t.Fatal("handleGetColumnLineage structured output is nil, want non-nil")
+		t.Fatal("handleGetLineage(level=column) structured output is nil, want non-nil")
 	}
 }
 

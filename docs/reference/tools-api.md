@@ -205,8 +205,9 @@ func DefaultAnnotations(name ToolName) *mcp.ToolAnnotations
 
 | Tool Category | ReadOnlyHint | DestructiveHint | IdempotentHint | OpenWorldHint |
 |---------------|:------------:|:---------------:|:--------------:|:-------------:|
-| Read tools (12) | `true` | _(default)_ | `true` | `true` |
+| Read tools (9) | `true` | _(default)_ | `true` | `true` |
 | Write tools (7) | `false` | `false` | `true` | `true` |
+| Deprecated aliases (4) | same as replacement tool | same as replacement tool | same as replacement tool | same as replacement tool |
 
 `OpenWorldHint` is `true` for all tools because every tool communicates with an external DataHub instance.
 
@@ -294,18 +295,15 @@ Available tool name constants:
 
 ```go
 const (
-    ToolSearch           ToolName = "datahub_search"
-    ToolGetEntity        ToolName = "datahub_get_entity"
-    ToolGetSchema        ToolName = "datahub_get_schema"
-    ToolGetLineage       ToolName = "datahub_get_lineage"
-    ToolGetColumnLineage ToolName = "datahub_get_column_lineage"
-    ToolGetQueries       ToolName = "datahub_get_queries"
-    ToolGetGlossaryTerm  ToolName = "datahub_get_glossary_term"
-    ToolListTags         ToolName = "datahub_list_tags"
-    ToolListDomains      ToolName = "datahub_list_domains"
-    ToolListDataProducts ToolName = "datahub_list_data_products"
-    ToolGetDataProduct   ToolName = "datahub_get_data_product"
-    ToolListConnections  ToolName = "datahub_list_connections"
+    ToolSearch          ToolName = "datahub_search"
+    ToolGetEntity       ToolName = "datahub_get_entity"
+    ToolGetSchema       ToolName = "datahub_get_schema"
+    ToolGetLineage      ToolName = "datahub_get_lineage"
+    ToolGetQueries      ToolName = "datahub_get_queries"
+    ToolBrowse          ToolName = "datahub_browse"
+    ToolGetGlossaryTerm ToolName = "datahub_get_glossary_term"
+    ToolGetDataProduct  ToolName = "datahub_get_data_product"
+    ToolListConnections ToolName = "datahub_list_connections"
 
     // Write tools (require WriteEnabled: true)
     ToolUpdateDescription  ToolName = "datahub_update_description"
@@ -315,6 +313,12 @@ const (
     ToolRemoveGlossaryTerm ToolName = "datahub_remove_glossary_term"
     ToolAddLink            ToolName = "datahub_add_link"
     ToolRemoveLink         ToolName = "datahub_remove_link"
+
+    // Deprecated aliases (kept for one release cycle)
+    ToolListTags         ToolName = "datahub_list_tags"         // use ToolBrowse
+    ToolListDomains      ToolName = "datahub_list_domains"      // use ToolBrowse
+    ToolListDataProducts ToolName = "datahub_list_data_products" // use ToolBrowse
+    ToolGetColumnLineage ToolName = "datahub_get_column_lineage" // use ToolGetLineage with level=column
 )
 ```
 
