@@ -6,19 +6,27 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// ListDataProductsInput is the input for the list_data_products tool.
+// ListDataProductsInput is the input for the deprecated datahub_list_data_products tool.
+//
+// Deprecated: use BrowseInput with What="data_products" instead.
 type ListDataProductsInput struct {
 	// Connection is the named connection to use. Empty uses the default connection.
 	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
+// registerListDataProductsTool registers the deprecated datahub_list_data_products alias.
+// It delegates to handleBrowse with What="data_products".
 func (t *Toolkit) registerListDataProductsTool(server *mcp.Server, cfg *toolConfig) {
 	baseHandler := func(ctx context.Context, req *mcp.CallToolRequest, input any) (*mcp.CallToolResult, any, error) {
 		productsInput, ok := input.(ListDataProductsInput)
 		if !ok {
 			return ErrorResult("internal error: invalid input type"), nil, nil
 		}
-		return t.handleListDataProducts(ctx, req, productsInput)
+		browseInput := BrowseInput{
+			What:       "data_products",
+			Connection: productsInput.Connection,
+		}
+		return t.handleBrowse(ctx, req, browseInput)
 	}
 
 	wrappedHandler := t.wrapHandler(ToolListDataProducts, baseHandler, cfg)
@@ -33,29 +41,6 @@ func (t *Toolkit) registerListDataProductsTool(server *mcp.Server, cfg *toolConf
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListDataProductsInput) (*mcp.CallToolResult, any, error) {
 		return wrappedHandler(ctx, req, input)
 	})
-}
-
-func (t *Toolkit) handleListDataProducts(
-	ctx context.Context, _ *mcp.CallToolRequest, input ListDataProductsInput,
-) (*mcp.CallToolResult, any, error) {
-	// Get client for the specified connection
-	datahubClient, err := t.getClient(input.Connection)
-	if err != nil {
-		return ErrorResult("Connection error: " + err.Error()), nil, nil
-	}
-
-	products, err := datahubClient.ListDataProducts(ctx)
-	if err != nil {
-		return ErrorResult(err.Error()), nil, nil
-	}
-
-	output := ListDataProductsOutput{DataProducts: products}
-	jsonResult, err := JSONResult(output)
-	if err != nil {
-		return ErrorResult("failed to format result: " + err.Error()), nil, nil
-	}
-
-	return jsonResult, &output, nil
 }
 
 // GetDataProductInput is the input for the get_data_product tool.

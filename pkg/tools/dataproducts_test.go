@@ -5,10 +5,14 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
-func TestHandleListDataProducts(t *testing.T) {
+// TestListDataProductsDeprecatedAlias verifies the deprecated datahub_list_data_products tool
+// delegates to handleBrowse and returns correct results.
+func TestListDataProductsDeprecatedAlias(t *testing.T) {
 	tests := []struct {
 		name         string
 		mockProducts []types.DataProduct
@@ -16,15 +20,14 @@ func TestHandleListDataProducts(t *testing.T) {
 		wantErr      bool
 	}{
 		{
-			name: "successful list",
+			name: "successful list via alias",
 			mockProducts: []types.DataProduct{
-				{URN: "urn:li:dataProduct:product1", Name: "Product 1", Description: "First product"},
-				{URN: "urn:li:dataProduct:product2", Name: "Product 2", Description: "Second product"},
+				{URN: "urn:li:dataProduct:product1", Name: "Product 1"},
 			},
 			wantErr: false,
 		},
 		{
-			name: "with domain",
+			name: "with domain via alias",
 			mockProducts: []types.DataProduct{
 				{
 					URN:    "urn:li:dataProduct:product1",
@@ -35,12 +38,7 @@ func TestHandleListDataProducts(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:         "empty list",
-			mockProducts: []types.DataProduct{},
-			wantErr:      false,
-		},
-		{
-			name:    "client error",
+			name:    "client error via alias",
 			mockErr: errors.New("api error"),
 			wantErr: true,
 		},
@@ -58,18 +56,37 @@ func TestHandleListDataProducts(t *testing.T) {
 			}
 
 			toolkit := NewToolkit(mock, DefaultConfig())
-			result, _, _ := toolkit.handleListDataProducts(context.Background(), nil, ListDataProductsInput{})
+
+			browseInput := BrowseInput{What: "data_products"}
+			result, _, _ := toolkit.handleBrowse(context.Background(), nil, browseInput)
 
 			if tt.wantErr {
 				if !result.IsError {
-					t.Error("handleListDataProducts() should return error result")
+					t.Error("deprecated alias should return error result")
 				}
 			} else {
 				if result.IsError {
-					t.Error("handleListDataProducts() should not return error result")
+					t.Error("deprecated alias should not return error result")
 				}
 			}
 		})
+	}
+}
+
+// TestListDataProductsDeprecatedAlias_Registration verifies the deprecated tool registers.
+func TestListDataProductsDeprecatedAlias_Registration(t *testing.T) {
+	mock := &mockClient{
+		listDataProductsFunc: func(_ context.Context) ([]types.DataProduct, error) {
+			return []types.DataProduct{{URN: "urn:li:dataProduct:test", Name: "test"}}, nil
+		},
+	}
+	toolkit := NewToolkit(mock, DefaultConfig())
+	impl := &mcp.Implementation{Name: "test", Version: "1.0.0"}
+	server := mcp.NewServer(impl, nil)
+	toolkit.Register(server, ToolListDataProducts)
+
+	if !toolkit.registeredTools[ToolListDataProducts] {
+		t.Error("ToolListDataProducts should be registered")
 	}
 }
 

@@ -866,8 +866,8 @@ func TestWriteTools(t *testing.T) {
 
 func TestAllToolsUnchanged(t *testing.T) {
 	at := AllTools()
-	if len(at) != 12 {
-		t.Errorf("AllTools() should return 12 tools (backward compat), got %d", len(at))
+	if len(at) != 9 {
+		t.Errorf("AllTools() should return 9 tools, got %d", len(at))
 	}
 
 	// Verify no write tools in AllTools
@@ -878,6 +878,17 @@ func TestAllToolsUnchanged(t *testing.T) {
 	for _, name := range at {
 		if writeSet[name] {
 			t.Errorf("AllTools() should not contain write tool %s", name)
+		}
+	}
+
+	// Verify no deprecated tools in AllTools
+	deprecatedSet := make(map[ToolName]bool)
+	for _, name := range DeprecatedTools() {
+		deprecatedSet[name] = true
+	}
+	for _, name := range at {
+		if deprecatedSet[name] {
+			t.Errorf("AllTools() should not contain deprecated tool %s", name)
 		}
 	}
 }
