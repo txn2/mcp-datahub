@@ -206,7 +206,7 @@ Annotation priority (highest to lowest):
 2. Toolkit-level override via `WithAnnotations()`
 3. Built-in default annotations
 
-All 16 tools (plus 4 deprecated aliases) ship with defaults: read tools are `ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: true`; write tools are `DestructiveHint: false, IdempotentHint: true, OpenWorldHint: true`.
+All 16 tools ship with defaults: read tools are `ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: true`; write tools are `DestructiveHint: false, IdempotentHint: true, OpenWorldHint: true`.
 
 ## Extensions Configuration
 

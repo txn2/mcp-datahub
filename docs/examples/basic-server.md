@@ -88,7 +88,7 @@ go build -o basic-server
 
 ## Available Tools
 
-This example registers all 9 DataHub read tools (plus 4 deprecated aliases):
+This example registers all 9 DataHub read tools:
 
 - `datahub_search`
 - `datahub_get_entity`

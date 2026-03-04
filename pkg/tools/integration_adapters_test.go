@@ -513,7 +513,7 @@ func TestIsDataHubURN(t *testing.T) {
 }
 
 func TestIsListTool(t *testing.T) {
-	listTools := []ToolName{ToolSearch, ToolBrowse, ToolListTags, ToolListDomains, ToolListDataProducts, ToolGetLineage}
+	listTools := []ToolName{ToolSearch, ToolBrowse, ToolGetLineage}
 	nonListTools := []ToolName{ToolGetEntity, ToolGetSchema, ToolGetGlossaryTerm, ToolGetDataProduct}
 
 	for _, tool := range listTools {
@@ -531,7 +531,7 @@ func TestIsListTool(t *testing.T) {
 
 func TestIsEntityTool(t *testing.T) {
 	entityTools := []ToolName{ToolGetEntity, ToolGetSchema, ToolGetGlossaryTerm, ToolGetDataProduct}
-	nonEntityTools := []ToolName{ToolSearch, ToolListTags, ToolListDomains}
+	nonEntityTools := []ToolName{ToolSearch, ToolBrowse}
 
 	for _, tool := range entityTools {
 		if !isEntityTool(tool) {

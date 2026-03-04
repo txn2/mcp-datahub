@@ -880,15 +880,4 @@ func TestAllToolsUnchanged(t *testing.T) {
 			t.Errorf("AllTools() should not contain write tool %s", name)
 		}
 	}
-
-	// Verify no deprecated tools in AllTools
-	deprecatedSet := make(map[ToolName]bool)
-	for _, name := range DeprecatedTools() {
-		deprecatedSet[name] = true
-	}
-	for _, name := range at {
-		if deprecatedSet[name] {
-			t.Errorf("AllTools() should not contain deprecated tool %s", name)
-		}
-	}
 }

@@ -26,11 +26,6 @@ var defaultDescriptions = map[ToolName]string{
 		"Default (dataset) returns dataset-level relationships with direction and depth control. " +
 		"When a QueryProvider is configured, includes execution_context mapping URNs to query engine tables.",
 
-	// Deprecated: use ToolGetLineage with level=column
-	ToolGetColumnLineage: "Deprecated: use datahub_get_lineage with level=column. " +
-		"Get column-level lineage showing exactly which upstream columns feed each downstream " +
-		"column.",
-
 	ToolGetQueries: "Get saved SQL queries linked to a dataset — including view definitions, common query " +
 		"patterns, and example queries. For database views (v_* prefix), this returns the " +
 		"actual view SQL showing all joins and transformations. Essential for understanding " +
@@ -44,11 +39,6 @@ var defaultDescriptions = map[ToolName]string{
 	ToolBrowse: "Browse the DataHub catalog by category. Set what=tags to list tags, " +
 		"what=domains to list data domains, or what=data_products to list data products. " +
 		"Use the optional filter parameter (tags only) to narrow results.",
-
-	// Deprecated: use ToolBrowse with what=tags/domains/data_products
-	ToolListTags:         "Deprecated: use datahub_browse with what=tags. List available tags in the DataHub catalog.",
-	ToolListDomains:      "Deprecated: use datahub_browse with what=domains. List data domains in the DataHub catalog.",
-	ToolListDataProducts: "Deprecated: use datahub_browse with what=data_products. List data products in the DataHub catalog.",
 
 	ToolGetDataProduct: "Get full details of a data product including its constituent datasets, owners, and " +
 		"domain. Data products group related datasets for a specific business use case. " +

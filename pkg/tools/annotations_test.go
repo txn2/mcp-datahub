@@ -20,11 +20,6 @@ func TestDefaultAnnotations(t *testing.T) {
 		{ToolGetGlossaryTerm, false},
 		{ToolGetDataProduct, false},
 		{ToolListConnections, false},
-		// Deprecated but still have annotations
-		{ToolGetColumnLineage, false},
-		{ToolListTags, false},
-		{ToolListDomains, false},
-		{ToolListDataProducts, false},
 		// Write tools
 		{ToolUpdateDescription, false},
 		{ToolAddTag, false},
@@ -55,11 +50,6 @@ func TestDefaultAnnotations_AllToolsCovered(t *testing.T) {
 			t.Errorf("tool %s has no default annotations", name)
 		}
 	}
-	for _, name := range DeprecatedTools() {
-		if DefaultAnnotations(name) == nil {
-			t.Errorf("deprecated tool %s has no default annotations", name)
-		}
-	}
 }
 
 func TestDefaultAnnotations_ReadOnlyTools(t *testing.T) {
@@ -67,8 +57,6 @@ func TestDefaultAnnotations_ReadOnlyTools(t *testing.T) {
 		ToolSearch, ToolGetEntity, ToolGetSchema, ToolGetLineage,
 		ToolGetQueries, ToolBrowse, ToolGetGlossaryTerm,
 		ToolGetDataProduct, ToolListConnections,
-		// Deprecated aliases are also read-only
-		ToolGetColumnLineage, ToolListTags, ToolListDomains, ToolListDataProducts,
 	}
 
 	for _, name := range readOnlyTools {

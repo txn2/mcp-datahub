@@ -6,43 +6,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// ListDataProductsInput is the input for the deprecated datahub_list_data_products tool.
-//
-// Deprecated: use BrowseInput with What="data_products" instead.
-type ListDataProductsInput struct {
-	// Connection is the named connection to use. Empty uses the default connection.
-	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
-}
-
-// registerListDataProductsTool registers the deprecated datahub_list_data_products alias.
-// It delegates to handleBrowse with What="data_products".
-func (t *Toolkit) registerListDataProductsTool(server *mcp.Server, cfg *toolConfig) {
-	baseHandler := func(ctx context.Context, req *mcp.CallToolRequest, input any) (*mcp.CallToolResult, any, error) {
-		productsInput, ok := input.(ListDataProductsInput)
-		if !ok {
-			return ErrorResult("internal error: invalid input type"), nil, nil
-		}
-		browseInput := BrowseInput{
-			What:       "data_products",
-			Connection: productsInput.Connection,
-		}
-		return t.handleBrowse(ctx, req, browseInput)
-	}
-
-	wrappedHandler := t.wrapHandler(ToolListDataProducts, baseHandler, cfg)
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:         string(ToolListDataProducts),
-		Description:  t.getDescription(ToolListDataProducts, cfg),
-		Annotations:  t.getAnnotations(ToolListDataProducts, cfg),
-		Icons:        t.getIcons(ToolListDataProducts, cfg),
-		Title:        t.getTitle(ToolListDataProducts, cfg),
-		OutputSchema: t.getOutputSchema(ToolListDataProducts, cfg),
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListDataProductsInput) (*mcp.CallToolResult, any, error) {
-		return wrappedHandler(ctx, req, input)
-	})
-}
-
 // GetDataProductInput is the input for the get_data_product tool.
 type GetDataProductInput struct {
 	URN string `json:"urn" jsonschema_description:"The DataHub URN of the data product"`

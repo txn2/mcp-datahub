@@ -1,6 +1,6 @@
 # Available Tools
 
-mcp-datahub provides 16 MCP tools for interacting with DataHub (9 read + 7 write), plus 4 deprecated aliases kept for one release cycle.
+mcp-datahub provides 16 MCP tools for interacting with DataHub (9 read + 7 write).
 
 ## Tool Annotations
 
@@ -503,7 +503,7 @@ Get glossary term definition and related assets.
 
 ## datahub_browse
 
-Browse the catalog to list tags, domains, or data products. Consolidates the former `datahub_list_tags`, `datahub_list_domains`, and `datahub_list_data_products` tools.
+Browse the catalog to list tags, domains, or data products.
 
 **Parameters:**
 
@@ -741,19 +741,6 @@ Remove a link from an entity.
 | `urn` | string | Yes | Entity URN |
 | `link_url` | string | Yes | URL to remove |
 | `connection` | string | No | Named connection to use |
-
----
-
-## Deprecated Aliases
-
-The following tool names are kept as aliases for one release cycle. They delegate to the consolidated tools above.
-
-| Deprecated Tool | Replacement |
-|----------------|-------------|
-| `datahub_list_tags` | `datahub_browse` with `what=tags` |
-| `datahub_list_domains` | `datahub_browse` with `what=domains` |
-| `datahub_list_data_products` | `datahub_browse` with `what=data_products` |
-| `datahub_get_column_lineage` | `datahub_get_lineage` with `level=column` |
 
 ---
 
