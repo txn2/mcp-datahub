@@ -38,6 +38,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Ecosystem: ecosystem/index.md
   - Getting Started: getting-started.md
   - MCP Server:
     - Overview: server/index.md
