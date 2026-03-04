@@ -15,12 +15,6 @@ var defaultTitles = map[ToolName]string{
 	ToolGetDataProduct:  "Get Data Product",
 	ToolListConnections: "List Connections",
 
-	// Deprecated tool titles (kept for one release cycle)
-	ToolGetColumnLineage: "Get Column Lineage",
-	ToolListTags:         "List Tags",
-	ToolListDomains:      "List Domains",
-	ToolListDataProducts: "List Data Products",
-
 	// Write tools
 	ToolUpdateDescription:  "Update Description",
 	ToolAddTag:             "Add Tag",

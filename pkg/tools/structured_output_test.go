@@ -362,34 +362,34 @@ func TestFormatJSONResult_ErrorInput(t *testing.T) {
 	}
 }
 
-// TestListDomainsOutput_WrapsDomainsCorrectly checks that the output wrapper
+// TestBrowseOutput_WrapsDomainsCorrectly checks that the output wrapper
 // preserves the domains slice exactly.
-func TestListDomainsOutput_WrapsDomainsCorrectly(t *testing.T) {
+func TestBrowseOutput_WrapsDomainsCorrectly(t *testing.T) {
 	domains := []types.Domain{
 		{URN: "urn:li:domain:a", Name: "A"},
 		{URN: "urn:li:domain:b", Name: "B"},
 	}
-	output := ListDomainsOutput{Domains: domains}
+	output := BrowseOutput{Domains: domains}
 	if len(output.Domains) != 2 {
-		t.Errorf("ListDomainsOutput.Domains length = %d, want 2", len(output.Domains))
+		t.Errorf("BrowseOutput.Domains length = %d, want 2", len(output.Domains))
 	}
 }
 
-// TestListTagsOutput_WrapsTagsCorrectly checks that the output wrapper preserves the tags slice.
-func TestListTagsOutput_WrapsTagsCorrectly(t *testing.T) {
+// TestBrowseOutput_WrapsTagsCorrectly checks that the output wrapper preserves the tags slice.
+func TestBrowseOutput_WrapsTagsCorrectly(t *testing.T) {
 	tags := []types.Tag{{URN: "urn:li:tag:PII", Name: "PII"}}
-	output := ListTagsOutput{Tags: tags}
+	output := BrowseOutput{Tags: tags}
 	if len(output.Tags) != 1 {
-		t.Errorf("ListTagsOutput.Tags length = %d, want 1", len(output.Tags))
+		t.Errorf("BrowseOutput.Tags length = %d, want 1", len(output.Tags))
 	}
 }
 
-// TestListDataProductsOutput_WrapsProductsCorrectly checks the output wrapper.
-func TestListDataProductsOutput_WrapsProductsCorrectly(t *testing.T) {
+// TestBrowseOutput_WrapsProductsCorrectly checks the output wrapper.
+func TestBrowseOutput_WrapsProductsCorrectly(t *testing.T) {
 	products := []types.DataProduct{{URN: "urn:li:dataProduct:x", Name: "X"}}
-	output := ListDataProductsOutput{DataProducts: products}
+	output := BrowseOutput{DataProducts: products}
 	if len(output.DataProducts) != 1 {
-		t.Errorf("ListDataProductsOutput.DataProducts length = %d, want 1", len(output.DataProducts))
+		t.Errorf("BrowseOutput.DataProducts length = %d, want 1", len(output.DataProducts))
 	}
 }
 

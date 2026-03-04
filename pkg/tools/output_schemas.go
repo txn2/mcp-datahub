@@ -16,11 +16,6 @@ var defaultOutputSchemas = map[ToolName]json.RawMessage{
 	ToolGetDataProduct:  schemaGetDataProduct,
 	ToolListConnections: schemaListConnections,
 
-	// Deprecated tool schemas (kept for one release cycle)
-	ToolGetColumnLineage: schemaGetColumnLineage,
-	ToolListTags:         schemaListTags,
-	ToolListDomains:      schemaListDomains,
-	ToolListDataProducts: schemaListDataProducts,
 	// Write tools
 	ToolUpdateDescription:  schemaUpdateDescription,
 	ToolAddTag:             schemaAddTag,
@@ -224,32 +219,6 @@ var schemaGetLineage = json.RawMessage(`{
   }
 }`)
 
-var schemaGetColumnLineage = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "urn": {"type": "string"},
-    "columns": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "downstreamColumn": {"type": "string"},
-          "upstreamColumns": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "datasetUrn": {"type": "string"},
-                "column":     {"type": "string"}
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}`)
-
 var schemaGetQueries = json.RawMessage(`{
   "type": "object",
   "properties": {
@@ -319,58 +288,6 @@ var schemaBrowse = json.RawMessage(`{
     "data_products": {
       "type": "array",
       "description": "Data products (present when what=data_products)",
-      "items": {
-        "type": "object",
-        "properties": {
-          "urn":         {"type": "string"},
-          "name":        {"type": "string"},
-          "description": {"type": "string"},
-          "domain":      {"type": "string"}
-        }
-      }
-    }
-  }
-}`)
-
-var schemaListTags = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "tags": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "urn":         {"type": "string"},
-          "name":        {"type": "string"},
-          "description": {"type": "string"}
-        }
-      }
-    }
-  }
-}`)
-
-var schemaListDomains = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "domains": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "urn":         {"type": "string"},
-          "name":        {"type": "string"},
-          "description": {"type": "string"}
-        }
-      }
-    }
-  }
-}`)
-
-var schemaListDataProducts = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "data_products": {
-      "type": "array",
       "items": {
         "type": "object",
         "properties": {

@@ -207,7 +207,6 @@ func DefaultAnnotations(name ToolName) *mcp.ToolAnnotations
 |---------------|:------------:|:---------------:|:--------------:|:-------------:|
 | Read tools (9) | `true` | _(default)_ | `true` | `true` |
 | Write tools (7) | `false` | `false` | `true` | `true` |
-| Deprecated aliases (4) | same as replacement tool | same as replacement tool | same as replacement tool | same as replacement tool |
 
 `OpenWorldHint` is `true` for all tools because every tool communicates with an external DataHub instance.
 
@@ -314,11 +313,6 @@ const (
     ToolAddLink            ToolName = "datahub_add_link"
     ToolRemoveLink         ToolName = "datahub_remove_link"
 
-    // Deprecated aliases (kept for one release cycle)
-    ToolListTags         ToolName = "datahub_list_tags"         // use ToolBrowse
-    ToolListDomains      ToolName = "datahub_list_domains"      // use ToolBrowse
-    ToolListDataProducts ToolName = "datahub_list_data_products" // use ToolBrowse
-    ToolGetColumnLineage ToolName = "datahub_get_column_lineage" // use ToolGetLineage with level=column
 )
 ```
 

@@ -293,7 +293,7 @@ func getEffectiveURN(tc *ToolContext) string {
 func isListTool(name ToolName) bool {
 	//nolint:exhaustive // Only list-type tools return true
 	switch name {
-	case ToolSearch, ToolBrowse, ToolListTags, ToolListDomains, ToolListDataProducts, ToolGetLineage:
+	case ToolSearch, ToolBrowse, ToolGetLineage:
 		return true
 	default:
 		return false

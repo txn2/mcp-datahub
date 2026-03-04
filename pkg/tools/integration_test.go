@@ -120,11 +120,6 @@ func TestToolsViaServer(t *testing.T) {
 		{"browse_data_products", ToolBrowse, map[string]any{"what": "data_products"}},
 		{"get_glossary_term", ToolGetGlossaryTerm, map[string]any{"urn": "urn:li:glossaryTerm:test"}},
 		{"get_data_product", ToolGetDataProduct, map[string]any{"urn": "urn:li:dataProduct:test"}},
-		// Deprecated aliases still work
-		{"deprecated_list_tags", ToolListTags, map[string]any{}},
-		{"deprecated_list_domains", ToolListDomains, map[string]any{}},
-		{"deprecated_list_data_products", ToolListDataProducts, map[string]any{}},
-		{"deprecated_get_column_lineage", ToolGetColumnLineage, map[string]any{"urn": "urn:li:dataset:test"}},
 	}
 
 	for _, tt := range tests {

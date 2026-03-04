@@ -10,21 +10,6 @@ type BrowseOutput struct {
 	DataProducts []types.DataProduct `json:"data_products,omitempty"`
 }
 
-// ListDomainsOutput is the structured output of the deprecated datahub_list_domains tool.
-//
-// Deprecated: use BrowseOutput instead.
-type ListDomainsOutput = BrowseOutput
-
-// ListTagsOutput is the structured output of the deprecated datahub_list_tags tool.
-//
-// Deprecated: use BrowseOutput instead.
-type ListTagsOutput = BrowseOutput
-
-// ListDataProductsOutput is the structured output of the deprecated datahub_list_data_products tool.
-//
-// Deprecated: use BrowseOutput instead.
-type ListDataProductsOutput = BrowseOutput
-
 // UpdateDescriptionOutput is the structured output of the datahub_update_description tool.
 type UpdateDescriptionOutput struct {
 	URN    string `json:"urn"`

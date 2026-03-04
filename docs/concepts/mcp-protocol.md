@@ -89,7 +89,7 @@ Example tool definition:
 
 ### Tool Annotations
 
-Tool annotations are optional metadata that describe a tool's behavior to AI clients. mcp-datahub sets annotations on all 16 tools (plus 4 deprecated aliases):
+Tool annotations are optional metadata that describe a tool's behavior to AI clients. mcp-datahub sets annotations on all 16 tools:
 
 | Annotation | Description |
 |------------|-------------|

@@ -131,11 +131,9 @@ func (t *Toolkit) buildIntegrationMiddleware() {
 }
 
 // RegisterAll adds all DataHub tools to the given MCP server.
-// Also registers deprecated aliases for one release cycle.
 // If WriteEnabled is true, also registers write tools.
 func (t *Toolkit) RegisterAll(server *mcp.Server) {
 	t.Register(server, AllTools()...)
-	t.Register(server, DeprecatedTools()...)
 	if t.isWriteEnabled() {
 		t.Register(server, WriteTools()...)
 	}
@@ -173,12 +171,6 @@ func (t *Toolkit) toolRegistry() map[ToolName]toolRegistrar {
 		ToolGetGlossaryTerm: t.registerGetGlossaryTermTool,
 		ToolGetDataProduct:  t.registerGetDataProductTool,
 		ToolListConnections: t.registerListConnectionsTool,
-
-		// Deprecated aliases (kept for one release cycle)
-		ToolGetColumnLineage: t.registerGetColumnLineageTool,
-		ToolListTags:         t.registerListTagsTool,
-		ToolListDomains:      t.registerListDomainsTool,
-		ToolListDataProducts: t.registerListDataProductsTool,
 
 		// Write tools
 		ToolUpdateDescription:  t.registerUpdateDescriptionTool,

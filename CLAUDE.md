@@ -98,7 +98,7 @@ export DATAHUB_TOKEN=your_token
 ./mcp-datahub
 ```
 
-## Available Tools (16 total: 9 read + 7 write + 4 deprecated aliases)
+## Available Tools (16 total: 9 read + 7 write)
 
 Each tool has a `Title` (human-readable display name shown in MCP clients like Claude Desktop),
 an `OutputSchema` (JSON Schema describing the response structure), and `Annotations`.
@@ -117,15 +117,6 @@ All are customizable via the three-tier priority pattern.
 | `datahub_get_glossary_term` | Get Glossary Term | Get glossary term details |
 | `datahub_get_data_product` | Get Data Product | Get data product details |
 | `datahub_list_connections` | List Connections | List configured DataHub server connections |
-
-### Deprecated Aliases (kept for one release cycle)
-
-| Old Tool | Replacement |
-|----------|-------------|
-| `datahub_list_tags` | `datahub_browse` with `what=tags` |
-| `datahub_list_domains` | `datahub_browse` with `what=domains` |
-| `datahub_list_data_products` | `datahub_browse` with `what=data_products` |
-| `datahub_get_column_lineage` | `datahub_get_lineage` with `level=column` |
 
 ### Write Tools (require `WriteEnabled: true`)
 
@@ -173,7 +164,7 @@ MCP tool annotations (behavior hints per the MCP specification) follow the same 
 2. **Toolkit-level**: `tools.NewToolkit(client, cfg, tools.WithAnnotations(map[tools.ToolName]*mcp.ToolAnnotations{...}))`
 3. **Default**: Built-in annotations from `pkg/tools/annotations.go`
 
-Default annotations for all 16 tools (plus 4 deprecated aliases):
+Default annotations for all 16 tools:
 
 - **Read tools** (9): `ReadOnlyHint: true`, `IdempotentHint: true`, `OpenWorldHint: true`
 - **Write tools** (7): `DestructiveHint: false`, `IdempotentHint: true`, `OpenWorldHint: true`

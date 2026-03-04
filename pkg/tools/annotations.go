@@ -25,12 +25,6 @@ var defaultAnnotations = map[ToolName]*mcp.ToolAnnotations{
 	ToolGetDataProduct:  {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 	ToolListConnections: {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 
-	// Deprecated tool annotations (kept for one release cycle)
-	ToolGetColumnLineage: {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolListTags:         {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolListDomains:      {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolListDataProducts: {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-
 	// Write tools
 	ToolUpdateDescription:  {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 	ToolAddTag:             {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},

@@ -104,7 +104,7 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{},
 )
 ```
 
-All 16 tools (plus 4 deprecated aliases) ship with default annotations: read tools are marked `ReadOnlyHint: true`, write tools are marked `DestructiveHint: false` and `IdempotentHint: true`.
+All 16 tools ship with default annotations: read tools are marked `ReadOnlyHint: true`, write tools are marked `DestructiveHint: false` and `IdempotentHint: true`.
 
 #### Extensions (Logging, Metrics, Error Hints)
 
@@ -246,15 +246,6 @@ See the [library documentation](https://mcp-datahub.txn2.com/library/) for compl
 | `datahub_get_glossary_term` | Get glossary term definition and properties |
 | `datahub_get_data_product` | Get data product details (owners, domain, properties) |
 | `datahub_list_connections` | List configured DataHub server connections (multi-server mode) |
-
-### Deprecated Aliases (kept for one release cycle)
-
-| Alias | Replacement |
-|-------|-------------|
-| `datahub_list_tags` | `datahub_browse` with `what=tags` |
-| `datahub_list_domains` | `datahub_browse` with `what=domains` |
-| `datahub_list_data_products` | `datahub_browse` with `what=data_products` |
-| `datahub_get_column_lineage` | `datahub_get_lineage` with `level=column` |
 
 ### Write Tools (require `DATAHUB_WRITE_ENABLED=true`)
 
