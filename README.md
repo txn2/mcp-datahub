@@ -1,4 +1,4 @@
-![txn2/mcp-datahub](./docs/images/txn2_mcp_datahub_banner.png)
+[![txn2/mcp-datahub](docs/images/MCP-datahub-logo-banner.svg)](https://mcp-datahub.txn2.com)
 
 [![GitHub license](https://img.shields.io/github/license/txn2/mcp-datahub.svg)](LICENSE)
 [![Go Reference](https://pkg.go.dev/badge/github.com/txn2/mcp-datahub.svg)](https://pkg.go.dev/github.com/txn2/mcp-datahub)
@@ -9,7 +9,15 @@
 
 An MCP server and composable Go library that connects AI assistants to [DataHub](https://datahubproject.io/) metadata catalogs. Search datasets, explore schemas, trace lineage, and access glossary terms and domains.
 
-**[Documentation](https://mcp-datahub.txn2.com)** | **[Installation](https://mcp-datahub.txn2.com/server/installation/)** | **[Library Docs](https://mcp-datahub.txn2.com/library/)**
+**[mcp-datahub.txn2.com](https://mcp-datahub.txn2.com)** | **[Installation](https://mcp-datahub.txn2.com/server/installation/)** | **[Library Docs](https://mcp-datahub.txn2.com/library/)**
+
+## MCP Data Platform Ecosystem
+
+mcp-datahub is part of a broader suite of open-source MCP servers designed to work together as a composable data platform. Each component can run standalone or be combined to give AI assistants unified access to storage, query engines, and metadata catalogs.
+
+- [txn2/mcp-data-platform](https://github.com/txn2/mcp-data-platform/)
+- [txn2/mcp-s3](https://github.com/txn2/mcp-s3/)
+- [txn2/mcp-trino](https://github.com/txn2/mcp-trino/)
 
 ## Two Ways to Use
 

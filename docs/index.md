@@ -1,9 +1,10 @@
 ---
 hide:
   - toc
+  - navigation
 ---
 
-# txn2/mcp-datahub
+# ![txn2/mcp-datahub](images/MCP-datahub-logo-banner-black-transparent.svg#only-light)![txn2/mcp-datahub](images/MCP-datahub-logo-banner-white-transparent.svg#only-dark)
 
 An MCP server that connects AI assistants to DataHub metadata catalogs. Search datasets, explore schemas, understand lineage, and access business context like glossary terms and domains.
 
@@ -103,12 +104,6 @@ Unlike other MCP servers, mcp-datahub is designed as a composable Go library. Im
 | `datahub_get_glossary_term` | Get term definition and relationships |
 | `datahub_get_data_product` | Get data product details and assets |
 | `datahub_list_connections` | List configured server connections |
-
----
-
-## Related Projects
-
-Pair mcp-datahub with [txn2/mcp-trino](https://mcp-trino.txn2.com) for a complete data stack. mcp-trino queries your Trino data warehouse and can use DataHub as a semantic layer to enrich query results with business context.
 
 ---
 
