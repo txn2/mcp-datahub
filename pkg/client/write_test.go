@@ -41,12 +41,20 @@ func TestUpdateDescription(t *testing.T) {
 		if desc != "new description" {
 			t.Errorf("expected 'new description', got %q", desc)
 		}
-		// Verify other fields are preserved
-		if _, ok := fields["created"]; !ok {
-			t.Error("expected created audit stamp to be preserved")
+		// Verify other fields are preserved with correct values
+		var created auditStampRaw
+		if err := json.Unmarshal(fields["created"], &created); err != nil {
+			t.Fatalf("failed to unmarshal created: %v", err)
 		}
-		if _, ok := fields["lastModified"]; !ok {
-			t.Error("expected lastModified audit stamp to be preserved")
+		if created.Actor != "urn:li:corpuser:admin" {
+			t.Errorf("expected created actor 'urn:li:corpuser:admin', got %q", created.Actor)
+		}
+		var lastModified auditStampRaw
+		if err := json.Unmarshal(fields["lastModified"], &lastModified); err != nil {
+			t.Fatalf("failed to unmarshal lastModified: %v", err)
+		}
+		if lastModified.Time != 2000 {
+			t.Errorf("expected lastModified time 2000, got %d", lastModified.Time)
 		}
 
 		w.WriteHeader(http.StatusOK)

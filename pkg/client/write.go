@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// ErrUnsupportedEntityType is returned when an entity type does not support description updates.
+// Entity types intentionally excluded (no editable description aspect in DataHub):
+// tag, corpuser, corpGroup, mlModel, mlModelGroup, notebook.
+var ErrUnsupportedEntityType = errors.New("unsupported entity type for description update")
+
 // entityTypeFromURN derives the DataHub entity type string from a parsed URN.
 // Maps URN entity types to the REST API entity type names.
 func entityTypeFromURN(urn string) (string, error) {
@@ -42,9 +47,6 @@ var descriptionAspectMap = map[string]descriptionAspectInfo{
 	"glossaryNode": {AspectName: "glossaryNodeInfo", FieldName: "definition"},
 }
 
-// ErrUnsupportedEntityType is returned when an entity type does not support description updates.
-var ErrUnsupportedEntityType = fmt.Errorf("unsupported entity type for description update")
-
 // lookupDescriptionAspect returns the aspect info for updating the description of the given entity type.
 func lookupDescriptionAspect(entityType string) (descriptionAspectInfo, error) {
 	info, ok := descriptionAspectMap[entityType]
@@ -68,19 +70,25 @@ type editableFieldInfo struct {
 	GlossaryTerms json.RawMessage `json:"glossaryTerms,omitempty"`
 }
 
-// editablePropertiesAspect represents a generic properties aspect for description updates.
-// Uses a map to handle different field names ("description" vs "definition") across entity types.
-type editablePropertiesAspect struct {
+// descriptionAspect represents a generic properties aspect for description updates.
+// Uses a map to preserve all existing fields during read-modify-write regardless of
+// which aspect is being updated — different aspects have different schemas.
+type descriptionAspect struct {
 	fields map[string]json.RawMessage
 }
 
 // MarshalJSON serializes the aspect as a flat JSON object.
-func (a *editablePropertiesAspect) MarshalJSON() ([]byte, error) {
+func (a *descriptionAspect) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.fields)
 }
 
+// UnmarshalJSON deserializes a flat JSON object into the aspect's field map.
+func (a *descriptionAspect) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &a.fields)
+}
+
 // setDescription sets the description value in the aspect under the given field name.
-func (a *editablePropertiesAspect) setDescription(fieldName, value string) error {
+func (a *descriptionAspect) setDescription(fieldName, value string) error {
 	encoded, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("encoding description: %w", err)
@@ -121,20 +129,20 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 
 // readEditableProperties reads the current properties aspect for an entity.
 // Returns an empty aspect if none exists (not an error).
-func (c *Client) readEditableProperties(ctx context.Context, urn, aspectName string) (*editablePropertiesAspect, error) {
+func (c *Client) readEditableProperties(ctx context.Context, urn, aspectName string) (*descriptionAspect, error) {
 	raw, err := c.getAspect(ctx, urn, aspectName)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return &editablePropertiesAspect{fields: map[string]json.RawMessage{}}, nil
+			return &descriptionAspect{fields: map[string]json.RawMessage{}}, nil
 		}
 		return nil, fmt.Errorf("reading %s: %w", aspectName, err)
 	}
 
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &fields); err != nil {
+	var props descriptionAspect
+	if err := json.Unmarshal(raw, &props); err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", aspectName, err)
 	}
-	return &editablePropertiesAspect{fields: fields}, nil
+	return &props, nil
 }
 
 // globalTagsAspect represents the globalTags aspect structure.
