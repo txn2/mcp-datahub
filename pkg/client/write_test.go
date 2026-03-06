@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,18 +30,31 @@ func TestUpdateDescription(t *testing.T) {
 			t.Errorf("expected aspect 'editableDatasetProperties', got %v", proposal["aspectName"])
 		}
 
-		var props editablePropertiesAspect
-		if err := json.Unmarshal([]byte(aspectJSON), &props); err != nil {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(aspectJSON), &fields); err != nil {
 			t.Fatalf("failed to unmarshal inner aspect: %v", err)
 		}
-		if props.Description != "new description" {
-			t.Errorf("expected 'new description', got %q", props.Description)
+		var desc string
+		if err := json.Unmarshal(fields["description"], &desc); err != nil {
+			t.Fatalf("failed to unmarshal description: %v", err)
 		}
-		if props.Created == nil || props.Created.Actor != "urn:li:corpuser:admin" {
-			t.Error("expected created audit stamp to be preserved")
+		if desc != "new description" {
+			t.Errorf("expected 'new description', got %q", desc)
 		}
-		if props.LastModified == nil || props.LastModified.Time != 2000 {
-			t.Error("expected lastModified audit stamp to be preserved")
+		// Verify other fields are preserved with correct values
+		var created auditStampRaw
+		if err := json.Unmarshal(fields["created"], &created); err != nil {
+			t.Fatalf("failed to unmarshal created: %v", err)
+		}
+		if created.Actor != "urn:li:corpuser:admin" {
+			t.Errorf("expected created actor 'urn:li:corpuser:admin', got %q", created.Actor)
+		}
+		var lastModified auditStampRaw
+		if err := json.Unmarshal(fields["lastModified"], &lastModified); err != nil {
+			t.Fatalf("failed to unmarshal lastModified: %v", err)
+		}
+		if lastModified.Time != 2000 {
+			t.Errorf("expected lastModified time 2000, got %d", lastModified.Time)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -69,12 +83,16 @@ func TestUpdateDescription_NoExistingProperties(t *testing.T) {
 			return
 		}
 		_, aspectJSON := extractProposalWireFormat(t, r.Body)
-		var props editablePropertiesAspect
-		if err := json.Unmarshal([]byte(aspectJSON), &props); err != nil {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(aspectJSON), &fields); err != nil {
 			t.Fatalf("failed to unmarshal inner aspect: %v", err)
 		}
-		if props.Description != "first description" {
-			t.Errorf("expected 'first description', got %q", props.Description)
+		var desc string
+		if err := json.Unmarshal(fields["description"], &desc); err != nil {
+			t.Fatalf("failed to unmarshal description: %v", err)
+		}
+		if desc != "first description" {
+			t.Errorf("expected 'first description', got %q", desc)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -109,13 +127,16 @@ func TestUpdateDescription_MarkdownContent(t *testing.T) {
 			return
 		}
 		_, aspectJSON := extractProposalWireFormat(t, r.Body)
-		var props editablePropertiesAspect
-		if err := json.Unmarshal([]byte(aspectJSON), &props); err != nil {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(aspectJSON), &fields); err != nil {
 			t.Fatalf("failed to unmarshal inner aspect: %v", err)
 		}
-		if props.Description != mdDesc {
-			t.Errorf("markdown not preserved:\ngot:  %q\nwant: %q",
-				props.Description, mdDesc)
+		var desc string
+		if err := json.Unmarshal(fields["description"], &desc); err != nil {
+			t.Fatalf("failed to unmarshal description: %v", err)
+		}
+		if desc != mdDesc {
+			t.Errorf("markdown not preserved:\ngot:  %q\nwant: %q", desc, mdDesc)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -152,7 +173,8 @@ func TestReadEditableProperties_InvalidJSON(t *testing.T) {
 	}
 
 	_, err := c.readEditableProperties(context.Background(),
-		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
+		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
+		"editableDatasetProperties")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -1189,5 +1211,202 @@ func TestEntityTypeFromURN(t *testing.T) {
 				t.Errorf("entityTypeFromURN() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestLookupDescriptionAspect(t *testing.T) {
+	tests := []struct {
+		entityType string
+		wantAspect string
+		wantField  string
+		wantErr    bool
+	}{
+		{"dataset", "editableDatasetProperties", "description", false},
+		{"dashboard", "editableDashboardProperties", "description", false},
+		{"chart", "editableChartProperties", "description", false},
+		{"dataFlow", "editableDataFlowProperties", "description", false},
+		{"dataJob", "editableDataJobProperties", "description", false},
+		{"container", "editableContainerProperties", "description", false},
+		{"dataProduct", "dataProductProperties", "description", false},
+		{"domain", "domainProperties", "description", false},
+		{"glossaryTerm", "glossaryTermInfo", "definition", false},
+		{"glossaryNode", "glossaryNodeInfo", "definition", false},
+		{"tag", "", "", true},
+		{"corpuser", "", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.entityType, func(t *testing.T) {
+			info, err := lookupDescriptionAspect(tt.entityType)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("lookupDescriptionAspect(%q) error = %v, wantErr %v",
+					tt.entityType, err, tt.wantErr)
+			}
+			if info.AspectName != tt.wantAspect {
+				t.Errorf("AspectName = %q, want %q", info.AspectName, tt.wantAspect)
+			}
+			if info.FieldName != tt.wantField {
+				t.Errorf("FieldName = %q, want %q", info.FieldName, tt.wantField)
+			}
+		})
+	}
+}
+
+func TestUpdateDescription_EntityTypes(t *testing.T) {
+	tests := []struct {
+		name       string
+		urn        string
+		wantEntity string
+		wantAspect string
+		wantField  string
+	}{
+		{
+			name:       "dashboard",
+			urn:        "urn:li:dashboard:(looker,dashboards.123)",
+			wantEntity: "dashboard",
+			wantAspect: "editableDashboardProperties",
+			wantField:  "description",
+		},
+		{
+			name:       "glossaryTerm uses definition field",
+			urn:        "urn:li:glossaryTerm:Classification",
+			wantEntity: "glossaryTerm",
+			wantAspect: "glossaryTermInfo",
+			wantField:  "definition",
+		},
+		{
+			name:       "domain",
+			urn:        "urn:li:domain:engineering",
+			wantEntity: "domain",
+			wantAspect: "domainProperties",
+			wantField:  "description",
+		},
+		{
+			name:       "dataProduct",
+			urn:        "urn:li:dataProduct:users",
+			wantEntity: "dataProduct",
+			wantAspect: "dataProductProperties",
+			wantField:  "description",
+		},
+		{
+			name:       "container",
+			urn:        "urn:li:container:mycontainer",
+			wantEntity: "container",
+			wantAspect: "editableContainerProperties",
+			wantField:  "description",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodGet {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
+				proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
+
+				if proposal["entityType"] != tt.wantEntity {
+					t.Errorf("entityType = %v, want %v", proposal["entityType"], tt.wantEntity)
+				}
+				if proposal["aspectName"] != tt.wantAspect {
+					t.Errorf("aspectName = %v, want %v", proposal["aspectName"], tt.wantAspect)
+				}
+
+				var fields map[string]json.RawMessage
+				if err := json.Unmarshal([]byte(aspectJSON), &fields); err != nil {
+					t.Fatalf("failed to unmarshal inner aspect: %v", err)
+				}
+				var desc string
+				if err := json.Unmarshal(fields[tt.wantField], &desc); err != nil {
+					t.Fatalf("failed to unmarshal field %q: %v", tt.wantField, err)
+				}
+				if desc != "new desc" {
+					t.Errorf("description = %q, want %q", desc, "new desc")
+				}
+
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+
+			c := &Client{
+				endpoint:   server.URL + "/api/graphql",
+				token:      "test-token",
+				httpClient: server.Client(),
+				logger:     NopLogger{},
+			}
+
+			err := c.UpdateDescription(context.Background(), tt.urn, "new desc")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestUpdateDescription_UnsupportedEntityType(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.UpdateDescription(context.Background(), "urn:li:tag:PII", "desc")
+	if err == nil {
+		t.Fatal("expected error for unsupported entity type")
+	}
+	if !errors.Is(err, ErrUnsupportedEntityType) {
+		t.Errorf("expected ErrUnsupportedEntityType, got: %v", err)
+	}
+}
+
+func TestUpdateDescription_GlossaryTermPreservesExistingFields(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			// glossaryTermInfo has "definition" plus other fields
+			existing := `{"definition":"old def","termSource":"INTERNAL","name":"Classification"}`
+			resp := aspectResponse{Value: json.RawMessage(existing)}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
+		if proposal["aspectName"] != "glossaryTermInfo" {
+			t.Errorf("expected aspect 'glossaryTermInfo', got %v", proposal["aspectName"])
+		}
+
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(aspectJSON), &fields); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		var def string
+		if err := json.Unmarshal(fields["definition"], &def); err != nil {
+			t.Fatalf("failed to unmarshal definition: %v", err)
+		}
+		if def != "updated definition" {
+			t.Errorf("definition = %q, want %q", def, "updated definition")
+		}
+
+		// termSource and name should be preserved
+		if _, ok := fields["termSource"]; !ok {
+			t.Error("expected termSource to be preserved")
+		}
+		if _, ok := fields["name"]; !ok {
+			t.Error("expected name to be preserved")
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateDescription(context.Background(),
+		"urn:li:glossaryTerm:Classification", "updated definition")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

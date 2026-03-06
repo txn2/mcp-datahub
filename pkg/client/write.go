@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// ErrUnsupportedEntityType is returned when an entity type does not support description updates.
+// Entity types intentionally excluded (no editable description aspect in DataHub):
+// tag, corpuser, corpGroup, mlModel, mlModelGroup, notebook.
+var ErrUnsupportedEntityType = errors.New("unsupported entity type for description update")
+
 // entityTypeFromURN derives the DataHub entity type string from a parsed URN.
 // Maps URN entity types to the REST API entity type names.
 func entityTypeFromURN(urn string) (string, error) {
@@ -16,6 +21,39 @@ func entityTypeFromURN(urn string) (string, error) {
 		return "", err
 	}
 	return parsed.EntityType, nil
+}
+
+// descriptionAspectInfo holds the aspect name and field name for updating
+// an entity's description. The field is "description" for most entity types,
+// but "definition" for glossary entities.
+type descriptionAspectInfo struct {
+	AspectName string
+	FieldName  string
+}
+
+// descriptionAspectMap maps DataHub entity types to their description aspect.
+// glossaryTerm and glossaryNode use "definition" instead of "description".
+// dataProduct and domain use non-editable property aspects.
+var descriptionAspectMap = map[string]descriptionAspectInfo{
+	"dataset":      {AspectName: "editableDatasetProperties", FieldName: "description"},
+	"dashboard":    {AspectName: "editableDashboardProperties", FieldName: "description"},
+	"chart":        {AspectName: "editableChartProperties", FieldName: "description"},
+	"dataFlow":     {AspectName: "editableDataFlowProperties", FieldName: "description"},
+	"dataJob":      {AspectName: "editableDataJobProperties", FieldName: "description"},
+	"container":    {AspectName: "editableContainerProperties", FieldName: "description"},
+	"dataProduct":  {AspectName: "dataProductProperties", FieldName: "description"},
+	"domain":       {AspectName: "domainProperties", FieldName: "description"},
+	"glossaryTerm": {AspectName: "glossaryTermInfo", FieldName: "definition"},
+	"glossaryNode": {AspectName: "glossaryNodeInfo", FieldName: "definition"},
+}
+
+// lookupDescriptionAspect returns the aspect info for updating the description of the given entity type.
+func lookupDescriptionAspect(entityType string) (descriptionAspectInfo, error) {
+	info, ok := descriptionAspectMap[entityType]
+	if !ok {
+		return descriptionAspectInfo{}, fmt.Errorf("%w: %s", ErrUnsupportedEntityType, entityType)
+	}
+	return info, nil
 }
 
 // editableSchemaAspect is the REST API representation of editableSchemaMetadata.
@@ -32,49 +70,77 @@ type editableFieldInfo struct {
 	GlossaryTerms json.RawMessage `json:"glossaryTerms,omitempty"`
 }
 
-// editablePropertiesAspect represents the editableDatasetProperties aspect.
-type editablePropertiesAspect struct {
-	Description  string         `json:"description"`
-	Created      *auditStampRaw `json:"created,omitempty"`
-	LastModified *auditStampRaw `json:"lastModified,omitempty"`
+// descriptionAspect represents a generic properties aspect for description updates.
+// Uses a map to preserve all existing fields during read-modify-write regardless of
+// which aspect is being updated — different aspects have different schemas.
+type descriptionAspect struct {
+	fields map[string]json.RawMessage
+}
+
+// MarshalJSON serializes the aspect as a flat JSON object.
+func (a *descriptionAspect) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.fields)
+}
+
+// UnmarshalJSON deserializes a flat JSON object into the aspect's field map.
+func (a *descriptionAspect) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &a.fields)
+}
+
+// setDescription sets the description value in the aspect under the given field name.
+func (a *descriptionAspect) setDescription(fieldName, value string) error {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("encoding description: %w", err)
+	}
+	a.fields[fieldName] = encoded
+	return nil
 }
 
 // UpdateDescription sets the editable description for any entity using read-modify-write.
+// Resolves the correct aspect name and field name based on the entity type in the URN.
 func (c *Client) UpdateDescription(ctx context.Context, urn, description string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
 
-	props, err := c.readEditableProperties(ctx, urn)
+	aspectInfo, err := lookupDescriptionAspect(entityType)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
 
-	props.Description = description
+	props, err := c.readEditableProperties(ctx, urn, aspectInfo.AspectName)
+	if err != nil {
+		return fmt.Errorf("UpdateDescription: %w", err)
+	}
+
+	if err := props.setDescription(aspectInfo.FieldName, description); err != nil {
+		return fmt.Errorf("UpdateDescription: %w", err)
+	}
 
 	return c.postIngestProposal(ctx, ingestProposal{
 		EntityType: entityType,
 		EntityURN:  urn,
-		AspectName: "editableDatasetProperties",
+		AspectName: aspectInfo.AspectName,
 		Aspect:     props,
 	})
 }
 
-// readEditableProperties reads the current editableDatasetProperties aspect.
+// readEditableProperties reads the current properties aspect for an entity.
 // Returns an empty aspect if none exists (not an error).
-func (c *Client) readEditableProperties(ctx context.Context, urn string) (*editablePropertiesAspect, error) {
-	raw, err := c.getAspect(ctx, urn, "editableDatasetProperties")
+func (c *Client) readEditableProperties(ctx context.Context, urn, aspectName string) (*descriptionAspect, error) {
+	raw, err := c.getAspect(ctx, urn, aspectName)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return &editablePropertiesAspect{}, nil
+			return &descriptionAspect{fields: map[string]json.RawMessage{}}, nil
 		}
-		return nil, fmt.Errorf("reading editableDatasetProperties: %w", err)
+		return nil, fmt.Errorf("reading %s: %w", aspectName, err)
 	}
 
-	var props editablePropertiesAspect
+	var props descriptionAspect
 	if err := json.Unmarshal(raw, &props); err != nil {
-		return nil, fmt.Errorf("parsing editableDatasetProperties: %w", err)
+		return nil, fmt.Errorf("parsing %s: %w", aspectName, err)
 	}
 	return &props, nil
 }
