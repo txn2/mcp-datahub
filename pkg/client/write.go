@@ -48,12 +48,16 @@ var descriptionAspectMap = map[string]DescriptionAspectInfo{
 }
 
 // globalTagsSupportedTypes lists entity types that support the globalTags aspect.
+// Currently identical to glossaryTermsSupportedTypes, but kept separate because
+// DataHub may add tag support to additional entity types independently.
 var globalTagsSupportedTypes = map[string]bool{
 	"dataset": true, "dashboard": true, "chart": true,
 	"dataFlow": true, "dataJob": true, "container": true, "dataProduct": true,
 }
 
 // glossaryTermsSupportedTypes lists entity types that support glossaryTerms associations.
+// Currently identical to globalTagsSupportedTypes, but kept separate because
+// DataHub may add glossary term support to additional entity types independently.
 var glossaryTermsSupportedTypes = map[string]bool{
 	"dataset": true, "dashboard": true, "chart": true,
 	"dataFlow": true, "dataJob": true, "container": true, "dataProduct": true,
@@ -165,6 +169,8 @@ func (c *Client) preserveDataProductName(ctx context.Context, urn string, props 
 		return fmt.Errorf("fetching data product name: %w", err)
 	}
 
+	// If the GraphQL response also has no name, allow the write to proceed without
+	// injecting one — the data product genuinely has no display name to preserve.
 	if dp.Name != "" {
 		encoded, err := json.Marshal(dp.Name)
 		if err != nil {

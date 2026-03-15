@@ -1439,6 +1439,72 @@ func TestAddGlossaryTerm_UnsupportedEntityType(t *testing.T) {
 	}
 }
 
+func TestRemoveGlossaryTerm_UnsupportedEntityType(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	tests := []struct {
+		name string
+		urn  string
+	}{
+		{"domain", "urn:li:domain:engineering"},
+		{"glossaryTerm", "urn:li:glossaryTerm:Classification"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := c.RemoveGlossaryTerm(context.Background(), tt.urn, "urn:li:glossaryTerm:PII")
+			if err == nil {
+				t.Fatal("expected error for unsupported entity type")
+			}
+			if !errors.Is(err, ErrUnsupportedGlossaryTermEntity) {
+				t.Errorf("expected ErrUnsupportedGlossaryTermEntity, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestAddLink_UnsupportedEntityType(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	tests := []struct {
+		name string
+		urn  string
+	}{
+		{"tag", "urn:li:tag:PII"},
+		{"corpuser", "urn:li:corpuser:johndoe"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := c.AddLink(context.Background(), tt.urn, "https://example.com", "doc")
+			if err == nil {
+				t.Fatal("expected error for unsupported entity type")
+			}
+			if !errors.Is(err, ErrUnsupportedLinkEntity) {
+				t.Errorf("expected ErrUnsupportedLinkEntity, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestRemoveLink_UnsupportedEntityType(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	tests := []struct {
+		name string
+		urn  string
+	}{
+		{"tag", "urn:li:tag:PII"},
+		{"corpuser", "urn:li:corpuser:johndoe"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := c.RemoveLink(context.Background(), tt.urn, "https://example.com")
+			if err == nil {
+				t.Fatal("expected error for unsupported entity type")
+			}
+			if !errors.Is(err, ErrUnsupportedLinkEntity) {
+				t.Errorf("expected ErrUnsupportedLinkEntity, got: %v", err)
+			}
+		})
+	}
+}
+
 func TestUpdateDescription_DataProductPreservesName(t *testing.T) {
 	graphQLCalled := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

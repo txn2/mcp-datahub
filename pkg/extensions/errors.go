@@ -54,7 +54,7 @@ var errorHints = []errorHint{
 		hint:      "Hint: Glossary terms cannot be associated with domain or glossaryTerm entities via the REST API.",
 	},
 	{
-		substring: "unsupported entity type for description",
+		substring: "unsupported entity type for description update",
 		hint:      "Hint: Description updates for domain and glossaryTerm entities are not supported via the REST API.",
 	},
 }
