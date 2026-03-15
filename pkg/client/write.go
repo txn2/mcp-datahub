@@ -48,8 +48,7 @@ type DescriptionAspectInfo struct {
 // descriptionAspectMap maps DataHub entity types to their description aspect.
 // glossaryNode uses "definition" instead of "description".
 // dataProduct uses its non-editable property aspect (dataProductProperties).
-// domain and glossaryTerm are intentionally excluded: their aspects
-// (domainProperties, glossaryTermInfo) are not writable via the REST ingest proposal API.
+// domain uses domainProperties and glossaryTerm uses glossaryTermInfo.
 var descriptionAspectMap = map[string]DescriptionAspectInfo{
 	entityTypeDataset:      {AspectName: "editableDatasetProperties", FieldName: "description"},
 	entityTypeDashboard:    {AspectName: "editableDashboardProperties", FieldName: "description"},
@@ -59,6 +58,8 @@ var descriptionAspectMap = map[string]DescriptionAspectInfo{
 	entityTypeContainer:    {AspectName: "editableContainerProperties", FieldName: "description"},
 	entityTypeDataProduct:  {AspectName: "dataProductProperties", FieldName: "description"},
 	entityTypeGlossaryNode: {AspectName: "glossaryNodeInfo", FieldName: "definition"},
+	entityTypeDomain:       {AspectName: "domainProperties", FieldName: "description"},
+	entityTypeGlossaryTerm: {AspectName: "glossaryTermInfo", FieldName: "description"},
 }
 
 // globalTagsSupportedTypes lists entity types that support the globalTags aspect.
@@ -67,6 +68,7 @@ var descriptionAspectMap = map[string]DescriptionAspectInfo{
 var globalTagsSupportedTypes = map[string]bool{
 	entityTypeDataset: true, entityTypeDashboard: true, entityTypeChart: true,
 	entityTypeDataFlow: true, entityTypeDataJob: true, entityTypeContainer: true, entityTypeDataProduct: true,
+	entityTypeDomain: true, entityTypeGlossaryTerm: true, entityTypeGlossaryNode: true,
 }
 
 // glossaryTermsSupportedTypes lists entity types that support glossaryTerms associations.
@@ -75,6 +77,7 @@ var globalTagsSupportedTypes = map[string]bool{
 var glossaryTermsSupportedTypes = map[string]bool{
 	entityTypeDataset: true, entityTypeDashboard: true, entityTypeChart: true,
 	entityTypeDataFlow: true, entityTypeDataJob: true, entityTypeContainer: true, entityTypeDataProduct: true,
+	entityTypeDomain: true, entityTypeGlossaryTerm: true, entityTypeGlossaryNode: true,
 }
 
 // institutionalMemorySupportedTypes lists entity types that support institutional memory (links).

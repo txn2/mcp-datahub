@@ -126,16 +126,30 @@ query listStructuredPropertyDefinitions($input: SearchInput!) {
 `
 
 	// UpsertStructuredPropertiesMutation sets or updates structured property values on an entity.
+	// The mutation returns StructuredProperties! which requires a selection set.
 	UpsertStructuredPropertiesMutation = `
 mutation upsertStructuredProperties($input: UpsertStructuredPropertiesInput!) {
-  upsertStructuredProperties(input: $input)
+  upsertStructuredProperties(input: $input) {
+    properties {
+      structuredProperty {
+        urn
+      }
+    }
+  }
 }
 `
 
 	// RemoveStructuredPropertiesMutation removes structured property values from an entity.
+	// The mutation returns StructuredProperties! which requires a selection set.
 	RemoveStructuredPropertiesMutation = `
 mutation removeStructuredProperties($input: RemoveStructuredPropertiesInput!) {
-  removeStructuredProperties(input: $input)
+  removeStructuredProperties(input: $input) {
+    properties {
+      structuredProperty {
+        urn
+      }
+    }
+  }
 }
 `
 )
@@ -232,7 +246,13 @@ func (c *Client) UpsertStructuredProperties(ctx context.Context, urn string, pro
 	}
 
 	var response struct {
-		UpsertStructuredProperties bool `json:"upsertStructuredProperties"`
+		UpsertStructuredProperties struct {
+			Properties []struct {
+				StructuredProperty struct {
+					URN string `json:"urn"`
+				} `json:"structuredProperty"`
+			} `json:"properties"`
+		} `json:"upsertStructuredProperties"`
 	}
 
 	if err := c.Execute(ctx, UpsertStructuredPropertiesMutation, variables, &response); err != nil {
@@ -252,7 +272,13 @@ func (c *Client) RemoveStructuredProperties(ctx context.Context, urn string, pro
 	}
 
 	var response struct {
-		RemoveStructuredProperties bool `json:"removeStructuredProperties"`
+		RemoveStructuredProperties struct {
+			Properties []struct {
+				StructuredProperty struct {
+					URN string `json:"urn"`
+				} `json:"structuredProperty"`
+			} `json:"properties"`
+		} `json:"removeStructuredProperties"`
 	}
 
 	if err := c.Execute(ctx, RemoveStructuredPropertiesMutation, variables, &response); err != nil {

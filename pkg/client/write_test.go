@@ -304,6 +304,43 @@ func TestAddTag_NoExistingTags(t *testing.T) {
 	}
 }
 
+func TestAddTag_DomainEntity(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
+		if proposal["entityType"] != "domain" {
+			t.Errorf("entityType = %v, want domain", proposal["entityType"])
+		}
+		if proposal["aspectName"] != "globalTags" {
+			t.Errorf("aspectName = %v, want globalTags", proposal["aspectName"])
+		}
+		var tags globalTagsAspect
+		if err := json.Unmarshal([]byte(aspectJSON), &tags); err != nil {
+			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		}
+		if len(tags.Tags) != 1 {
+			t.Errorf("expected 1 tag, got %d", len(tags.Tags))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.AddTag(context.Background(), "urn:li:domain:engineering", "urn:li:tag:PII")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestRemoveTag(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -1234,9 +1271,9 @@ func TestLookupDescriptionAspect(t *testing.T) {
 		{"container", "editableContainerProperties", "description", false},
 		{"dataProduct", "dataProductProperties", "description", false},
 		{"glossaryNode", "glossaryNodeInfo", "definition", false},
+		{"domain", "domainProperties", "description", false},
+		{"glossaryTerm", "glossaryTermInfo", "description", false},
 		// Unsupported types return errors
-		{"domain", "", "", true},
-		{"glossaryTerm", "", "", true},
 		{"tag", "", "", true},
 		{"corpuser", "", "", true},
 	}
@@ -1285,6 +1322,20 @@ func TestUpdateDescription_EntityTypes(t *testing.T) {
 			urn:        "urn:li:container:mycontainer",
 			wantEntity: "container",
 			wantAspect: "editableContainerProperties",
+			wantField:  "description",
+		},
+		{
+			name:       "domain",
+			urn:        "urn:li:domain:engineering",
+			wantEntity: "domain",
+			wantAspect: "domainProperties",
+			wantField:  "description",
+		},
+		{
+			name:       "glossaryTerm",
+			urn:        "urn:li:glossaryTerm:Classification",
+			wantEntity: "glossaryTerm",
+			wantAspect: "glossaryTermInfo",
 			wantField:  "description",
 		},
 	}
@@ -1356,36 +1407,14 @@ func TestUpdateDescription_UnsupportedEntityType(t *testing.T) {
 	}
 }
 
-func TestUpdateDescription_DomainReturnsError(t *testing.T) {
-	c := &Client{logger: NopLogger{}}
-	err := c.UpdateDescription(context.Background(), "urn:li:domain:engineering", "desc")
-	if err == nil {
-		t.Fatal("expected error for domain entity")
-	}
-	if !errors.Is(err, ErrUnsupportedEntityType) {
-		t.Errorf("expected ErrUnsupportedEntityType, got: %v", err)
-	}
-}
-
-func TestUpdateDescription_GlossaryTermReturnsError(t *testing.T) {
-	c := &Client{logger: NopLogger{}}
-	err := c.UpdateDescription(context.Background(), "urn:li:glossaryTerm:Classification", "desc")
-	if err == nil {
-		t.Fatal("expected error for glossaryTerm entity")
-	}
-	if !errors.Is(err, ErrUnsupportedEntityType) {
-		t.Errorf("expected ErrUnsupportedEntityType, got: %v", err)
-	}
-}
-
 func TestAddTag_UnsupportedEntityType(t *testing.T) {
 	c := &Client{logger: NopLogger{}}
 	tests := []struct {
 		name string
 		urn  string
 	}{
-		{"domain", "urn:li:domain:engineering"},
-		{"glossaryTerm", "urn:li:glossaryTerm:Classification"},
+		{"tag", "urn:li:tag:PII"},
+		{"corpuser", "urn:li:corpuser:johndoe"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1406,8 +1435,8 @@ func TestRemoveTag_UnsupportedEntityType(t *testing.T) {
 		name string
 		urn  string
 	}{
-		{"domain", "urn:li:domain:engineering"},
-		{"glossaryTerm", "urn:li:glossaryTerm:Classification"},
+		{"tag", "urn:li:tag:PII"},
+		{"corpuser", "urn:li:corpuser:johndoe"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1428,8 +1457,8 @@ func TestAddGlossaryTerm_UnsupportedEntityType(t *testing.T) {
 		name string
 		urn  string
 	}{
-		{"domain", "urn:li:domain:engineering"},
-		{"glossaryTerm", "urn:li:glossaryTerm:Classification"},
+		{"tag", "urn:li:tag:PII"},
+		{"corpuser", "urn:li:corpuser:johndoe"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1450,8 +1479,8 @@ func TestRemoveGlossaryTerm_UnsupportedEntityType(t *testing.T) {
 		name string
 		urn  string
 	}{
-		{"domain", "urn:li:domain:engineering"},
-		{"glossaryTerm", "urn:li:glossaryTerm:Classification"},
+		{"tag", "urn:li:tag:PII"},
+		{"corpuser", "urn:li:corpuser:johndoe"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

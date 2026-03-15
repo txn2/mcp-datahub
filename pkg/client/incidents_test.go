@@ -286,7 +286,32 @@ func TestRaiseIncident(t *testing.T) {
 			if !tt.wantErr && urn != tt.wantURN {
 				t.Errorf("URN = %q, want %q", urn, tt.wantURN)
 			}
+
+			// Verify resourceUrn is sent as a singular string field
+			if !tt.wantErr && receivedBody != nil {
+				vars, _ := receivedBody["variables"].(map[string]any)
+				input, _ := vars["input"].(map[string]any)
+				resourceUrn, ok := input["resourceUrn"].(string)
+				if !ok {
+					t.Fatal("expected resourceUrn to be a string")
+				}
+				if resourceUrn != tt.input.ResourceURNs[0] {
+					t.Errorf("resourceUrn = %q, want %q", resourceUrn, tt.input.ResourceURNs[0])
+				}
+			}
 		})
+	}
+}
+
+func TestRaiseIncident_EmptyResourceURNs(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	_, err := c.RaiseIncident(context.Background(), types.RaiseIncidentInput{
+		Type:         "OPERATIONAL",
+		Title:        "Test",
+		ResourceURNs: []string{},
+	})
+	if err == nil {
+		t.Fatal("expected error for empty resource URNs")
 	}
 }
 
