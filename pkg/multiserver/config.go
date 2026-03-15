@@ -40,6 +40,10 @@ type ConnectionConfig struct {
 	// WriteEnabled enables write operations for this connection.
 	// nil = inherit from toolkit config, true/false = explicit override.
 	WriteEnabled *bool `json:"write_enabled,omitempty"`
+
+	// APIVersion selects the REST API version ("v1" or "v3").
+	// Empty = inherit from primary connection.
+	APIVersion string `json:"api_version,omitempty"`
 }
 
 // Config holds configuration for multiple DataHub connections.
@@ -139,6 +143,9 @@ func (c Config) ClientConfig(name string) (client.Config, error) {
 	}
 	if conn.MaxLineageDepth > 0 {
 		cfg.MaxLineageDepth = conn.MaxLineageDepth
+	}
+	if conn.APIVersion != "" {
+		cfg.APIVersion = conn.APIVersion
 	}
 
 	return cfg, nil

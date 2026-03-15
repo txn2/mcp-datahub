@@ -173,6 +173,7 @@ func TestReadEditableProperties_InvalidJSON(t *testing.T) {
 	}
 
 	_, err := c.readEditableProperties(context.Background(),
+		"dataset",
 		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)",
 		"editableDatasetProperties")
 	if err == nil {
@@ -670,6 +671,7 @@ func TestReadGlobalTags_InvalidJSON(t *testing.T) {
 	}
 
 	_, err := c.readGlobalTags(context.Background(),
+		"dataset",
 		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
@@ -754,6 +756,7 @@ func TestReadGlossaryTerms_InvalidJSON(t *testing.T) {
 	}
 
 	_, err := c.readGlossaryTerms(context.Background(),
+		"dataset",
 		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
@@ -838,6 +841,7 @@ func TestReadInstitutionalMemory_InvalidJSON(t *testing.T) {
 	}
 
 	_, err := c.readInstitutionalMemory(context.Background(),
+		"dataset",
 		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
@@ -1142,6 +1146,7 @@ func TestReadEditableSchema_InvalidJSON(t *testing.T) {
 	}
 
 	_, err := c.readEditableSchema(context.Background(),
+		"dataset",
 		"urn:li:dataset:(urn:li:dataPlatform:hive,testdb.table,PROD)")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")

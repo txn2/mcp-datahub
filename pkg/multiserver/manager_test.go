@@ -587,6 +587,57 @@ func TestManager_Client_ConcurrentAccess(t *testing.T) {
 	}
 }
 
+func TestConfig_ClientConfig_APIVersion(t *testing.T) {
+	cfg := Config{
+		Default: "default",
+		Primary: client.Config{
+			URL:        "https://prod.datahub.example.com",
+			Token:      "prod-token",
+			APIVersion: "v1",
+		},
+		Connections: map[string]ConnectionConfig{
+			"new-dh": {
+				URL:        "https://new.datahub.example.com",
+				APIVersion: "v3",
+			},
+			"inherit": {
+				URL: "https://inherit.datahub.example.com",
+				// APIVersion empty — inherits from primary
+			},
+		},
+	}
+
+	t.Run("primary returns v1", func(t *testing.T) {
+		got, err := cfg.ClientConfig("default")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.APIVersion != "v1" {
+			t.Errorf("APIVersion = %q, want %q", got.APIVersion, "v1")
+		}
+	})
+
+	t.Run("explicit v3 override", func(t *testing.T) {
+		got, err := cfg.ClientConfig("new-dh")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.APIVersion != "v3" {
+			t.Errorf("APIVersion = %q, want %q", got.APIVersion, "v3")
+		}
+	})
+
+	t.Run("inherits from primary", func(t *testing.T) {
+		got, err := cfg.ClientConfig("inherit")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.APIVersion != "v1" {
+			t.Errorf("APIVersion = %q, want %q (inherited)", got.APIVersion, "v1")
+		}
+	})
+}
+
 func TestManager_Client_InheritsFromPrimary(t *testing.T) {
 	cfg := Config{
 		Default: "default",

@@ -580,6 +580,115 @@ func TestDuration_UnmarshalJSON_Invalid(t *testing.T) {
 	}
 }
 
+func TestFromBytes_APIVersion_YAML(t *testing.T) {
+	data := []byte(`
+datahub:
+  url: https://datahub.example.com
+  token: my-token
+  api_version: "v3"
+`)
+
+	cfg, err := FromBytes(data, "yaml")
+	if err != nil {
+		t.Fatalf("FromBytes() error: %v", err)
+	}
+
+	if cfg.DataHub.APIVersion != "v3" {
+		t.Errorf("APIVersion = %q, want %q", cfg.DataHub.APIVersion, "v3")
+	}
+}
+
+func TestFromBytes_APIVersion_JSON(t *testing.T) {
+	data := []byte(`{"datahub": {"url": "https://datahub.example.com", "api_version": "v3"}}`)
+
+	cfg, err := FromBytes(data, "json")
+	if err != nil {
+		t.Fatalf("FromBytes() error: %v", err)
+	}
+
+	if cfg.DataHub.APIVersion != "v3" {
+		t.Errorf("APIVersion = %q, want %q", cfg.DataHub.APIVersion, "v3")
+	}
+}
+
+func TestLoadConfig_APIVersion_EnvOverride(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	yamlPath := filepath.Join(tmpDir, "config.yaml")
+	yamlData := []byte(`
+datahub:
+  url: https://datahub.example.com
+  token: file-token
+  api_version: "v1"
+`)
+	if err := os.WriteFile(yamlPath, yamlData, 0o600); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	// Clear other env vars that might interfere
+	for _, k := range []string{"DATAHUB_URL", "DATAHUB_TOKEN", "DATAHUB_TIMEOUT", "DATAHUB_CONNECTION_NAME", "DATAHUB_WRITE_ENABLED"} {
+		orig := os.Getenv(k)
+		if err := os.Unsetenv(k); err != nil {
+			t.Fatalf("failed to unset %s: %v", k, err)
+		}
+		t.Cleanup(func() {
+			if orig != "" {
+				_ = os.Setenv(k, orig)
+			}
+		})
+	}
+
+	orig := os.Getenv("DATAHUB_API_VERSION")
+	if err := os.Setenv("DATAHUB_API_VERSION", "v3"); err != nil {
+		t.Fatalf("failed to set DATAHUB_API_VERSION: %v", err)
+	}
+	t.Cleanup(func() {
+		if orig == "" {
+			_ = os.Unsetenv("DATAHUB_API_VERSION")
+		} else {
+			_ = os.Setenv("DATAHUB_API_VERSION", orig)
+		}
+	})
+
+	cfg, err := LoadConfig(yamlPath)
+	if err != nil {
+		t.Fatalf("LoadConfig() error: %v", err)
+	}
+
+	if cfg.DataHub.APIVersion != "v3" {
+		t.Errorf("APIVersion = %q, want env override %q", cfg.DataHub.APIVersion, "v3")
+	}
+}
+
+func TestClientConfig_APIVersion(t *testing.T) {
+	sc := ServerConfig{
+		DataHub: DataHubConfig{
+			URL:        "https://test.datahub.io",
+			Token:      "test-token",
+			APIVersion: "v3",
+		},
+	}
+
+	cfg := sc.ClientConfig()
+	if cfg.APIVersion != "v3" {
+		t.Errorf("APIVersion = %q, want %q", cfg.APIVersion, "v3")
+	}
+}
+
+func TestClientConfig_APIVersion_Empty(t *testing.T) {
+	sc := ServerConfig{
+		DataHub: DataHubConfig{
+			URL:   "https://test.datahub.io",
+			Token: "test-token",
+		},
+	}
+
+	cfg := sc.ClientConfig()
+	if cfg.APIVersion != "" {
+		t.Errorf("APIVersion = %q, want empty", cfg.APIVersion)
+	}
+}
+
 func TestPartialConfig_Defaults(t *testing.T) {
 	// Only set one field, rest should use defaults
 	data := []byte(`{"toolkit": {"default_limit": 50}}`)
