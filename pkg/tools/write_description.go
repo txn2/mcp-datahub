@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/txn2/mcp-datahub/pkg/client"
 )
 
 // UpdateDescriptionInput is the input for the update_description tool.
@@ -59,9 +61,16 @@ func (t *Toolkit) handleUpdateDescription(
 		return ErrorResult("UpdateDescription failed: " + err.Error()), nil, nil
 	}
 
+	aspectName := "unknown"
+	if parsed, parseErr := client.ParseURN(input.URN); parseErr == nil {
+		if info, lookupErr := client.LookupDescriptionAspect(parsed.EntityType); lookupErr == nil {
+			aspectName = info.AspectName
+		}
+	}
+
 	output := UpdateDescriptionOutput{
 		URN:    input.URN,
-		Aspect: "editableDatasetProperties",
+		Aspect: aspectName,
 		Action: "updated",
 	}
 

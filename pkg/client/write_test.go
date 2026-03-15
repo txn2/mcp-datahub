@@ -1228,18 +1228,19 @@ func TestLookupDescriptionAspect(t *testing.T) {
 		{"dataJob", "editableDataJobProperties", "description", false},
 		{"container", "editableContainerProperties", "description", false},
 		{"dataProduct", "dataProductProperties", "description", false},
-		{"domain", "domainProperties", "description", false},
-		{"glossaryTerm", "glossaryTermInfo", "definition", false},
 		{"glossaryNode", "glossaryNodeInfo", "definition", false},
+		// Unsupported types return errors
+		{"domain", "", "", true},
+		{"glossaryTerm", "", "", true},
 		{"tag", "", "", true},
 		{"corpuser", "", "", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.entityType, func(t *testing.T) {
-			info, err := lookupDescriptionAspect(tt.entityType)
+			info, err := LookupDescriptionAspect(tt.entityType)
 			if (err != nil) != tt.wantErr {
-				t.Fatalf("lookupDescriptionAspect(%q) error = %v, wantErr %v",
+				t.Fatalf("LookupDescriptionAspect(%q) error = %v, wantErr %v",
 					tt.entityType, err, tt.wantErr)
 			}
 			if info.AspectName != tt.wantAspect {
@@ -1268,20 +1269,6 @@ func TestUpdateDescription_EntityTypes(t *testing.T) {
 			wantField:  "description",
 		},
 		{
-			name:       "glossaryTerm uses definition field",
-			urn:        "urn:li:glossaryTerm:Classification",
-			wantEntity: "glossaryTerm",
-			wantAspect: "glossaryTermInfo",
-			wantField:  "definition",
-		},
-		{
-			name:       "domain",
-			urn:        "urn:li:domain:engineering",
-			wantEntity: "domain",
-			wantAspect: "domainProperties",
-			wantField:  "description",
-		},
-		{
 			name:       "dataProduct",
 			urn:        "urn:li:dataProduct:users",
 			wantEntity: "dataProduct",
@@ -1300,6 +1287,14 @@ func TestUpdateDescription_EntityTypes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// GraphQL endpoint (used by dataProduct to fetch name)
+				if r.URL.Path == "/api/graphql" {
+					resp := `{"data":{"dataProduct":{"urn":"urn:li:dataProduct:users","properties":{"name":"Users","description":""}}}}`
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(resp))
+					return
+				}
+
 				if r.Method == http.MethodGet {
 					w.WriteHeader(http.StatusNotFound)
 					return
@@ -1356,43 +1351,128 @@ func TestUpdateDescription_UnsupportedEntityType(t *testing.T) {
 	}
 }
 
-func TestUpdateDescription_GlossaryTermPreservesExistingFields(t *testing.T) {
+func TestUpdateDescription_DomainReturnsError(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.UpdateDescription(context.Background(), "urn:li:domain:engineering", "desc")
+	if err == nil {
+		t.Fatal("expected error for domain entity")
+	}
+	if !errors.Is(err, ErrUnsupportedEntityType) {
+		t.Errorf("expected ErrUnsupportedEntityType, got: %v", err)
+	}
+}
+
+func TestUpdateDescription_GlossaryTermReturnsError(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.UpdateDescription(context.Background(), "urn:li:glossaryTerm:Classification", "desc")
+	if err == nil {
+		t.Fatal("expected error for glossaryTerm entity")
+	}
+	if !errors.Is(err, ErrUnsupportedEntityType) {
+		t.Errorf("expected ErrUnsupportedEntityType, got: %v", err)
+	}
+}
+
+func TestAddTag_UnsupportedEntityType(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	tests := []struct {
+		name string
+		urn  string
+	}{
+		{"domain", "urn:li:domain:engineering"},
+		{"glossaryTerm", "urn:li:glossaryTerm:Classification"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := c.AddTag(context.Background(), tt.urn, "urn:li:tag:PII")
+			if err == nil {
+				t.Fatal("expected error for unsupported entity type")
+			}
+			if !errors.Is(err, ErrUnsupportedTagEntity) {
+				t.Errorf("expected ErrUnsupportedTagEntity, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestRemoveTag_UnsupportedEntityType(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	tests := []struct {
+		name string
+		urn  string
+	}{
+		{"domain", "urn:li:domain:engineering"},
+		{"glossaryTerm", "urn:li:glossaryTerm:Classification"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := c.RemoveTag(context.Background(), tt.urn, "urn:li:tag:PII")
+			if err == nil {
+				t.Fatal("expected error for unsupported entity type")
+			}
+			if !errors.Is(err, ErrUnsupportedTagEntity) {
+				t.Errorf("expected ErrUnsupportedTagEntity, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestAddGlossaryTerm_UnsupportedEntityType(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	tests := []struct {
+		name string
+		urn  string
+	}{
+		{"domain", "urn:li:domain:engineering"},
+		{"glossaryTerm", "urn:li:glossaryTerm:Classification"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := c.AddGlossaryTerm(context.Background(), tt.urn, "urn:li:glossaryTerm:PII")
+			if err == nil {
+				t.Fatal("expected error for unsupported entity type")
+			}
+			if !errors.Is(err, ErrUnsupportedGlossaryTermEntity) {
+				t.Errorf("expected ErrUnsupportedGlossaryTermEntity, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestUpdateDescription_DataProductPreservesName(t *testing.T) {
+	graphQLCalled := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// GraphQL endpoint for GetDataProduct
+		if r.URL.Path == "/api/graphql" {
+			graphQLCalled = true
+			resp := `{"data":{"dataProduct":{"urn":"urn:li:dataProduct:users","properties":{"name":"Users Product","description":"old desc"}}}}`
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(resp))
+			return
+		}
+
 		if r.Method == http.MethodGet {
-			// glossaryTermInfo has "definition" plus other fields
-			existing := `{"definition":"old def","termSource":"INTERNAL","name":"Classification"}`
-			resp := aspectResponse{Value: json.RawMessage(existing)}
+			// REST GET returns dataProductProperties WITHOUT "name"
+			propsJSON := `{"description":"old desc","customProperties":[]}`
+			resp := aspectResponse{Value: json.RawMessage(propsJSON)}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
 
-		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
-		if proposal["aspectName"] != "glossaryTermInfo" {
-			t.Errorf("expected aspect 'glossaryTermInfo', got %v", proposal["aspectName"])
-		}
-
+		// REST POST: verify "name" was injected
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
 		var fields map[string]json.RawMessage
 		if err := json.Unmarshal([]byte(aspectJSON), &fields); err != nil {
-			t.Fatalf("failed to unmarshal: %v", err)
+			t.Fatalf("failed to unmarshal aspect: %v", err)
 		}
-
-		var def string
-		if err := json.Unmarshal(fields["definition"], &def); err != nil {
-			t.Fatalf("failed to unmarshal definition: %v", err)
+		var name string
+		if err := json.Unmarshal(fields["name"], &name); err != nil {
+			t.Fatalf("name field missing or invalid: %v", err)
 		}
-		if def != "updated definition" {
-			t.Errorf("definition = %q, want %q", def, "updated definition")
+		if name != "Users Product" {
+			t.Errorf("expected name 'Users Product', got %q", name)
 		}
-
-		// termSource and name should be preserved
-		if _, ok := fields["termSource"]; !ok {
-			t.Error("expected termSource to be preserved")
-		}
-		if _, ok := fields["name"]; !ok {
-			t.Error("expected name to be preserved")
-		}
-
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -1405,8 +1485,97 @@ func TestUpdateDescription_GlossaryTermPreservesExistingFields(t *testing.T) {
 	}
 
 	err := c.UpdateDescription(context.Background(),
-		"urn:li:glossaryTerm:Classification", "updated definition")
+		"urn:li:dataProduct:users", "new description")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if !graphQLCalled {
+		t.Error("expected GraphQL call to fetch data product name")
+	}
+}
+
+func TestUpdateDescription_DataProductNameAlreadyPresent(t *testing.T) {
+	graphQLCalled := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/graphql" {
+			graphQLCalled = true
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			// REST GET returns dataProductProperties WITH "name" present
+			propsJSON := `{"description":"old desc","name":"Users Product"}`
+			resp := aspectResponse{Value: json.RawMessage(propsJSON)}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		// REST POST: verify name is still present
+		_, aspectJSON := extractProposalWireFormat(t, r.Body)
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(aspectJSON), &fields); err != nil {
+			t.Fatalf("failed to unmarshal aspect: %v", err)
+		}
+		if _, ok := fields["name"]; !ok {
+			t.Error("expected name field to be preserved")
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateDescription(context.Background(),
+		"urn:li:dataProduct:users", "new description")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if graphQLCalled {
+		t.Error("should not call GraphQL when name is already present")
+	}
+}
+
+func TestPreserveDataProductName_GraphQLError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/graphql" {
+			// GraphQL returns an error
+			resp := `{"errors":[{"message":"internal error"}]}`
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(resp))
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			// REST GET returns aspect without name
+			propsJSON := `{"description":"old desc"}`
+			resp := aspectResponse{Value: json.RawMessage(propsJSON)}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		t.Error("POST should not be called when GraphQL fails")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+	}
+
+	err := c.UpdateDescription(context.Background(),
+		"urn:li:dataProduct:users", "new description")
+	if err == nil {
+		t.Fatal("expected error when GraphQL fails")
 	}
 }

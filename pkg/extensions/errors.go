@@ -45,6 +45,18 @@ var errorHints = []errorHint{
 		substring: "invalid urn",
 		hint:      "Hint: URNs follow the format urn:li:dataset:(platform,name,env).",
 	},
+	{
+		substring: "does not support tag operations",
+		hint:      "Hint: Tags cannot be added to domain or glossaryTerm entities via the REST API.",
+	},
+	{
+		substring: "does not support glossary term operations",
+		hint:      "Hint: Glossary terms cannot be associated with domain or glossaryTerm entities via the REST API.",
+	},
+	{
+		substring: "unsupported entity type for description",
+		hint:      "Hint: Description updates for domain and glossaryTerm entities are not supported via the REST API.",
+	},
 }
 
 // ErrorHintMiddleware enriches error results with helpful hints.

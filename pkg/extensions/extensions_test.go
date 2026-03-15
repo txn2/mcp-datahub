@@ -363,6 +363,21 @@ func TestErrorHintMiddleware_Hints(t *testing.T) {
 			wantHint: "urn:li:dataset:",
 		},
 		{
+			name:     "unsupported tag entity",
+			errMsg:   "AddTag: entity type does not support tag operations: domain",
+			wantHint: "Tags cannot be added to domain",
+		},
+		{
+			name:     "unsupported glossary term entity",
+			errMsg:   "AddGlossaryTerm: entity type does not support glossary term operations: domain",
+			wantHint: "Glossary terms cannot be associated",
+		},
+		{
+			name:     "unsupported description entity",
+			errMsg:   "UpdateDescription: unsupported entity type for description update: domain",
+			wantHint: "Description updates for domain and glossaryTerm",
+		},
+		{
 			name:     "no matching hint",
 			errMsg:   "some random error",
 			wantHint: "",
