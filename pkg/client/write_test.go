@@ -1272,7 +1272,7 @@ func TestLookupDescriptionAspect(t *testing.T) {
 		{"dataProduct", "dataProductProperties", "description", false},
 		{"glossaryNode", "glossaryNodeInfo", "definition", false},
 		{"domain", "domainProperties", "description", false},
-		{"glossaryTerm", "glossaryTermInfo", "description", false},
+		{"glossaryTerm", "glossaryTermInfo", "definition", false},
 		// Unsupported types return errors
 		{"tag", "", "", true},
 		{"corpuser", "", "", true},
@@ -1336,7 +1336,7 @@ func TestUpdateDescription_EntityTypes(t *testing.T) {
 			urn:        "urn:li:glossaryTerm:Classification",
 			wantEntity: "glossaryTerm",
 			wantAspect: "glossaryTermInfo",
-			wantField:  "description",
+			wantField:  "definition",
 		},
 	}
 

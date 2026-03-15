@@ -59,7 +59,7 @@ var descriptionAspectMap = map[string]DescriptionAspectInfo{
 	entityTypeDataProduct:  {AspectName: "dataProductProperties", FieldName: "description"},
 	entityTypeGlossaryNode: {AspectName: "glossaryNodeInfo", FieldName: "definition"},
 	entityTypeDomain:       {AspectName: "domainProperties", FieldName: "description"},
-	entityTypeGlossaryTerm: {AspectName: "glossaryTermInfo", FieldName: "description"},
+	entityTypeGlossaryTerm: {AspectName: "glossaryTermInfo", FieldName: "definition"},
 }
 
 // globalTagsSupportedTypes lists entity types that support the globalTags aspect.
