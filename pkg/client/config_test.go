@@ -63,6 +63,52 @@ func TestConfigValidate(t *testing.T) {
 			wantErr: true,
 			errMsg:  "DATAHUB_URL is required",
 		},
+		{
+			name: "valid with explicit v1",
+			config: Config{
+				URL:        "https://datahub.example.com",
+				Token:      "test-token",
+				APIVersion: "v1",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid with v3",
+			config: Config{
+				URL:        "https://datahub.example.com",
+				Token:      "test-token",
+				APIVersion: "v3",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid with empty api version",
+			config: Config{
+				URL:   "https://datahub.example.com",
+				Token: "test-token",
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid api version",
+			config: Config{
+				URL:        "https://datahub.example.com",
+				Token:      "test-token",
+				APIVersion: "v2",
+			},
+			wantErr: true,
+			errMsg:  `invalid DATAHUB_API_VERSION: "v2" (must be "v1" or "v3")`,
+		},
+		{
+			name: "invalid api version typo",
+			config: Config{
+				URL:        "https://datahub.example.com",
+				Token:      "test-token",
+				APIVersion: "3",
+			},
+			wantErr: true,
+			errMsg:  `invalid DATAHUB_API_VERSION: "3" (must be "v1" or "v3")`,
+		},
 	}
 
 	for _, tt := range tests {

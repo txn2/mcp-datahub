@@ -130,5 +130,8 @@ func (c Config) Validate() error {
 	if c.Token == "" {
 		return fmt.Errorf("DATAHUB_TOKEN is required")
 	}
+	if c.APIVersion != "" && c.APIVersion != APIVersionV1 && c.APIVersion != APIVersionV3 {
+		return fmt.Errorf("invalid DATAHUB_API_VERSION: %q (must be %q or %q)", c.APIVersion, APIVersionV1, APIVersionV3)
+	}
 	return nil
 }

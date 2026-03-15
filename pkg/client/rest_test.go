@@ -843,6 +843,50 @@ func TestSetRESTHeaders_V3(t *testing.T) {
 	}
 }
 
+func TestGetAspect_V3_NullValue(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// v3 returns 200 OK but value is null — aspect never written
+		_, _ = w.Write([]byte(`{"value": null}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     Config{APIVersion: APIVersionV3},
+		logger:     NopLogger{},
+	}
+
+	_, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:test", "globalTags")
+	if err != ErrNotFound {
+		t.Errorf("expected ErrNotFound for null value, got: %v", err)
+	}
+}
+
+func TestGetAspect_V3_EmptyObject(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// v3 returns 200 OK but no value key — treated as null
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     Config{APIVersion: APIVersionV3},
+		logger:     NopLogger{},
+	}
+
+	_, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:test", "globalTags")
+	if err != ErrNotFound {
+		t.Errorf("expected ErrNotFound for empty object, got: %v", err)
+	}
+}
+
 func TestPostIngestProposal_V3_MarshalError(t *testing.T) {
 	c := &Client{
 		endpoint: "https://datahub.example.com/api/graphql",
