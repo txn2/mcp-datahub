@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
 func TestGetStructuredProperties(t *testing.T) {
@@ -484,7 +486,7 @@ func TestUpsertStructuredProperties(t *testing.T) {
 	tests := []struct {
 		name       string
 		urn        string
-		properties []StructuredPropertyInput
+		properties []types.StructuredPropertyInput
 		statusCode int
 		response   string
 		wantErr    bool
@@ -492,7 +494,7 @@ func TestUpsertStructuredProperties(t *testing.T) {
 		{
 			name: "single property",
 			urn:  "urn:li:dataset:test",
-			properties: []StructuredPropertyInput{
+			properties: []types.StructuredPropertyInput{
 				{
 					PropertyURN: "urn:li:structuredProperty:retentionTime",
 					Values:      []any{float64(30)},
@@ -503,7 +505,7 @@ func TestUpsertStructuredProperties(t *testing.T) {
 		{
 			name: "multiple properties",
 			urn:  "urn:li:dataset:test",
-			properties: []StructuredPropertyInput{
+			properties: []types.StructuredPropertyInput{
 				{
 					PropertyURN: "urn:li:structuredProperty:retentionTime",
 					Values:      []any{float64(30)},
@@ -518,7 +520,7 @@ func TestUpsertStructuredProperties(t *testing.T) {
 		{
 			name: "graphql error",
 			urn:  "urn:li:dataset:test",
-			properties: []StructuredPropertyInput{
+			properties: []types.StructuredPropertyInput{
 				{PropertyURN: "urn:li:structuredProperty:invalid", Values: []any{"x"}},
 			},
 			response: `{"errors": [{"message": "invalid property URN"}]}`,

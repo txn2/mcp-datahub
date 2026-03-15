@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -71,23 +72,40 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 // enrichEntityWith14xFeatures enriches an entity with DataHub 1.4.x data.
 // Each call returns nil/empty when the feature is not supported, so the
 // entity fields remain zero-valued on DataHub < 1.4.x.
+// Calls are made concurrently since they are independent reads.
 func (t *Toolkit) enrichEntityWith14xFeatures(ctx context.Context, c DataHubClient, entity *types.Entity) {
+	var wg sync.WaitGroup
+
 	// Structured properties (all entity types)
-	if props, err := c.GetStructuredProperties(ctx, entity.URN); err == nil && len(props) > 0 {
-		entity.StructuredProperties = props
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if props, err := c.GetStructuredProperties(ctx, entity.URN); err == nil && len(props) > 0 {
+			entity.StructuredProperties = props
+		}
+	}()
 
 	// Active incidents (datasets, dashboards, charts, data flows, data jobs)
-	if incidents, err := c.GetIncidents(ctx, entity.URN); err == nil && incidents != nil && incidents.Total > 0 {
-		entity.ActiveIncidents = incidents
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if incidents, err := c.GetIncidents(ctx, entity.URN); err == nil && incidents != nil && incidents.Total > 0 {
+			entity.ActiveIncidents = incidents
+		}
+	}()
 
 	// Data contracts (datasets only)
 	if entity.Type == "DATASET" {
-		if contract, err := c.GetDataContract(ctx, entity.URN); err == nil && contract != nil {
-			entity.DataContract = contract
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if contract, err := c.GetDataContract(ctx, entity.URN); err == nil && contract != nil {
+				entity.DataContract = contract
+			}
+		}()
 	}
+
+	wg.Wait()
 }
 
 // enrichEntityWithQueryContext flattens entity fields to top level and appends

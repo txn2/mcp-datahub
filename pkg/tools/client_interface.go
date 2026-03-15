@@ -84,7 +84,7 @@ type DataHubClient interface {
 	ListStructuredPropertyDefinitions(ctx context.Context) ([]types.StructuredPropertyDefinition, error)
 
 	// UpsertStructuredProperties sets or updates structured property values on an entity.
-	UpsertStructuredProperties(ctx context.Context, urn string, properties []client.StructuredPropertyInput) error
+	UpsertStructuredProperties(ctx context.Context, urn string, properties []types.StructuredPropertyInput) error
 
 	// RemoveStructuredProperties removes structured properties from an entity.
 	RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error

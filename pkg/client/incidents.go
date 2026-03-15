@@ -10,138 +10,50 @@ import (
 // GraphQL queries and mutations for incidents (DataHub 1.4.x+).
 const (
 	// GetIncidentsQuery retrieves active incidents for an entity.
+	// Uses a named fragment to avoid duplicating the incident field selection
+	// across each entity type inline fragment.
 	GetIncidentsQuery = `
+fragment IncidentFields on EntityIncidentsResult {
+  total
+  incidents {
+    urn
+    type
+    customType
+    title
+    description
+    status {
+      state
+      lastUpdated {
+        time
+        actor
+      }
+    }
+    source {
+      type
+    }
+    created {
+      time
+      actor
+    }
+  }
+}
+
 query getIncidents($urn: String!, $start: Int!, $count: Int!) {
   entity(urn: $urn) {
     ... on Dataset {
-      incidents(state: ACTIVE, start: $start, count: $count) {
-        total
-        incidents {
-          urn
-          type
-          customType
-          title
-          description
-          status {
-            state
-            lastUpdated {
-              time
-              actor
-            }
-          }
-          source {
-            type
-          }
-          created {
-            time
-            actor
-          }
-        }
-      }
+      incidents(state: ACTIVE, start: $start, count: $count) { ...IncidentFields }
     }
     ... on Dashboard {
-      incidents(state: ACTIVE, start: $start, count: $count) {
-        total
-        incidents {
-          urn
-          type
-          customType
-          title
-          description
-          status {
-            state
-            lastUpdated {
-              time
-              actor
-            }
-          }
-          source {
-            type
-          }
-          created {
-            time
-            actor
-          }
-        }
-      }
+      incidents(state: ACTIVE, start: $start, count: $count) { ...IncidentFields }
     }
     ... on Chart {
-      incidents(state: ACTIVE, start: $start, count: $count) {
-        total
-        incidents {
-          urn
-          type
-          customType
-          title
-          description
-          status {
-            state
-            lastUpdated {
-              time
-              actor
-            }
-          }
-          source {
-            type
-          }
-          created {
-            time
-            actor
-          }
-        }
-      }
+      incidents(state: ACTIVE, start: $start, count: $count) { ...IncidentFields }
     }
     ... on DataFlow {
-      incidents(state: ACTIVE, start: $start, count: $count) {
-        total
-        incidents {
-          urn
-          type
-          customType
-          title
-          description
-          status {
-            state
-            lastUpdated {
-              time
-              actor
-            }
-          }
-          source {
-            type
-          }
-          created {
-            time
-            actor
-          }
-        }
-      }
+      incidents(state: ACTIVE, start: $start, count: $count) { ...IncidentFields }
     }
     ... on DataJob {
-      incidents(state: ACTIVE, start: $start, count: $count) {
-        total
-        incidents {
-          urn
-          type
-          customType
-          title
-          description
-          status {
-            state
-            lastUpdated {
-              time
-              actor
-            }
-          }
-          source {
-            type
-          }
-          created {
-            time
-            actor
-          }
-        }
-      }
+      incidents(state: ACTIVE, start: $start, count: $count) { ...IncidentFields }
     }
   }
 }
@@ -180,6 +92,7 @@ func (c *Client) GetIncidents(ctx context.Context, urn string) (*types.IncidentR
 
 	if err := c.Execute(ctx, GetIncidentsQuery, variables, &response); err != nil {
 		// Return empty result when incidents are not supported (DataHub < 1.4.x)
+		c.logger.Debug("GetIncidents graceful fallback", "urn", urn, "error", err.Error())
 		return &types.IncidentResult{}, nil
 	}
 

@@ -10,43 +10,29 @@ import (
 // GraphQL queries and mutations for structured properties (DataHub 1.4.x+).
 const (
 	// GetStructuredPropertiesQuery reads structured property values assigned to an entity.
+	// Uses a named fragment to avoid duplicating the field selection across entity types.
 	GetStructuredPropertiesQuery = `
-query getStructuredProperties($urn: String!) {
-  entity(urn: $urn) {
-    ... on Dataset {
-      structuredProperties {
-        properties {
-          structuredProperty {
-            urn
-            definition {
-              qualifiedName
-              displayName
-              description
-              valueType {
-                info {
-                  type
-                }
-              }
-              cardinality
-              entityTypes {
-                info {
-                  type
-                }
-              }
-              allowedValues {
-                value {
-                  ... on StringValue {
-                    stringValue
-                  }
-                  ... on NumberValue {
-                    numberValue
-                  }
-                }
-                description
-              }
-            }
+fragment StructuredProps on EntityStructuredPropertiesResult {
+  properties {
+    structuredProperty {
+      urn
+      definition {
+        qualifiedName
+        displayName
+        description
+        valueType {
+          info {
+            type
           }
-          values {
+        }
+        cardinality
+        entityTypes {
+          info {
+            type
+          }
+        }
+        allowedValues {
+          value {
             ... on StringValue {
               stringValue
             }
@@ -54,8 +40,43 @@ query getStructuredProperties($urn: String!) {
               numberValue
             }
           }
+          description
         }
       }
+    }
+    values {
+      ... on StringValue {
+        stringValue
+      }
+      ... on NumberValue {
+        numberValue
+      }
+    }
+  }
+}
+
+query getStructuredProperties($urn: String!) {
+  entity(urn: $urn) {
+    ... on Dataset {
+      structuredProperties { ...StructuredProps }
+    }
+    ... on Dashboard {
+      structuredProperties { ...StructuredProps }
+    }
+    ... on Chart {
+      structuredProperties { ...StructuredProps }
+    }
+    ... on DataFlow {
+      structuredProperties { ...StructuredProps }
+    }
+    ... on DataJob {
+      structuredProperties { ...StructuredProps }
+    }
+    ... on Container {
+      structuredProperties { ...StructuredProps }
+    }
+    ... on DataProduct {
+      structuredProperties { ...StructuredProps }
     }
   }
 }
@@ -119,15 +140,6 @@ mutation removeStructuredProperties($input: RemoveStructuredPropertiesInput!) {
 `
 )
 
-// StructuredPropertyInput represents a structured property value to set on an entity.
-type StructuredPropertyInput struct {
-	// PropertyURN is the URN of the structured property definition.
-	PropertyURN string
-
-	// Values holds the value(s) to assign. Elements should be strings or numbers.
-	Values []any
-}
-
 // GetStructuredProperties retrieves structured property values assigned to an entity.
 // Returns empty results (not an error) when structured properties are not available,
 // which is common on DataHub versions before 1.4.x.
@@ -146,6 +158,7 @@ func (c *Client) GetStructuredProperties(ctx context.Context, urn string) ([]typ
 
 	if err := c.Execute(ctx, GetStructuredPropertiesQuery, variables, &response); err != nil {
 		// Return empty result when structured properties are not supported (DataHub < 1.4.x)
+		c.logger.Debug("GetStructuredProperties graceful fallback", "urn", urn, "error", err.Error())
 		return nil, nil
 	}
 
@@ -188,6 +201,7 @@ func (c *Client) ListStructuredPropertyDefinitions(ctx context.Context) ([]types
 
 	if err := c.Execute(ctx, ListStructuredPropertyDefinitionsQuery, variables, &response); err != nil {
 		// Return empty result when STRUCTURED_PROPERTY type is not supported (DataHub < 1.4.x)
+		c.logger.Debug("ListStructuredPropertyDefinitions graceful fallback", "error", err.Error())
 		return nil, nil
 	}
 
@@ -201,7 +215,7 @@ func (c *Client) ListStructuredPropertyDefinitions(ctx context.Context) ([]types
 }
 
 // UpsertStructuredProperties sets or updates structured property values on an entity.
-func (c *Client) UpsertStructuredProperties(ctx context.Context, urn string, properties []StructuredPropertyInput) error {
+func (c *Client) UpsertStructuredProperties(ctx context.Context, urn string, properties []types.StructuredPropertyInput) error {
 	propInputs := make([]map[string]any, 0, len(properties))
 	for _, p := range properties {
 		propInputs = append(propInputs, map[string]any{

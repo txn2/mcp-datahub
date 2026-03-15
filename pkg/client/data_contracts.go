@@ -53,6 +53,7 @@ func (c *Client) GetDataContract(ctx context.Context, datasetURN string) (*types
 
 	if err := c.Execute(ctx, GetDataContractQuery, variables, &response); err != nil {
 		// Return nil when data contracts are not supported (DataHub < 1.4.x)
+		c.logger.Debug("GetDataContract graceful fallback", "urn", datasetURN, "error", err.Error())
 		return nil, nil
 	}
 

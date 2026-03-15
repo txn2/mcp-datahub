@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -36,7 +37,7 @@ type mockClient struct {
 	removeLinkFunc                        func(ctx context.Context, urn, linkURL string) error
 	getStructuredPropertiesFunc           func(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error)
 	listStructuredPropertyDefinitionsFunc func(ctx context.Context) ([]types.StructuredPropertyDefinition, error)
-	upsertStructuredPropertiesFunc        func(ctx context.Context, urn string, properties []client.StructuredPropertyInput) error
+	upsertStructuredPropertiesFunc        func(ctx context.Context, urn string, properties []types.StructuredPropertyInput) error
 	removeStructuredPropertiesFunc        func(ctx context.Context, urn string, propertyURNs []string) error
 	getIncidentsFunc                      func(ctx context.Context, urn string) (*types.IncidentResult, error)
 	raiseIncidentFunc                     func(ctx context.Context, input types.RaiseIncidentInput) (string, error)
@@ -203,7 +204,7 @@ func (m *mockClient) ListStructuredPropertyDefinitions(ctx context.Context) ([]t
 	return nil, nil
 }
 
-func (m *mockClient) UpsertStructuredProperties(ctx context.Context, urn string, properties []client.StructuredPropertyInput) error {
+func (m *mockClient) UpsertStructuredProperties(ctx context.Context, urn string, properties []types.StructuredPropertyInput) error {
 	if m.upsertStructuredPropertiesFunc != nil {
 		return m.upsertStructuredPropertiesFunc(ctx, urn, properties)
 	}
@@ -951,5 +952,165 @@ func TestAllToolsUnchanged(t *testing.T) {
 		if writeSet[name] {
 			t.Errorf("AllTools() should not contain write tool %s", name)
 		}
+	}
+}
+
+func TestEnrichEntityWith14xFeatures(t *testing.T) {
+	mock := &mockClient{}
+	mock.getEntityFunc = func(_ context.Context, _ string) (*types.Entity, error) {
+		return &types.Entity{
+			URN:  "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)",
+			Type: "DATASET",
+			Name: "users",
+		}, nil
+	}
+	mock.getStructuredPropertiesFunc = func(_ context.Context, _ string) ([]types.StructuredPropertyValue, error) {
+		return []types.StructuredPropertyValue{
+			{PropertyURN: "urn:li:structuredProperty:retention", Values: []any{float64(30)}},
+		}, nil
+	}
+	mock.getIncidentsFunc = func(_ context.Context, _ string) (*types.IncidentResult, error) {
+		return &types.IncidentResult{
+			Total: 1,
+			Incidents: []types.Incident{
+				{URN: "urn:li:incident:1", Type: "OPERATIONAL", Title: "Pipeline down", State: "ACTIVE"},
+			},
+		}, nil
+	}
+	mock.getDataContractFunc = func(_ context.Context, _ string) (*types.DataContract, error) {
+		return &types.DataContract{Status: "PASSING"}, nil
+	}
+
+	toolkit := NewToolkit(mock, DefaultConfig())
+	entity := &types.Entity{
+		URN:  "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)",
+		Type: "DATASET",
+		Name: "users",
+	}
+
+	toolkit.enrichEntityWith14xFeatures(t.Context(), mock, entity)
+
+	if len(entity.StructuredProperties) != 1 {
+		t.Errorf("StructuredProperties count = %d, want 1", len(entity.StructuredProperties))
+	}
+	if entity.StructuredProperties[0].PropertyURN != "urn:li:structuredProperty:retention" {
+		t.Errorf("StructuredProperties[0].PropertyURN = %q", entity.StructuredProperties[0].PropertyURN)
+	}
+	if entity.ActiveIncidents == nil || entity.ActiveIncidents.Total != 1 {
+		t.Errorf("ActiveIncidents = %+v, want total=1", entity.ActiveIncidents)
+	}
+	if entity.DataContract == nil || entity.DataContract.Status != "PASSING" {
+		t.Errorf("DataContract = %+v, want status=PASSING", entity.DataContract)
+	}
+}
+
+func TestEnrichEntityWith14xFeatures_NonDataset_SkipsContract(t *testing.T) {
+	mock := &mockClient{}
+	mock.getStructuredPropertiesFunc = func(_ context.Context, _ string) ([]types.StructuredPropertyValue, error) {
+		return nil, nil
+	}
+	mock.getIncidentsFunc = func(_ context.Context, _ string) (*types.IncidentResult, error) {
+		return &types.IncidentResult{}, nil
+	}
+	mock.getDataContractFunc = func(_ context.Context, _ string) (*types.DataContract, error) {
+		t.Error("GetDataContract should not be called for non-dataset entities")
+		return nil, nil
+	}
+
+	toolkit := NewToolkit(mock, DefaultConfig())
+	entity := &types.Entity{
+		URN:  "urn:li:dashboard:(urn:li:dataPlatform:looker,dashboard1)",
+		Type: "DASHBOARD",
+		Name: "dashboard1",
+	}
+
+	toolkit.enrichEntityWith14xFeatures(t.Context(), mock, entity)
+
+	if entity.DataContract != nil {
+		t.Error("DataContract should be nil for non-dataset entities")
+	}
+}
+
+func TestSearchModeRouting(t *testing.T) {
+	tests := []struct {
+		name           string
+		mode           string
+		wantSemantic   bool
+		wantKeyword    bool
+		wantErr        bool
+		wantErrContain string
+	}{
+		{
+			name:        "default mode uses keyword",
+			mode:        "",
+			wantKeyword: true,
+		},
+		{
+			name:        "keyword mode",
+			mode:        "keyword",
+			wantKeyword: true,
+		},
+		{
+			name:         "semantic mode",
+			mode:         "semantic",
+			wantSemantic: true,
+		},
+		{
+			name:           "invalid mode",
+			mode:           "vector",
+			wantErr:        true,
+			wantErrContain: "invalid mode",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keywordCalled := false
+			semanticCalled := false
+
+			mock := &mockClient{}
+			mock.searchFunc = func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+				keywordCalled = true
+				return &types.SearchResult{}, nil
+			}
+			mock.semanticSearchFunc = func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+				semanticCalled = true
+				return &types.SearchResult{}, nil
+			}
+
+			toolkit := NewToolkit(mock, DefaultConfig())
+			input := SearchInput{Query: "test", Mode: tt.mode}
+			result, _, _ := toolkit.handleSearch(t.Context(), nil, input)
+
+			if tt.wantErr {
+				if !result.IsError {
+					t.Error("expected error result")
+				}
+				// Check error message content
+				if tt.wantErrContain != "" {
+					for _, c := range result.Content {
+						if tc, ok := c.(*mcp.TextContent); ok {
+							if !strings.Contains(tc.Text, tt.wantErrContain) {
+								t.Errorf("error %q should contain %q", tc.Text, tt.wantErrContain)
+							}
+						}
+					}
+				}
+				return
+			}
+
+			if tt.wantKeyword && !keywordCalled {
+				t.Error("expected keyword Search to be called")
+			}
+			if tt.wantSemantic && !semanticCalled {
+				t.Error("expected SemanticSearch to be called")
+			}
+			if tt.wantKeyword && semanticCalled {
+				t.Error("SemanticSearch should not be called in keyword mode")
+			}
+			if tt.wantSemantic && keywordCalled {
+				t.Error("keyword Search should not be called in semantic mode")
+			}
+		})
 	}
 }

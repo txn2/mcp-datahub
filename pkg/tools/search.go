@@ -67,6 +67,10 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 		return ErrorResult("query parameter is required"), nil, nil
 	}
 
+	if input.Mode != "" && input.Mode != "keyword" && input.Mode != "semantic" {
+		return ErrorResult("invalid mode: must be 'keyword' or 'semantic'"), nil, nil
+	}
+
 	datahubClient, err := t.getClient(input.Connection)
 	if err != nil {
 		return ErrorResult("Connection error: " + err.Error()), nil, nil

@@ -50,3 +50,12 @@ type StructuredPropertyValue struct {
 	// Values holds the assigned value(s). Elements are typically strings or numbers.
 	Values []any `json:"values"`
 }
+
+// StructuredPropertyInput represents a structured property value to set on an entity.
+type StructuredPropertyInput struct {
+	// PropertyURN is the URN of the structured property definition.
+	PropertyURN string
+
+	// Values holds the value(s) to assign. Elements should be strings or numbers.
+	Values []any
+}
