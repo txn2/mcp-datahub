@@ -128,7 +128,7 @@ func TestGetAspect(t *testing.T) {
 		logger:     NopLogger{},
 	}
 
-	result, err := c.getAspect(context.Background(), "urn:li:dataset:test", "globalTags")
+	result, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:test", "globalTags")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestGetAspect_NotFound(t *testing.T) {
 		logger:     NopLogger{},
 	}
 
-	_, err := c.getAspect(context.Background(), "urn:li:dataset:missing", "globalTags")
+	_, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:missing", "globalTags")
 	if err != ErrNotFound {
 		t.Errorf("expected ErrNotFound, got: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestGetAspect_NullValue(t *testing.T) {
 				logger:     NopLogger{},
 			}
 
-			_, err := c.getAspect(context.Background(), "urn:li:dataset:test", "editableDatasetProperties")
+			_, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:test", "editableDatasetProperties")
 			if err != ErrNotFound {
 				t.Errorf("expected ErrNotFound, got: %v", err)
 			}
@@ -228,7 +228,7 @@ func TestGetAspect_Unauthorized(t *testing.T) {
 		logger:     NopLogger{},
 	}
 
-	_, err := c.getAspect(context.Background(), "urn:li:dataset:test", "globalTags")
+	_, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:test", "globalTags")
 	if err != ErrUnauthorized {
 		t.Errorf("expected ErrUnauthorized, got: %v", err)
 	}
@@ -447,7 +447,7 @@ func TestGetAspect_InvalidResponseJSON(t *testing.T) {
 		logger:     NopLogger{},
 	}
 
-	_, err := c.getAspect(context.Background(), "urn:li:dataset:test", "globalTags")
+	_, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:test", "globalTags")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON response")
 	}
@@ -643,5 +643,221 @@ func TestCheckRESTStatus(t *testing.T) {
 				t.Errorf("expected %v, got: %v", tt.wantErr, err)
 			}
 		})
+	}
+}
+
+func TestGetAspect_V3(t *testing.T) {
+	expectedValue := json.RawMessage(`{"tags":["test"]}`)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		// v3 URL: /openapi/v3/entity/{entityType}/{urn}/{aspect}
+		wantPath := "/openapi/v3/entity/dataset/urn%3Ali%3Adataset%3Atest/globalTags"
+		if r.URL.RawPath != wantPath && r.URL.Path != "/openapi/v3/entity/dataset/urn:li:dataset:test/globalTags" {
+			t.Errorf("unexpected path: raw=%q path=%q, want %q", r.URL.RawPath, r.URL.Path, wantPath)
+		}
+
+		// No RestLi header for v3
+		if v := r.Header.Get("X-RestLi-Protocol-Version"); v != "" {
+			t.Errorf("v3 should not send X-RestLi-Protocol-Version, got %q", v)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			t.Errorf("unexpected auth header: %s", r.Header.Get("Authorization"))
+		}
+
+		resp := aspectResponse{Value: expectedValue}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     Config{APIVersion: APIVersionV3},
+		logger:     NopLogger{},
+	}
+
+	result, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:test", "globalTags")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(result) != string(expectedValue) {
+		t.Errorf("got %s, want %s", string(result), string(expectedValue))
+	}
+}
+
+func TestGetAspect_V3_NotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"error":"not found"}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     Config{APIVersion: APIVersionV3},
+		logger:     NopLogger{},
+	}
+
+	_, err := c.getAspect(context.Background(), "dataset", "urn:li:dataset:missing", "globalTags")
+	if err != ErrNotFound {
+		t.Errorf("expected ErrNotFound, got: %v", err)
+	}
+}
+
+func TestPostIngestProposal_V3(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+
+		// v3 URL
+		wantPath := "/openapi/v3/entity/dataset/urn%3Ali%3Adataset%3Atest/globalTags"
+		if r.URL.RawPath != wantPath && r.URL.Path != "/openapi/v3/entity/dataset/urn:li:dataset:test/globalTags" {
+			t.Errorf("unexpected path: raw=%q path=%q, want %q", r.URL.RawPath, r.URL.Path, wantPath)
+		}
+
+		// No RestLi header
+		if v := r.Header.Get("X-RestLi-Protocol-Version"); v != "" {
+			t.Errorf("v3 should not send X-RestLi-Protocol-Version, got %q", v)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("unexpected content type: %s", r.Header.Get("Content-Type"))
+		}
+
+		// Body should be {"value": {...}} (not wrapped in proposal/GenericAspect)
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("failed to read body: %v", err)
+		}
+
+		var body map[string]any
+		if err := json.Unmarshal(raw, &body); err != nil {
+			t.Fatalf("failed to unmarshal body: %v", err)
+		}
+
+		// Must have "value" at top level
+		val, ok := body["value"]
+		if !ok {
+			t.Fatal("body missing 'value' key")
+		}
+
+		// Must NOT have proposal wrapper
+		if _, hasProposal := body["proposal"]; hasProposal {
+			t.Error("v3 body should not have 'proposal' wrapper")
+		}
+
+		// Value should contain our aspect data
+		valMap, ok := val.(map[string]any)
+		if !ok {
+			t.Fatalf("value should be an object, got %T", val)
+		}
+		if _, hasTags := valMap["tags"]; !hasTags {
+			t.Error("value missing 'tags' key")
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     Config{APIVersion: APIVersionV3},
+		logger:     NopLogger{},
+	}
+
+	err := c.postIngestProposal(context.Background(), ingestProposal{
+		EntityType: "dataset",
+		EntityURN:  "urn:li:dataset:test",
+		AspectName: "globalTags",
+		Aspect:     map[string]any{"tags": []any{}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestPostIngestProposal_V3_NonASCIIPreserved(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("failed to read body: %v", err)
+		}
+
+		var body struct {
+			Value map[string]any `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &body); err != nil {
+			t.Fatalf("failed to unmarshal body: %v", err)
+		}
+
+		desc, _ := body.Value["description"].(string)
+		if desc != "before \u2014 after" {
+			t.Errorf("expected em dash in description, got %q", desc)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     Config{APIVersion: APIVersionV3},
+		logger:     NopLogger{},
+	}
+
+	err := c.postIngestProposal(context.Background(), ingestProposal{
+		EntityType: "dataset",
+		EntityURN:  "urn:li:dataset:test",
+		AspectName: "editableDatasetProperties",
+		Aspect:     map[string]any{"description": "before \u2014 after"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSetRESTHeaders_V3(t *testing.T) {
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
+
+	c := &Client{
+		token:  "test-token",
+		config: Config{APIVersion: APIVersionV3},
+	}
+	c.setRESTHeaders(req)
+
+	if req.Header.Get("Authorization") != "Bearer test-token" {
+		t.Errorf("unexpected auth header: %s", req.Header.Get("Authorization"))
+	}
+	if v := req.Header.Get("X-RestLi-Protocol-Version"); v != "" {
+		t.Errorf("v3 should not set X-RestLi-Protocol-Version, got %q", v)
+	}
+}
+
+func TestPostIngestProposal_V3_MarshalError(t *testing.T) {
+	c := &Client{
+		endpoint: "https://datahub.example.com/api/graphql",
+		token:    "test-token",
+		config:   Config{APIVersion: APIVersionV3},
+		logger:   NopLogger{},
+	}
+
+	err := c.postIngestProposal(context.Background(), ingestProposal{
+		EntityType: "dataset",
+		EntityURN:  "urn:li:dataset:test",
+		AspectName: "testAspect",
+		Aspect:     make(chan int),
+	})
+	if err == nil {
+		t.Fatal("expected error for unmarshalable aspect")
 	}
 }

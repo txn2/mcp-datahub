@@ -95,6 +95,7 @@ func setupEnv(t *testing.T, vars envVars) {
 		"DATAHUB_URL", "DATAHUB_TOKEN", "DATAHUB_TIMEOUT",
 		"DATAHUB_RETRY_MAX", "DATAHUB_DEFAULT_LIMIT",
 		"DATAHUB_MAX_LIMIT", "DATAHUB_MAX_LINEAGE_DEPTH",
+		"DATAHUB_API_VERSION",
 	}
 	for _, key := range allVars {
 		if val, ok := vars[key]; ok {
@@ -248,6 +249,7 @@ func saveEnvVars() map[string]string {
 		"DATAHUB_URL", "DATAHUB_TOKEN", "DATAHUB_TIMEOUT",
 		"DATAHUB_RETRY_MAX", "DATAHUB_DEFAULT_LIMIT",
 		"DATAHUB_MAX_LIMIT", "DATAHUB_MAX_LINEAGE_DEPTH",
+		"DATAHUB_API_VERSION",
 	}
 	saved := make(map[string]string)
 	for _, k := range keys {
@@ -265,5 +267,62 @@ func restoreEnvVars(t *testing.T, saved map[string]string) {
 		} else {
 			mustSetenv(t, k, v)
 		}
+	}
+}
+
+func TestFromEnv_APIVersion(t *testing.T) {
+	origEnv := saveEnvVars()
+	t.Cleanup(func() { restoreEnvVars(t, origEnv) })
+
+	t.Run("defaults to empty (v1 behavior)", func(t *testing.T) {
+		setupEnv(t, envVars{
+			"DATAHUB_URL":   "https://test.datahub.io",
+			"DATAHUB_TOKEN": "token",
+		})
+
+		cfg, err := FromEnv()
+		if err != nil {
+			t.Fatalf("FromEnv() error: %v", err)
+		}
+		if cfg.APIVersion != "" {
+			t.Errorf("APIVersion = %q, want empty", cfg.APIVersion)
+		}
+	})
+
+	t.Run("reads v3 from env", func(t *testing.T) {
+		setupEnv(t, envVars{
+			"DATAHUB_URL":         "https://test.datahub.io",
+			"DATAHUB_TOKEN":       "token",
+			"DATAHUB_API_VERSION": "v3",
+		})
+
+		cfg, err := FromEnv()
+		if err != nil {
+			t.Fatalf("FromEnv() error: %v", err)
+		}
+		if cfg.APIVersion != "v3" {
+			t.Errorf("APIVersion = %q, want %q", cfg.APIVersion, "v3")
+		}
+	})
+}
+
+func TestIsV3(t *testing.T) {
+	tests := []struct {
+		name       string
+		apiVersion string
+		want       bool
+	}{
+		{"empty string defaults to v1", "", false},
+		{"explicit v1", "v1", false},
+		{"v3", "v3", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := Config{APIVersion: tt.apiVersion}
+			if got := cfg.isV3(); got != tt.want {
+				t.Errorf("isV3() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

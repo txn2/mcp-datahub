@@ -133,7 +133,7 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
 
-	props, err := c.readEditableProperties(ctx, urn, aspectInfo.AspectName)
+	props, err := c.readEditableProperties(ctx, entityType, urn, aspectInfo.AspectName)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
@@ -183,8 +183,8 @@ func (c *Client) preserveDataProductName(ctx context.Context, urn string, props 
 
 // readEditableProperties reads the current properties aspect for an entity.
 // Returns an empty aspect if none exists (not an error).
-func (c *Client) readEditableProperties(ctx context.Context, urn, aspectName string) (*descriptionAspect, error) {
-	raw, err := c.getAspect(ctx, urn, aspectName)
+func (c *Client) readEditableProperties(ctx context.Context, entityType, urn, aspectName string) (*descriptionAspect, error) {
+	raw, err := c.getAspect(ctx, entityType, urn, aspectName)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return &descriptionAspect{fields: map[string]json.RawMessage{}}, nil
@@ -221,7 +221,7 @@ func (c *Client) AddTag(ctx context.Context, urn, tagURN string) error {
 	}
 
 	// Read current tags
-	tags, err := c.readGlobalTags(ctx, urn)
+	tags, err := c.readGlobalTags(ctx, entityType, urn)
 	if err != nil {
 		return fmt.Errorf("AddTag: %w", err)
 	}
@@ -256,7 +256,7 @@ func (c *Client) RemoveTag(ctx context.Context, urn, tagURN string) error {
 	}
 
 	// Read current tags
-	tags, err := c.readGlobalTags(ctx, urn)
+	tags, err := c.readGlobalTags(ctx, entityType, urn)
 	if err != nil {
 		return fmt.Errorf("RemoveTag: %w", err)
 	}
@@ -280,8 +280,8 @@ func (c *Client) RemoveTag(ctx context.Context, urn, tagURN string) error {
 
 // readGlobalTags reads the current globalTags aspect for an entity.
 // Returns an empty aspect if none exists (not an error).
-func (c *Client) readGlobalTags(ctx context.Context, urn string) (*globalTagsAspect, error) {
-	raw, err := c.getAspect(ctx, urn, "globalTags")
+func (c *Client) readGlobalTags(ctx context.Context, entityType, urn string) (*globalTagsAspect, error) {
+	raw, err := c.getAspect(ctx, entityType, urn, "globalTags")
 	if err != nil {
 		// Not found means no tags yet - return empty
 		if errors.Is(err, ErrNotFound) {
@@ -320,7 +320,7 @@ func (c *Client) AddGlossaryTerm(ctx context.Context, urn, termURN string) error
 		return fmt.Errorf("AddGlossaryTerm: %w: %s", ErrUnsupportedGlossaryTermEntity, entityType)
 	}
 
-	terms, err := c.readGlossaryTerms(ctx, urn)
+	terms, err := c.readGlossaryTerms(ctx, entityType, urn)
 	if err != nil {
 		return fmt.Errorf("AddGlossaryTerm: %w", err)
 	}
@@ -354,7 +354,7 @@ func (c *Client) RemoveGlossaryTerm(ctx context.Context, urn, termURN string) er
 		return fmt.Errorf("RemoveGlossaryTerm: %w: %s", ErrUnsupportedGlossaryTermEntity, entityType)
 	}
 
-	terms, err := c.readGlossaryTerms(ctx, urn)
+	terms, err := c.readGlossaryTerms(ctx, entityType, urn)
 	if err != nil {
 		return fmt.Errorf("RemoveGlossaryTerm: %w", err)
 	}
@@ -377,8 +377,8 @@ func (c *Client) RemoveGlossaryTerm(ctx context.Context, urn, termURN string) er
 }
 
 // readGlossaryTerms reads the current glossaryTerms aspect for an entity.
-func (c *Client) readGlossaryTerms(ctx context.Context, urn string) (*glossaryTermsAspect, error) {
-	raw, err := c.getAspect(ctx, urn, "glossaryTerms")
+func (c *Client) readGlossaryTerms(ctx context.Context, entityType, urn string) (*glossaryTermsAspect, error) {
+	raw, err := c.getAspect(ctx, entityType, urn, "glossaryTerms")
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return &glossaryTermsAspect{Terms: []termAssociation{}}, nil
@@ -432,7 +432,7 @@ func (c *Client) AddLink(ctx context.Context, urn, linkURL, description string) 
 		return fmt.Errorf("AddLink: %w: %s", ErrUnsupportedLinkEntity, entityType)
 	}
 
-	memory, err := c.readInstitutionalMemory(ctx, urn)
+	memory, err := c.readInstitutionalMemory(ctx, entityType, urn)
 	if err != nil {
 		return fmt.Errorf("AddLink: %w", err)
 	}
@@ -469,7 +469,7 @@ func (c *Client) RemoveLink(ctx context.Context, urn, linkURL string) error {
 		return fmt.Errorf("RemoveLink: %w: %s", ErrUnsupportedLinkEntity, entityType)
 	}
 
-	memory, err := c.readInstitutionalMemory(ctx, urn)
+	memory, err := c.readInstitutionalMemory(ctx, entityType, urn)
 	if err != nil {
 		return fmt.Errorf("RemoveLink: %w", err)
 	}
@@ -491,8 +491,8 @@ func (c *Client) RemoveLink(ctx context.Context, urn, linkURL string) error {
 }
 
 // readInstitutionalMemory reads the current institutionalMemory aspect.
-func (c *Client) readInstitutionalMemory(ctx context.Context, urn string) (*institutionalMemoryAspect, error) {
-	raw, err := c.getAspect(ctx, urn, "institutionalMemory")
+func (c *Client) readInstitutionalMemory(ctx context.Context, entityType, urn string) (*institutionalMemoryAspect, error) {
+	raw, err := c.getAspect(ctx, entityType, urn, "institutionalMemory")
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return &institutionalMemoryAspect{Elements: []linkElement{}}, nil
@@ -515,7 +515,7 @@ func (c *Client) UpdateColumnDescription(ctx context.Context, urn, fieldPath, de
 		return fmt.Errorf("UpdateColumnDescription: %w", err)
 	}
 
-	schema, err := c.readEditableSchema(ctx, urn)
+	schema, err := c.readEditableSchema(ctx, entityType, urn)
 	if err != nil {
 		return fmt.Errorf("UpdateColumnDescription: %w", err)
 	}
@@ -546,8 +546,8 @@ func (c *Client) UpdateColumnDescription(ctx context.Context, urn, fieldPath, de
 
 // readEditableSchema reads the current editableSchemaMetadata aspect.
 // Returns an empty aspect if none exists (not an error).
-func (c *Client) readEditableSchema(ctx context.Context, urn string) (*editableSchemaAspect, error) {
-	raw, err := c.getAspect(ctx, urn, "editableSchemaMetadata")
+func (c *Client) readEditableSchema(ctx context.Context, entityType, urn string) (*editableSchemaAspect, error) {
+	raw, err := c.getAspect(ctx, entityType, urn, "editableSchemaMetadata")
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return &editableSchemaAspect{}, nil

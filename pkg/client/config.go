@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+// APIVersionV1 selects the legacy Rest.li API endpoints (DataHub <= 1.3.x).
+const APIVersionV1 = "v1"
+
+// APIVersionV3 selects the OpenAPI v3 endpoints (DataHub >= 1.4.0).
+const APIVersionV3 = "v3"
+
 // Config holds the DataHub client configuration.
 type Config struct {
 	// URL is the DataHub GMS URL (required).
@@ -29,6 +35,10 @@ type Config struct {
 
 	// MaxLineageDepth is the maximum lineage traversal depth. Default: 5.
 	MaxLineageDepth int
+
+	// APIVersion selects the REST API version: "v1" (legacy Rest.li, default)
+	// or "v3" (OpenAPI v3, DataHub >= 1.4.0).
+	APIVersion string
 
 	// Debug enables debug logging. Default: false.
 	Debug bool
@@ -96,11 +106,20 @@ func FromEnv() (Config, error) {
 		cfg.MaxLineageDepth = val
 	}
 
+	if apiVersion := os.Getenv("DATAHUB_API_VERSION"); apiVersion != "" {
+		cfg.APIVersion = apiVersion
+	}
+
 	if debug := os.Getenv("DATAHUB_DEBUG"); debug != "" {
 		cfg.Debug = debug == "1" || debug == "true"
 	}
 
 	return cfg, nil
+}
+
+// isV3 returns true when the config selects the OpenAPI v3 endpoints.
+func (c Config) isV3() bool {
+	return c.APIVersion == APIVersionV3
 }
 
 // Validate checks if the configuration is valid.

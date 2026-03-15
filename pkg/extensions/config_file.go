@@ -28,6 +28,7 @@ type DataHubConfig struct {
 	Timeout        Duration `json:"timeout" yaml:"timeout"`
 	ConnectionName string   `json:"connection_name" yaml:"connection_name"`
 	WriteEnabled   *bool    `json:"write_enabled" yaml:"write_enabled"`
+	APIVersion     string   `json:"api_version" yaml:"api_version"`
 }
 
 // ToolkitConfig configures toolkit behavior.
@@ -180,6 +181,9 @@ func LoadConfig(path string) (ServerConfig, error) {
 		b := parseBool(v)
 		cfg.DataHub.WriteEnabled = &b
 	}
+	if v := os.Getenv("DATAHUB_API_VERSION"); v != "" {
+		cfg.DataHub.APIVersion = v
+	}
 
 	// Expand environment variables in token (for $VAR or ${VAR} patterns)
 	cfg.DataHub.Token = os.ExpandEnv(cfg.DataHub.Token)
@@ -207,6 +211,9 @@ func (sc *ServerConfig) ClientConfig() client.Config {
 	}
 	if sc.Toolkit.MaxLineageDepth > 0 {
 		cfg.MaxLineageDepth = sc.Toolkit.MaxLineageDepth
+	}
+	if sc.DataHub.APIVersion != "" {
+		cfg.APIVersion = sc.DataHub.APIVersion
 	}
 	return cfg
 }

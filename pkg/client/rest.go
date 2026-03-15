@@ -7,9 +7,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"unicode/utf8"
 )
+
+// v3AspectRequest wraps an aspect value for the OpenAPI v3 POST body.
+type v3AspectRequest struct {
+	Value any `json:"value"`
+}
 
 // restBaseURL derives the REST API base URL from the GraphQL endpoint.
 // For example, "https://datahub.example.com/api/graphql" -> "https://datahub.example.com".
@@ -43,16 +49,23 @@ type ingestRequest struct {
 }
 
 // getAspect retrieves a raw aspect JSON from the DataHub REST API.
-func (c *Client) getAspect(ctx context.Context, entityURN, aspectName string) (json.RawMessage, error) {
-	url := fmt.Sprintf("%s/aspects/%s?aspect=%s&version=0",
-		c.restBaseURL(), entityURN, aspectName)
+// entityType is required for v3 URL construction; ignored in v1.
+func (c *Client) getAspect(ctx context.Context, entityType, entityURN, aspectName string) (json.RawMessage, error) {
+	var reqURL string
+	if c.config.isV3() {
+		reqURL = fmt.Sprintf("%s/openapi/v3/entity/%s/%s/%s",
+			c.restBaseURL(), entityType, url.PathEscape(entityURN), aspectName)
+	} else {
+		reqURL = fmt.Sprintf("%s/aspects/%s?aspect=%s&version=0",
+			c.restBaseURL(), entityURN, aspectName)
+	}
 
 	c.logger.Debug("REST GET aspect",
 		"urn", entityURN,
 		"aspect", aspectName,
-		"url", url)
+		"url", reqURL)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -97,8 +110,17 @@ func (c *Client) getAspect(ctx context.Context, entityURN, aspectName string) (j
 
 // postIngestProposal posts a metadata change proposal to the DataHub REST API.
 // DataHub v1.3.0+ requires changeType and GenericAspect wrapper format.
+// OpenAPI v3 (DataHub >= 1.4.0) uses a simpler body and URL structure.
 func (c *Client) postIngestProposal(ctx context.Context, proposal ingestProposal) error {
-	url := fmt.Sprintf("%s/aspects?action=ingestProposal", c.restBaseURL())
+	if c.config.isV3() {
+		return c.postAspectV3(ctx, proposal)
+	}
+	return c.postAspectV1(ctx, proposal)
+}
+
+// postAspectV1 sends a metadata change proposal via the legacy Rest.li endpoint.
+func (c *Client) postAspectV1(ctx context.Context, proposal ingestProposal) error {
+	reqURL := fmt.Sprintf("%s/aspects?action=ingestProposal", c.restBaseURL())
 
 	if proposal.ChangeType == "" {
 		proposal.ChangeType = "UPSERT"
@@ -123,9 +145,34 @@ func (c *Client) postIngestProposal(ctx context.Context, proposal ingestProposal
 		"urn", proposal.EntityURN,
 		"aspect", proposal.AspectName,
 		"entity_type", proposal.EntityType,
-		"url", url)
+		"url", reqURL)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(jsonBody))
+	return c.doPost(ctx, reqURL, jsonBody)
+}
+
+// postAspectV3 sends an aspect update via the OpenAPI v3 endpoint.
+func (c *Client) postAspectV3(ctx context.Context, proposal ingestProposal) error {
+	reqURL := fmt.Sprintf("%s/openapi/v3/entity/%s/%s/%s",
+		c.restBaseURL(), proposal.EntityType,
+		url.PathEscape(proposal.EntityURN), proposal.AspectName)
+
+	jsonBody, err := json.Marshal(v3AspectRequest{Value: proposal.Aspect})
+	if err != nil {
+		return fmt.Errorf("failed to marshal aspect: %w", err)
+	}
+
+	c.logger.Debug("REST POST v3 aspect",
+		"urn", proposal.EntityURN,
+		"aspect", proposal.AspectName,
+		"entity_type", proposal.EntityType,
+		"url", reqURL)
+
+	return c.doPost(ctx, reqURL, jsonBody)
+}
+
+// doPost executes an HTTP POST with the given URL and JSON body.
+func (c *Client) doPost(ctx context.Context, reqURL string, jsonBody []byte) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -154,9 +201,12 @@ func (c *Client) postIngestProposal(ctx context.Context, proposal ingestProposal
 }
 
 // setRESTHeaders sets common headers for REST API requests.
+// The X-RestLi-Protocol-Version header is only sent for v1 (Rest.li) endpoints.
 func (c *Client) setRESTHeaders(req *http.Request) {
 	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("X-RestLi-Protocol-Version", "2.0.0")
+	if !c.config.isV3() {
+		req.Header.Set("X-RestLi-Protocol-Version", "2.0.0")
+	}
 }
 
 // isNullOrEmptyJSON returns true if the raw JSON message is nil, empty,
