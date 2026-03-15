@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -14,26 +15,35 @@ import (
 
 // mockClient implements DataHubClient for testing.
 type mockClient struct {
-	searchFunc             func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
-	getEntityFunc          func(ctx context.Context, urn string) (*types.Entity, error)
-	getSchemaFunc          func(ctx context.Context, urn string) (*types.SchemaMetadata, error)
-	getSchemasFunc         func(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
-	getLineageFunc         func(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error)
-	getColumnLineageFunc   func(ctx context.Context, urn string) (*types.ColumnLineage, error)
-	getQueriesFunc         func(ctx context.Context, urn string) (*types.QueryList, error)
-	getGlossaryTermFunc    func(ctx context.Context, urn string) (*types.GlossaryTerm, error)
-	listTagsFunc           func(ctx context.Context, filter string) ([]types.Tag, error)
-	listDomainsFunc        func(ctx context.Context) ([]types.Domain, error)
-	listDataProductsFunc   func(ctx context.Context) ([]types.DataProduct, error)
-	getDataProductFunc     func(ctx context.Context, urn string) (*types.DataProduct, error)
-	pingFunc               func(ctx context.Context) error
-	updateDescriptionFunc  func(ctx context.Context, urn, description string) error
-	addTagFunc             func(ctx context.Context, urn, tagURN string) error
-	removeTagFunc          func(ctx context.Context, urn, tagURN string) error
-	addGlossaryTermFunc    func(ctx context.Context, urn, termURN string) error
-	removeGlossaryTermFunc func(ctx context.Context, urn, termURN string) error
-	addLinkFunc            func(ctx context.Context, urn, linkURL, description string) error
-	removeLinkFunc         func(ctx context.Context, urn, linkURL string) error
+	searchFunc                            func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
+	getEntityFunc                         func(ctx context.Context, urn string) (*types.Entity, error)
+	getSchemaFunc                         func(ctx context.Context, urn string) (*types.SchemaMetadata, error)
+	getSchemasFunc                        func(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
+	getLineageFunc                        func(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error)
+	getColumnLineageFunc                  func(ctx context.Context, urn string) (*types.ColumnLineage, error)
+	getQueriesFunc                        func(ctx context.Context, urn string) (*types.QueryList, error)
+	getGlossaryTermFunc                   func(ctx context.Context, urn string) (*types.GlossaryTerm, error)
+	listTagsFunc                          func(ctx context.Context, filter string) ([]types.Tag, error)
+	listDomainsFunc                       func(ctx context.Context) ([]types.Domain, error)
+	listDataProductsFunc                  func(ctx context.Context) ([]types.DataProduct, error)
+	getDataProductFunc                    func(ctx context.Context, urn string) (*types.DataProduct, error)
+	pingFunc                              func(ctx context.Context) error
+	updateDescriptionFunc                 func(ctx context.Context, urn, description string) error
+	addTagFunc                            func(ctx context.Context, urn, tagURN string) error
+	removeTagFunc                         func(ctx context.Context, urn, tagURN string) error
+	addGlossaryTermFunc                   func(ctx context.Context, urn, termURN string) error
+	removeGlossaryTermFunc                func(ctx context.Context, urn, termURN string) error
+	addLinkFunc                           func(ctx context.Context, urn, linkURL, description string) error
+	removeLinkFunc                        func(ctx context.Context, urn, linkURL string) error
+	getStructuredPropertiesFunc           func(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error)
+	listStructuredPropertyDefinitionsFunc func(ctx context.Context) ([]types.StructuredPropertyDefinition, error)
+	upsertStructuredPropertiesFunc        func(ctx context.Context, urn string, properties []types.StructuredPropertyInput) error
+	removeStructuredPropertiesFunc        func(ctx context.Context, urn string, propertyURNs []string) error
+	getIncidentsFunc                      func(ctx context.Context, urn string) (*types.IncidentResult, error)
+	raiseIncidentFunc                     func(ctx context.Context, input types.RaiseIncidentInput) (string, error)
+	resolveIncidentFunc                   func(ctx context.Context, incidentURN, message string) error
+	getDataContractFunc                   func(ctx context.Context, datasetURN string) (*types.DataContract, error)
+	semanticSearchFunc                    func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 }
 
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
@@ -178,6 +188,69 @@ func (m *mockClient) RemoveLink(ctx context.Context, urn, linkURL string) error 
 		return m.removeLinkFunc(ctx, urn, linkURL)
 	}
 	return nil
+}
+
+func (m *mockClient) GetStructuredProperties(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error) {
+	if m.getStructuredPropertiesFunc != nil {
+		return m.getStructuredPropertiesFunc(ctx, urn)
+	}
+	return nil, nil
+}
+
+func (m *mockClient) ListStructuredPropertyDefinitions(ctx context.Context) ([]types.StructuredPropertyDefinition, error) {
+	if m.listStructuredPropertyDefinitionsFunc != nil {
+		return m.listStructuredPropertyDefinitionsFunc(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockClient) UpsertStructuredProperties(ctx context.Context, urn string, properties []types.StructuredPropertyInput) error {
+	if m.upsertStructuredPropertiesFunc != nil {
+		return m.upsertStructuredPropertiesFunc(ctx, urn, properties)
+	}
+	return nil
+}
+
+func (m *mockClient) RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error {
+	if m.removeStructuredPropertiesFunc != nil {
+		return m.removeStructuredPropertiesFunc(ctx, urn, propertyURNs)
+	}
+	return nil
+}
+
+func (m *mockClient) GetIncidents(ctx context.Context, urn string) (*types.IncidentResult, error) {
+	if m.getIncidentsFunc != nil {
+		return m.getIncidentsFunc(ctx, urn)
+	}
+	return &types.IncidentResult{}, nil
+}
+
+func (m *mockClient) RaiseIncident(ctx context.Context, input types.RaiseIncidentInput) (string, error) {
+	if m.raiseIncidentFunc != nil {
+		return m.raiseIncidentFunc(ctx, input)
+	}
+	return "", nil
+}
+
+func (m *mockClient) ResolveIncident(ctx context.Context, incidentURN, message string) error {
+	if m.resolveIncidentFunc != nil {
+		return m.resolveIncidentFunc(ctx, incidentURN, message)
+	}
+	return nil
+}
+
+func (m *mockClient) GetDataContract(ctx context.Context, datasetURN string) (*types.DataContract, error) {
+	if m.getDataContractFunc != nil {
+		return m.getDataContractFunc(ctx, datasetURN)
+	}
+	return nil, nil
+}
+
+func (m *mockClient) SemanticSearch(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
+	if m.semanticSearchFunc != nil {
+		return m.semanticSearchFunc(ctx, query, opts...)
+	}
+	return &types.SearchResult{}, nil
 }
 
 func TestNewToolkit(t *testing.T) {
@@ -879,5 +952,165 @@ func TestAllToolsUnchanged(t *testing.T) {
 		if writeSet[name] {
 			t.Errorf("AllTools() should not contain write tool %s", name)
 		}
+	}
+}
+
+func TestEnrichEntityWith14xFeatures(t *testing.T) {
+	mock := &mockClient{}
+	mock.getEntityFunc = func(_ context.Context, _ string) (*types.Entity, error) {
+		return &types.Entity{
+			URN:  "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)",
+			Type: "DATASET",
+			Name: "users",
+		}, nil
+	}
+	mock.getStructuredPropertiesFunc = func(_ context.Context, _ string) ([]types.StructuredPropertyValue, error) {
+		return []types.StructuredPropertyValue{
+			{PropertyURN: "urn:li:structuredProperty:retention", Values: []any{float64(30)}},
+		}, nil
+	}
+	mock.getIncidentsFunc = func(_ context.Context, _ string) (*types.IncidentResult, error) {
+		return &types.IncidentResult{
+			Total: 1,
+			Incidents: []types.Incident{
+				{URN: "urn:li:incident:1", Type: "OPERATIONAL", Title: "Pipeline down", State: "ACTIVE"},
+			},
+		}, nil
+	}
+	mock.getDataContractFunc = func(_ context.Context, _ string) (*types.DataContract, error) {
+		return &types.DataContract{Status: "PASSING"}, nil
+	}
+
+	toolkit := NewToolkit(mock, DefaultConfig())
+	entity := &types.Entity{
+		URN:  "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)",
+		Type: "DATASET",
+		Name: "users",
+	}
+
+	toolkit.enrichEntityWith14xFeatures(t.Context(), mock, entity)
+
+	if len(entity.StructuredProperties) != 1 {
+		t.Errorf("StructuredProperties count = %d, want 1", len(entity.StructuredProperties))
+	}
+	if entity.StructuredProperties[0].PropertyURN != "urn:li:structuredProperty:retention" {
+		t.Errorf("StructuredProperties[0].PropertyURN = %q", entity.StructuredProperties[0].PropertyURN)
+	}
+	if entity.ActiveIncidents == nil || entity.ActiveIncidents.Total != 1 {
+		t.Errorf("ActiveIncidents = %+v, want total=1", entity.ActiveIncidents)
+	}
+	if entity.DataContract == nil || entity.DataContract.Status != "PASSING" {
+		t.Errorf("DataContract = %+v, want status=PASSING", entity.DataContract)
+	}
+}
+
+func TestEnrichEntityWith14xFeatures_NonDataset_SkipsContract(t *testing.T) {
+	mock := &mockClient{}
+	mock.getStructuredPropertiesFunc = func(_ context.Context, _ string) ([]types.StructuredPropertyValue, error) {
+		return nil, nil
+	}
+	mock.getIncidentsFunc = func(_ context.Context, _ string) (*types.IncidentResult, error) {
+		return &types.IncidentResult{}, nil
+	}
+	mock.getDataContractFunc = func(_ context.Context, _ string) (*types.DataContract, error) {
+		t.Error("GetDataContract should not be called for non-dataset entities")
+		return nil, nil
+	}
+
+	toolkit := NewToolkit(mock, DefaultConfig())
+	entity := &types.Entity{
+		URN:  "urn:li:dashboard:(urn:li:dataPlatform:looker,dashboard1)",
+		Type: "DASHBOARD",
+		Name: "dashboard1",
+	}
+
+	toolkit.enrichEntityWith14xFeatures(t.Context(), mock, entity)
+
+	if entity.DataContract != nil {
+		t.Error("DataContract should be nil for non-dataset entities")
+	}
+}
+
+func TestSearchModeRouting(t *testing.T) {
+	tests := []struct {
+		name           string
+		mode           string
+		wantSemantic   bool
+		wantKeyword    bool
+		wantErr        bool
+		wantErrContain string
+	}{
+		{
+			name:        "default mode uses keyword",
+			mode:        "",
+			wantKeyword: true,
+		},
+		{
+			name:        "keyword mode",
+			mode:        "keyword",
+			wantKeyword: true,
+		},
+		{
+			name:         "semantic mode",
+			mode:         "semantic",
+			wantSemantic: true,
+		},
+		{
+			name:           "invalid mode",
+			mode:           "vector",
+			wantErr:        true,
+			wantErrContain: "invalid mode",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keywordCalled := false
+			semanticCalled := false
+
+			mock := &mockClient{}
+			mock.searchFunc = func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+				keywordCalled = true
+				return &types.SearchResult{}, nil
+			}
+			mock.semanticSearchFunc = func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+				semanticCalled = true
+				return &types.SearchResult{}, nil
+			}
+
+			toolkit := NewToolkit(mock, DefaultConfig())
+			input := SearchInput{Query: "test", Mode: tt.mode}
+			result, _, _ := toolkit.handleSearch(t.Context(), nil, input)
+
+			if tt.wantErr {
+				if !result.IsError {
+					t.Error("expected error result")
+				}
+				// Check error message content
+				if tt.wantErrContain != "" {
+					for _, c := range result.Content {
+						if tc, ok := c.(*mcp.TextContent); ok {
+							if !strings.Contains(tc.Text, tt.wantErrContain) {
+								t.Errorf("error %q should contain %q", tc.Text, tt.wantErrContain)
+							}
+						}
+					}
+				}
+				return
+			}
+
+			if tt.wantKeyword && !keywordCalled {
+				t.Error("expected keyword Search to be called")
+			}
+			if tt.wantSemantic && !semanticCalled {
+				t.Error("expected SemanticSearch to be called")
+			}
+			if tt.wantKeyword && semanticCalled {
+				t.Error("SemanticSearch should not be called in keyword mode")
+			}
+			if tt.wantSemantic && keywordCalled {
+				t.Error("keyword Search should not be called in semantic mode")
+			}
+		})
 	}
 }

@@ -16,6 +16,10 @@ type SearchInput struct {
 	EntityType string `json:"entity_type,omitempty" jsonschema_description:"Entity type to search. Defaults to DATASET."`
 	Limit      int    `json:"limit,omitempty" jsonschema_description:"Maximum number of results (default: 10, max: 100)"`
 	Offset     int    `json:"offset,omitempty" jsonschema_description:"Result offset for pagination"`
+	// Mode selects the search strategy: "keyword" (default) or "semantic".
+	// Semantic search uses vector embeddings for natural language queries.
+	// Requires DataHub 1.4.x with OpenSearch 2.19.3+.
+	Mode string `json:"mode,omitempty" jsonschema_description:"Search mode: keyword (default) or semantic"`
 	// Connection is the named connection to use. Empty uses the default connection.
 	Connection string `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
@@ -63,12 +67,21 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 		return ErrorResult("query parameter is required"), nil, nil
 	}
 
+	if input.Mode != "" && input.Mode != "keyword" && input.Mode != "semantic" {
+		return ErrorResult("invalid mode: must be 'keyword' or 'semantic'"), nil, nil
+	}
+
 	datahubClient, err := t.getClient(input.Connection)
 	if err != nil {
 		return ErrorResult("Connection error: " + err.Error()), nil, nil
 	}
 
-	result, err := datahubClient.Search(ctx, input.Query, buildSearchOptions(input)...)
+	var result *types.SearchResult
+	if input.Mode == "semantic" {
+		result, err = datahubClient.SemanticSearch(ctx, input.Query, buildSearchOptions(input)...)
+	} else {
+		result, err = datahubClient.Search(ctx, input.Query, buildSearchOptions(input)...)
+	}
 	if err != nil {
 		return ErrorResult(err.Error()), nil, nil
 	}

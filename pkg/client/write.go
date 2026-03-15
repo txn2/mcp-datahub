@@ -13,6 +13,20 @@ import (
 // tag, corpuser, corpGroup, mlModel, mlModelGroup, notebook.
 var ErrUnsupportedEntityType = errors.New("unsupported entity type for description update")
 
+// Entity type constants used in aspect maps and URN parsing.
+const (
+	entityTypeDataset      = "dataset"
+	entityTypeDashboard    = "dashboard"
+	entityTypeChart        = "chart"
+	entityTypeDataFlow     = "dataFlow"
+	entityTypeDataJob      = "dataJob"
+	entityTypeContainer    = "container"
+	entityTypeDataProduct  = "dataProduct"
+	entityTypeGlossaryNode = "glossaryNode"
+	entityTypeGlossaryTerm = "glossaryTerm"
+	entityTypeDomain       = "domain"
+)
+
 // entityTypeFromURN derives the DataHub entity type string from a parsed URN.
 // Maps URN entity types to the REST API entity type names.
 func entityTypeFromURN(urn string) (string, error) {
@@ -37,37 +51,37 @@ type DescriptionAspectInfo struct {
 // domain and glossaryTerm are intentionally excluded: their aspects
 // (domainProperties, glossaryTermInfo) are not writable via the REST ingest proposal API.
 var descriptionAspectMap = map[string]DescriptionAspectInfo{
-	"dataset":      {AspectName: "editableDatasetProperties", FieldName: "description"},
-	"dashboard":    {AspectName: "editableDashboardProperties", FieldName: "description"},
-	"chart":        {AspectName: "editableChartProperties", FieldName: "description"},
-	"dataFlow":     {AspectName: "editableDataFlowProperties", FieldName: "description"},
-	"dataJob":      {AspectName: "editableDataJobProperties", FieldName: "description"},
-	"container":    {AspectName: "editableContainerProperties", FieldName: "description"},
-	"dataProduct":  {AspectName: "dataProductProperties", FieldName: "description"},
-	"glossaryNode": {AspectName: "glossaryNodeInfo", FieldName: "definition"},
+	entityTypeDataset:      {AspectName: "editableDatasetProperties", FieldName: "description"},
+	entityTypeDashboard:    {AspectName: "editableDashboardProperties", FieldName: "description"},
+	entityTypeChart:        {AspectName: "editableChartProperties", FieldName: "description"},
+	entityTypeDataFlow:     {AspectName: "editableDataFlowProperties", FieldName: "description"},
+	entityTypeDataJob:      {AspectName: "editableDataJobProperties", FieldName: "description"},
+	entityTypeContainer:    {AspectName: "editableContainerProperties", FieldName: "description"},
+	entityTypeDataProduct:  {AspectName: "dataProductProperties", FieldName: "description"},
+	entityTypeGlossaryNode: {AspectName: "glossaryNodeInfo", FieldName: "definition"},
 }
 
 // globalTagsSupportedTypes lists entity types that support the globalTags aspect.
 // Currently identical to glossaryTermsSupportedTypes, but kept separate because
 // DataHub may add tag support to additional entity types independently.
 var globalTagsSupportedTypes = map[string]bool{
-	"dataset": true, "dashboard": true, "chart": true,
-	"dataFlow": true, "dataJob": true, "container": true, "dataProduct": true,
+	entityTypeDataset: true, entityTypeDashboard: true, entityTypeChart: true,
+	entityTypeDataFlow: true, entityTypeDataJob: true, entityTypeContainer: true, entityTypeDataProduct: true,
 }
 
 // glossaryTermsSupportedTypes lists entity types that support glossaryTerms associations.
 // Currently identical to globalTagsSupportedTypes, but kept separate because
 // DataHub may add glossary term support to additional entity types independently.
 var glossaryTermsSupportedTypes = map[string]bool{
-	"dataset": true, "dashboard": true, "chart": true,
-	"dataFlow": true, "dataJob": true, "container": true, "dataProduct": true,
+	entityTypeDataset: true, entityTypeDashboard: true, entityTypeChart: true,
+	entityTypeDataFlow: true, entityTypeDataJob: true, entityTypeContainer: true, entityTypeDataProduct: true,
 }
 
 // institutionalMemorySupportedTypes lists entity types that support institutional memory (links).
 var institutionalMemorySupportedTypes = map[string]bool{
-	"dataset": true, "dashboard": true, "chart": true,
-	"dataFlow": true, "dataJob": true, "container": true, "dataProduct": true,
-	"glossaryTerm": true, "glossaryNode": true, "domain": true,
+	entityTypeDataset: true, entityTypeDashboard: true, entityTypeChart: true,
+	entityTypeDataFlow: true, entityTypeDataJob: true, entityTypeContainer: true, entityTypeDataProduct: true,
+	entityTypeGlossaryTerm: true, entityTypeGlossaryNode: true, entityTypeDomain: true,
 }
 
 // LookupDescriptionAspect returns the aspect info for updating the description of the given entity type.
@@ -138,7 +152,7 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
 
-	if entityType == "dataProduct" {
+	if entityType == entityTypeDataProduct {
 		if err := c.preserveDataProductName(ctx, urn, props); err != nil {
 			return fmt.Errorf("UpdateDescription: %w", err)
 		}
