@@ -500,7 +500,7 @@ func TestUpsertStructuredProperties(t *testing.T) {
 					Values:      []any{float64(30)},
 				},
 			},
-			response: `{"data": {"upsertStructuredProperties": true}}`,
+			response: `{"data":{"upsertStructuredProperties":{"properties":[{"structuredProperty":{"urn":"urn:li:structuredProperty:t"}}]}}}`,
 		},
 		{
 			name: "multiple properties",
@@ -515,7 +515,7 @@ func TestUpsertStructuredProperties(t *testing.T) {
 					Values:      []any{"PII", "SENSITIVE"},
 				},
 			},
-			response: `{"data": {"upsertStructuredProperties": true}}`,
+			response: `{"data":{"upsertStructuredProperties":{"properties":[{"structuredProperty":{"urn":"urn:li:structuredProperty:t"}}]}}}`,
 		},
 		{
 			name: "graphql error",
@@ -580,7 +580,7 @@ func TestRemoveStructuredProperties(t *testing.T) {
 			name:         "single property",
 			urn:          "urn:li:dataset:test",
 			propertyURNs: []string{"urn:li:structuredProperty:retentionTime"},
-			response:     `{"data": {"removeStructuredProperties": true}}`,
+			response:     `{"data": {"removeStructuredProperties": {"properties": []}}}`,
 		},
 		{
 			name: "multiple properties",
@@ -589,7 +589,7 @@ func TestRemoveStructuredProperties(t *testing.T) {
 				"urn:li:structuredProperty:retentionTime",
 				"urn:li:structuredProperty:classification",
 			},
-			response: `{"data": {"removeStructuredProperties": true}}`,
+			response: `{"data": {"removeStructuredProperties": {"properties": []}}}`,
 		},
 		{
 			name:         "graphql error",

@@ -105,15 +105,14 @@ func (c *Client) GetIncidents(ctx context.Context, urn string) (*types.IncidentR
 
 // RaiseIncident creates a new incident on entities.
 func (c *Client) RaiseIncident(ctx context.Context, input types.RaiseIncidentInput) (string, error) {
-	resourceURNs := make([]map[string]string, 0, len(input.ResourceURNs))
-	for _, urn := range input.ResourceURNs {
-		resourceURNs = append(resourceURNs, map[string]string{"urn": urn})
+	if len(input.ResourceURNs) == 0 {
+		return "", fmt.Errorf("RaiseIncident: at least one resource URN is required")
 	}
 
 	gqlInput := map[string]any{
-		"type":         input.Type,
-		"title":        input.Title,
-		"resourceUrns": resourceURNs,
+		"type":        input.Type,
+		"title":       input.Title,
+		"resourceUrn": input.ResourceURNs[0],
 	}
 	if input.CustomType != "" {
 		gqlInput["customType"] = input.CustomType
