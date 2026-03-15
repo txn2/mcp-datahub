@@ -23,18 +23,20 @@ func entityTypeFromURN(urn string) (string, error) {
 	return parsed.EntityType, nil
 }
 
-// descriptionAspectInfo holds the aspect name and field name for updating
+// DescriptionAspectInfo holds the aspect name and field name for updating
 // an entity's description. The field is "description" for most entity types,
 // but "definition" for glossary entities.
-type descriptionAspectInfo struct {
+type DescriptionAspectInfo struct {
 	AspectName string
 	FieldName  string
 }
 
 // descriptionAspectMap maps DataHub entity types to their description aspect.
-// glossaryTerm and glossaryNode use "definition" instead of "description".
-// dataProduct and domain use non-editable property aspects.
-var descriptionAspectMap = map[string]descriptionAspectInfo{
+// glossaryNode uses "definition" instead of "description".
+// dataProduct uses its non-editable property aspect (dataProductProperties).
+// domain and glossaryTerm are intentionally excluded: their aspects
+// (domainProperties, glossaryTermInfo) are not writable via the REST ingest proposal API.
+var descriptionAspectMap = map[string]DescriptionAspectInfo{
 	"dataset":      {AspectName: "editableDatasetProperties", FieldName: "description"},
 	"dashboard":    {AspectName: "editableDashboardProperties", FieldName: "description"},
 	"chart":        {AspectName: "editableChartProperties", FieldName: "description"},
@@ -42,16 +44,37 @@ var descriptionAspectMap = map[string]descriptionAspectInfo{
 	"dataJob":      {AspectName: "editableDataJobProperties", FieldName: "description"},
 	"container":    {AspectName: "editableContainerProperties", FieldName: "description"},
 	"dataProduct":  {AspectName: "dataProductProperties", FieldName: "description"},
-	"domain":       {AspectName: "domainProperties", FieldName: "description"},
-	"glossaryTerm": {AspectName: "glossaryTermInfo", FieldName: "definition"},
 	"glossaryNode": {AspectName: "glossaryNodeInfo", FieldName: "definition"},
 }
 
-// lookupDescriptionAspect returns the aspect info for updating the description of the given entity type.
-func lookupDescriptionAspect(entityType string) (descriptionAspectInfo, error) {
+// globalTagsSupportedTypes lists entity types that support the globalTags aspect.
+// Currently identical to glossaryTermsSupportedTypes, but kept separate because
+// DataHub may add tag support to additional entity types independently.
+var globalTagsSupportedTypes = map[string]bool{
+	"dataset": true, "dashboard": true, "chart": true,
+	"dataFlow": true, "dataJob": true, "container": true, "dataProduct": true,
+}
+
+// glossaryTermsSupportedTypes lists entity types that support glossaryTerms associations.
+// Currently identical to globalTagsSupportedTypes, but kept separate because
+// DataHub may add glossary term support to additional entity types independently.
+var glossaryTermsSupportedTypes = map[string]bool{
+	"dataset": true, "dashboard": true, "chart": true,
+	"dataFlow": true, "dataJob": true, "container": true, "dataProduct": true,
+}
+
+// institutionalMemorySupportedTypes lists entity types that support institutional memory (links).
+var institutionalMemorySupportedTypes = map[string]bool{
+	"dataset": true, "dashboard": true, "chart": true,
+	"dataFlow": true, "dataJob": true, "container": true, "dataProduct": true,
+	"glossaryTerm": true, "glossaryNode": true, "domain": true,
+}
+
+// LookupDescriptionAspect returns the aspect info for updating the description of the given entity type.
+func LookupDescriptionAspect(entityType string) (DescriptionAspectInfo, error) {
 	info, ok := descriptionAspectMap[entityType]
 	if !ok {
-		return descriptionAspectInfo{}, fmt.Errorf("%w: %s", ErrUnsupportedEntityType, entityType)
+		return DescriptionAspectInfo{}, fmt.Errorf("%w: %s", ErrUnsupportedEntityType, entityType)
 	}
 	return info, nil
 }
@@ -105,7 +128,7 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
 
-	aspectInfo, err := lookupDescriptionAspect(entityType)
+	aspectInfo, err := LookupDescriptionAspect(entityType)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
@@ -113,6 +136,12 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 	props, err := c.readEditableProperties(ctx, urn, aspectInfo.AspectName)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
+	}
+
+	if entityType == "dataProduct" {
+		if err := c.preserveDataProductName(ctx, urn, props); err != nil {
+			return fmt.Errorf("UpdateDescription: %w", err)
+		}
 	}
 
 	if err := props.setDescription(aspectInfo.FieldName, description); err != nil {
@@ -125,6 +154,31 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 		AspectName: aspectInfo.AspectName,
 		Aspect:     props,
 	})
+}
+
+// preserveDataProductName ensures the "name" field is present in dataProductProperties.
+// The REST GET may not return the name field; if missing, it is fetched via GraphQL
+// to prevent the ingest proposal from resetting the display name to the URN slug.
+func (c *Client) preserveDataProductName(ctx context.Context, urn string, props *descriptionAspect) error {
+	if _, hasName := props.fields["name"]; hasName {
+		return nil
+	}
+
+	dp, err := c.GetDataProduct(ctx, urn)
+	if err != nil {
+		return fmt.Errorf("fetching data product name: %w", err)
+	}
+
+	// If the GraphQL response also has no name, allow the write to proceed without
+	// injecting one — the data product genuinely has no display name to preserve.
+	if dp.Name != "" {
+		encoded, err := json.Marshal(dp.Name)
+		if err != nil {
+			return fmt.Errorf("encoding data product name: %w", err)
+		}
+		props.fields["name"] = encoded
+	}
+	return nil
 }
 
 // readEditableProperties reads the current properties aspect for an entity.
@@ -162,6 +216,10 @@ func (c *Client) AddTag(ctx context.Context, urn, tagURN string) error {
 		return fmt.Errorf("AddTag: %w", err)
 	}
 
+	if !globalTagsSupportedTypes[entityType] {
+		return fmt.Errorf("AddTag: %w: %s", ErrUnsupportedTagEntity, entityType)
+	}
+
 	// Read current tags
 	tags, err := c.readGlobalTags(ctx, urn)
 	if err != nil {
@@ -191,6 +249,10 @@ func (c *Client) RemoveTag(ctx context.Context, urn, tagURN string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
 		return fmt.Errorf("RemoveTag: %w", err)
+	}
+
+	if !globalTagsSupportedTypes[entityType] {
+		return fmt.Errorf("RemoveTag: %w: %s", ErrUnsupportedTagEntity, entityType)
 	}
 
 	// Read current tags
@@ -254,6 +316,10 @@ func (c *Client) AddGlossaryTerm(ctx context.Context, urn, termURN string) error
 		return fmt.Errorf("AddGlossaryTerm: %w", err)
 	}
 
+	if !glossaryTermsSupportedTypes[entityType] {
+		return fmt.Errorf("AddGlossaryTerm: %w: %s", ErrUnsupportedGlossaryTermEntity, entityType)
+	}
+
 	terms, err := c.readGlossaryTerms(ctx, urn)
 	if err != nil {
 		return fmt.Errorf("AddGlossaryTerm: %w", err)
@@ -282,6 +348,10 @@ func (c *Client) RemoveGlossaryTerm(ctx context.Context, urn, termURN string) er
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
 		return fmt.Errorf("RemoveGlossaryTerm: %w", err)
+	}
+
+	if !glossaryTermsSupportedTypes[entityType] {
+		return fmt.Errorf("RemoveGlossaryTerm: %w: %s", ErrUnsupportedGlossaryTermEntity, entityType)
 	}
 
 	terms, err := c.readGlossaryTerms(ctx, urn)
@@ -358,6 +428,10 @@ func (c *Client) AddLink(ctx context.Context, urn, linkURL, description string) 
 		return fmt.Errorf("AddLink: %w", err)
 	}
 
+	if !institutionalMemorySupportedTypes[entityType] {
+		return fmt.Errorf("AddLink: %w: %s", ErrUnsupportedLinkEntity, entityType)
+	}
+
 	memory, err := c.readInstitutionalMemory(ctx, urn)
 	if err != nil {
 		return fmt.Errorf("AddLink: %w", err)
@@ -389,6 +463,10 @@ func (c *Client) RemoveLink(ctx context.Context, urn, linkURL string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
 		return fmt.Errorf("RemoveLink: %w", err)
+	}
+
+	if !institutionalMemorySupportedTypes[entityType] {
+		return fmt.Errorf("RemoveLink: %w: %s", ErrUnsupportedLinkEntity, entityType)
 	}
 
 	memory, err := c.readInstitutionalMemory(ctx, urn)

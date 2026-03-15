@@ -27,4 +27,13 @@ var (
 
 	// ErrWriteDisabled indicates write operations are not enabled.
 	ErrWriteDisabled = errors.New("write operations are disabled: set WriteEnabled to true in config")
+
+	// ErrUnsupportedTagEntity indicates the entity type does not support tag operations.
+	ErrUnsupportedTagEntity = errors.New("entity type does not support tag operations")
+
+	// ErrUnsupportedGlossaryTermEntity indicates the entity type does not support glossary term associations.
+	ErrUnsupportedGlossaryTermEntity = errors.New("entity type does not support glossary term operations")
+
+	// ErrUnsupportedLinkEntity indicates the entity type does not support link operations.
+	ErrUnsupportedLinkEntity = errors.New("entity type does not support link operations")
 )
