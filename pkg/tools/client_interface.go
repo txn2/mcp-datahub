@@ -88,4 +88,25 @@ type DataHubClient interface {
 
 	// RemoveStructuredProperties removes structured properties from an entity.
 	RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error
+
+	// Incidents (DataHub 1.4.x+).
+
+	// GetIncidents retrieves active incidents for an entity.
+	GetIncidents(ctx context.Context, urn string) (*types.IncidentResult, error)
+
+	// RaiseIncident creates a new incident on entities.
+	RaiseIncident(ctx context.Context, input types.RaiseIncidentInput) (string, error)
+
+	// ResolveIncident marks an incident as resolved.
+	ResolveIncident(ctx context.Context, incidentURN, message string) error
+
+	// Data contracts (DataHub 1.4.x+).
+
+	// GetDataContract retrieves the data contract status for a dataset.
+	GetDataContract(ctx context.Context, datasetURN string) (*types.DataContract, error)
+
+	// Semantic search (DataHub 1.4.x + OpenSearch 2.19.3+).
+
+	// SemanticSearch performs natural language semantic search across entities.
+	SemanticSearch(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 }

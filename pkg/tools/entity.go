@@ -58,11 +58,36 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult("GetEntity returned nil for " + input.URN), nil, nil
 	}
 
+	// Enrich with 1.4.x features (graceful fallback: nil/empty when not supported)
+	t.enrichEntityWith14xFeatures(ctx, datahubClient, entity)
+
 	if t.queryProvider != nil {
 		return t.enrichEntityWithQueryContext(ctx, entity, input.URN)
 	}
 
 	return formatJSONResult(entity)
+}
+
+// enrichEntityWith14xFeatures enriches an entity with DataHub 1.4.x data.
+// Each call returns nil/empty when the feature is not supported, so the
+// entity fields remain zero-valued on DataHub < 1.4.x.
+func (t *Toolkit) enrichEntityWith14xFeatures(ctx context.Context, c DataHubClient, entity *types.Entity) {
+	// Structured properties (all entity types)
+	if props, err := c.GetStructuredProperties(ctx, entity.URN); err == nil && len(props) > 0 {
+		entity.StructuredProperties = props
+	}
+
+	// Active incidents (datasets, dashboards, charts, data flows, data jobs)
+	if incidents, err := c.GetIncidents(ctx, entity.URN); err == nil && incidents != nil && incidents.Total > 0 {
+		entity.ActiveIncidents = incidents
+	}
+
+	// Data contracts (datasets only)
+	if entity.Type == "DATASET" {
+		if contract, err := c.GetDataContract(ctx, entity.URN); err == nil && contract != nil {
+			entity.DataContract = contract
+		}
+	}
 }
 
 // enrichEntityWithQueryContext flattens entity fields to top level and appends

@@ -38,6 +38,18 @@ type Entity struct {
 	// Properties contains additional entity-specific properties.
 	Properties map[string]any `json:"properties,omitempty"`
 
+	// StructuredProperties contains typed structured property values (DataHub 1.4.x+).
+	// Nil when running against DataHub < 1.4.x.
+	StructuredProperties []StructuredPropertyValue `json:"structured_properties,omitempty"`
+
+	// ActiveIncidents contains active incidents on this entity (DataHub 1.4.x+).
+	// Nil when running against DataHub < 1.4.x.
+	ActiveIncidents *IncidentResult `json:"active_incidents,omitempty"`
+
+	// DataContract contains the data contract status (DataHub 1.4.x+, datasets only).
+	// Nil when running against DataHub < 1.4.x or for non-dataset entities.
+	DataContract *DataContract `json:"data_contract,omitempty"`
+
 	// Created is the creation timestamp.
 	Created int64 `json:"created,omitempty"`
 

@@ -38,6 +38,11 @@ type mockClient struct {
 	listStructuredPropertyDefinitionsFunc func(ctx context.Context) ([]types.StructuredPropertyDefinition, error)
 	upsertStructuredPropertiesFunc        func(ctx context.Context, urn string, properties []client.StructuredPropertyInput) error
 	removeStructuredPropertiesFunc        func(ctx context.Context, urn string, propertyURNs []string) error
+	getIncidentsFunc                      func(ctx context.Context, urn string) (*types.IncidentResult, error)
+	raiseIncidentFunc                     func(ctx context.Context, input types.RaiseIncidentInput) (string, error)
+	resolveIncidentFunc                   func(ctx context.Context, incidentURN, message string) error
+	getDataContractFunc                   func(ctx context.Context, datasetURN string) (*types.DataContract, error)
+	semanticSearchFunc                    func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 }
 
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
@@ -210,6 +215,41 @@ func (m *mockClient) RemoveStructuredProperties(ctx context.Context, urn string,
 		return m.removeStructuredPropertiesFunc(ctx, urn, propertyURNs)
 	}
 	return nil
+}
+
+func (m *mockClient) GetIncidents(ctx context.Context, urn string) (*types.IncidentResult, error) {
+	if m.getIncidentsFunc != nil {
+		return m.getIncidentsFunc(ctx, urn)
+	}
+	return &types.IncidentResult{}, nil
+}
+
+func (m *mockClient) RaiseIncident(ctx context.Context, input types.RaiseIncidentInput) (string, error) {
+	if m.raiseIncidentFunc != nil {
+		return m.raiseIncidentFunc(ctx, input)
+	}
+	return "", nil
+}
+
+func (m *mockClient) ResolveIncident(ctx context.Context, incidentURN, message string) error {
+	if m.resolveIncidentFunc != nil {
+		return m.resolveIncidentFunc(ctx, incidentURN, message)
+	}
+	return nil
+}
+
+func (m *mockClient) GetDataContract(ctx context.Context, datasetURN string) (*types.DataContract, error) {
+	if m.getDataContractFunc != nil {
+		return m.getDataContractFunc(ctx, datasetURN)
+	}
+	return nil, nil
+}
+
+func (m *mockClient) SemanticSearch(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
+	if m.semanticSearchFunc != nil {
+		return m.semanticSearchFunc(ctx, query, opts...)
+	}
+	return &types.SearchResult{}, nil
 }
 
 func TestNewToolkit(t *testing.T) {
