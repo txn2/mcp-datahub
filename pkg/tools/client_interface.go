@@ -74,4 +74,18 @@ type DataHubClient interface {
 
 	// RemoveLink removes a link from an entity by URL.
 	RemoveLink(ctx context.Context, urn, linkURL string) error
+
+	// Structured properties (DataHub 1.4.x+).
+
+	// GetStructuredProperties retrieves structured property values assigned to an entity.
+	GetStructuredProperties(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error)
+
+	// ListStructuredPropertyDefinitions retrieves all structured property definitions.
+	ListStructuredPropertyDefinitions(ctx context.Context) ([]types.StructuredPropertyDefinition, error)
+
+	// UpsertStructuredProperties sets or updates structured property values on an entity.
+	UpsertStructuredProperties(ctx context.Context, urn string, properties []client.StructuredPropertyInput) error
+
+	// RemoveStructuredProperties removes structured properties from an entity.
+	RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error
 }

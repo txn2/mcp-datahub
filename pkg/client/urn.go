@@ -89,11 +89,11 @@ func ParseURN(urn string) (*types.ParsedURN, error) {
 
 	// Parse entity-specific parts
 	switch entityType {
-	case "dataset":
+	case entityTypeDataset:
 		if err := parseDatasetURN(remainder, parsed); err != nil {
 			return nil, err
 		}
-	case "dashboard", "chart":
+	case entityTypeDashboard, entityTypeChart:
 		if err := parseTupleURN(remainder, parsed); err != nil {
 			return nil, err
 		}

@@ -14,26 +14,30 @@ import (
 
 // mockClient implements DataHubClient for testing.
 type mockClient struct {
-	searchFunc             func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
-	getEntityFunc          func(ctx context.Context, urn string) (*types.Entity, error)
-	getSchemaFunc          func(ctx context.Context, urn string) (*types.SchemaMetadata, error)
-	getSchemasFunc         func(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
-	getLineageFunc         func(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error)
-	getColumnLineageFunc   func(ctx context.Context, urn string) (*types.ColumnLineage, error)
-	getQueriesFunc         func(ctx context.Context, urn string) (*types.QueryList, error)
-	getGlossaryTermFunc    func(ctx context.Context, urn string) (*types.GlossaryTerm, error)
-	listTagsFunc           func(ctx context.Context, filter string) ([]types.Tag, error)
-	listDomainsFunc        func(ctx context.Context) ([]types.Domain, error)
-	listDataProductsFunc   func(ctx context.Context) ([]types.DataProduct, error)
-	getDataProductFunc     func(ctx context.Context, urn string) (*types.DataProduct, error)
-	pingFunc               func(ctx context.Context) error
-	updateDescriptionFunc  func(ctx context.Context, urn, description string) error
-	addTagFunc             func(ctx context.Context, urn, tagURN string) error
-	removeTagFunc          func(ctx context.Context, urn, tagURN string) error
-	addGlossaryTermFunc    func(ctx context.Context, urn, termURN string) error
-	removeGlossaryTermFunc func(ctx context.Context, urn, termURN string) error
-	addLinkFunc            func(ctx context.Context, urn, linkURL, description string) error
-	removeLinkFunc         func(ctx context.Context, urn, linkURL string) error
+	searchFunc                            func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
+	getEntityFunc                         func(ctx context.Context, urn string) (*types.Entity, error)
+	getSchemaFunc                         func(ctx context.Context, urn string) (*types.SchemaMetadata, error)
+	getSchemasFunc                        func(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
+	getLineageFunc                        func(ctx context.Context, urn string, opts ...client.LineageOption) (*types.LineageResult, error)
+	getColumnLineageFunc                  func(ctx context.Context, urn string) (*types.ColumnLineage, error)
+	getQueriesFunc                        func(ctx context.Context, urn string) (*types.QueryList, error)
+	getGlossaryTermFunc                   func(ctx context.Context, urn string) (*types.GlossaryTerm, error)
+	listTagsFunc                          func(ctx context.Context, filter string) ([]types.Tag, error)
+	listDomainsFunc                       func(ctx context.Context) ([]types.Domain, error)
+	listDataProductsFunc                  func(ctx context.Context) ([]types.DataProduct, error)
+	getDataProductFunc                    func(ctx context.Context, urn string) (*types.DataProduct, error)
+	pingFunc                              func(ctx context.Context) error
+	updateDescriptionFunc                 func(ctx context.Context, urn, description string) error
+	addTagFunc                            func(ctx context.Context, urn, tagURN string) error
+	removeTagFunc                         func(ctx context.Context, urn, tagURN string) error
+	addGlossaryTermFunc                   func(ctx context.Context, urn, termURN string) error
+	removeGlossaryTermFunc                func(ctx context.Context, urn, termURN string) error
+	addLinkFunc                           func(ctx context.Context, urn, linkURL, description string) error
+	removeLinkFunc                        func(ctx context.Context, urn, linkURL string) error
+	getStructuredPropertiesFunc           func(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error)
+	listStructuredPropertyDefinitionsFunc func(ctx context.Context) ([]types.StructuredPropertyDefinition, error)
+	upsertStructuredPropertiesFunc        func(ctx context.Context, urn string, properties []client.StructuredPropertyInput) error
+	removeStructuredPropertiesFunc        func(ctx context.Context, urn string, propertyURNs []string) error
 }
 
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
@@ -176,6 +180,34 @@ func (m *mockClient) AddLink(ctx context.Context, urn, linkURL, description stri
 func (m *mockClient) RemoveLink(ctx context.Context, urn, linkURL string) error {
 	if m.removeLinkFunc != nil {
 		return m.removeLinkFunc(ctx, urn, linkURL)
+	}
+	return nil
+}
+
+func (m *mockClient) GetStructuredProperties(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error) {
+	if m.getStructuredPropertiesFunc != nil {
+		return m.getStructuredPropertiesFunc(ctx, urn)
+	}
+	return nil, nil
+}
+
+func (m *mockClient) ListStructuredPropertyDefinitions(ctx context.Context) ([]types.StructuredPropertyDefinition, error) {
+	if m.listStructuredPropertyDefinitionsFunc != nil {
+		return m.listStructuredPropertyDefinitionsFunc(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockClient) UpsertStructuredProperties(ctx context.Context, urn string, properties []client.StructuredPropertyInput) error {
+	if m.upsertStructuredPropertiesFunc != nil {
+		return m.upsertStructuredPropertiesFunc(ctx, urn, properties)
+	}
+	return nil
+}
+
+func (m *mockClient) RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error {
+	if m.removeStructuredPropertiesFunc != nil {
+		return m.removeStructuredPropertiesFunc(ctx, urn, propertyURNs)
 	}
 	return nil
 }
