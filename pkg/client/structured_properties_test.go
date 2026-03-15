@@ -240,7 +240,7 @@ func TestGetStructuredProperties_Definition(t *testing.T) {
 	}
 }
 
-func TestGetStructuredProperties_GraphQLError(t *testing.T) {
+func TestGetStructuredProperties_GraphQLError_ReturnsEmpty(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"errors": [{"message": "entity not found"}]}`))
@@ -254,9 +254,13 @@ func TestGetStructuredProperties_GraphQLError(t *testing.T) {
 		logger:     NopLogger{},
 	}
 
-	_, err := c.GetStructuredProperties(context.Background(), "urn:li:dataset:nonexistent")
-	if err == nil {
-		t.Fatal("expected error")
+	// Should return empty results (not error) for backward compatibility with DataHub < 1.4.x
+	result, err := c.GetStructuredProperties(context.Background(), "urn:li:dataset:nonexistent")
+	if err != nil {
+		t.Fatalf("expected nil error for graceful degradation, got: %v", err)
+	}
+	if result != nil {
+		t.Errorf("expected nil result, got %v", result)
 	}
 }
 
@@ -451,7 +455,7 @@ func TestListStructuredPropertyDefinitions_Details(t *testing.T) {
 	}
 }
 
-func TestListStructuredPropertyDefinitions_GraphQLError(t *testing.T) {
+func TestListStructuredPropertyDefinitions_GraphQLError_ReturnsEmpty(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"errors": [{"message": "STRUCTURED_PROPERTY type not supported"}]}`))
@@ -466,9 +470,13 @@ func TestListStructuredPropertyDefinitions_GraphQLError(t *testing.T) {
 		logger:     NopLogger{},
 	}
 
-	_, err := c.ListStructuredPropertyDefinitions(context.Background())
-	if err == nil {
-		t.Fatal("expected error")
+	// Should return empty results (not error) for backward compatibility with DataHub < 1.4.x
+	result, err := c.ListStructuredPropertyDefinitions(context.Background())
+	if err != nil {
+		t.Fatalf("expected nil error for graceful degradation, got: %v", err)
+	}
+	if result != nil {
+		t.Errorf("expected nil result, got %v", result)
 	}
 }
 

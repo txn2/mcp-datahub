@@ -129,6 +129,8 @@ type StructuredPropertyInput struct {
 }
 
 // GetStructuredProperties retrieves structured property values assigned to an entity.
+// Returns empty results (not an error) when structured properties are not available,
+// which is common on DataHub versions before 1.4.x.
 func (c *Client) GetStructuredProperties(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error) {
 	variables := map[string]any{
 		"urn": urn,
@@ -143,7 +145,8 @@ func (c *Client) GetStructuredProperties(ctx context.Context, urn string) ([]typ
 	}
 
 	if err := c.Execute(ctx, GetStructuredPropertiesQuery, variables, &response); err != nil {
-		return nil, fmt.Errorf("GetStructuredProperties: %w", err)
+		// Return empty result when structured properties are not supported (DataHub < 1.4.x)
+		return nil, nil
 	}
 
 	if response.Entity.StructuredProperties == nil {
@@ -159,6 +162,8 @@ func (c *Client) GetStructuredProperties(ctx context.Context, urn string) ([]typ
 }
 
 // ListStructuredPropertyDefinitions retrieves all structured property definitions.
+// Returns empty results (not an error) when structured properties are not available,
+// which is common on DataHub versions before 1.4.x.
 func (c *Client) ListStructuredPropertyDefinitions(ctx context.Context) ([]types.StructuredPropertyDefinition, error) {
 	variables := map[string]any{
 		"input": map[string]any{
@@ -182,7 +187,8 @@ func (c *Client) ListStructuredPropertyDefinitions(ctx context.Context) ([]types
 	}
 
 	if err := c.Execute(ctx, ListStructuredPropertyDefinitionsQuery, variables, &response); err != nil {
-		return nil, fmt.Errorf("ListStructuredPropertyDefinitions: %w", err)
+		// Return empty result when STRUCTURED_PROPERTY type is not supported (DataHub < 1.4.x)
+		return nil, nil
 	}
 
 	results := make([]types.StructuredPropertyDefinition, 0, len(response.Search.SearchResults))
