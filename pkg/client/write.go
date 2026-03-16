@@ -164,7 +164,6 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 
 // updateDescriptionREST updates a description via REST read-modify-write.
 func (c *Client) updateDescriptionREST(ctx context.Context, urn, description, entityType string, aspectInfo DescriptionAspectInfo) error {
-
 	props, err := c.readEditableProperties(ctx, entityType, urn, aspectInfo.AspectName)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
