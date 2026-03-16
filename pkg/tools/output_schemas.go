@@ -16,14 +16,10 @@ var defaultOutputSchemas = map[ToolName]json.RawMessage{
 	ToolGetDataProduct:  schemaGetDataProduct,
 	ToolListConnections: schemaListConnections,
 
-	// Write tools
-	ToolUpdateDescription:  schemaUpdateDescription,
-	ToolAddTag:             schemaAddTag,
-	ToolRemoveTag:          schemaRemoveTag,
-	ToolAddGlossaryTerm:    schemaAddGlossaryTerm,
-	ToolRemoveGlossaryTerm: schemaRemoveGlossaryTerm,
-	ToolAddLink:            schemaAddLink,
-	ToolRemoveLink:         schemaRemoveLink,
+	// Write tools (CRUD pattern)
+	ToolCreate: schemaCreate,
+	ToolUpdate: schemaUpdate,
+	ToolDelete: schemaDelete,
 }
 
 // DefaultOutputSchema returns the default output JSON Schema for a tool.
@@ -356,71 +352,30 @@ var schemaListConnections = json.RawMessage(`{
   }
 }`)
 
-var schemaUpdateDescription = json.RawMessage(`{
+var schemaCreate = json.RawMessage(`{
   "type": "object",
   "properties": {
-    "urn":         {"type": "string"},
-    "description": {"type": "string"},
-    "aspect":      {"type": "string"},
-    "action":      {"type": "string"}
+    "urn":    {"type": "string", "description": "URN of the created entity"},
+    "what":   {"type": "string", "description": "Entity type that was created"},
+    "action": {"type": "string", "description": "Always 'created'"}
   }
 }`)
 
-var schemaAddTag = json.RawMessage(`{
+var schemaUpdate = json.RawMessage(`{
   "type": "object",
   "properties": {
-    "urn":    {"type": "string"},
-    "tag":    {"type": "string"},
-    "aspect": {"type": "string"},
-    "action": {"type": "string"}
+    "urn":        {"type": "string", "description": "URN of the updated entity"},
+    "what":       {"type": "string", "description": "What was updated"},
+    "action":     {"type": "string", "description": "Action performed (added, removed, updated)"},
+    "target_urn": {"type": "string", "description": "URN of the target (tag, term, owner, etc.) when applicable"}
   }
 }`)
 
-var schemaRemoveTag = json.RawMessage(`{
+var schemaDelete = json.RawMessage(`{
   "type": "object",
   "properties": {
-    "urn":    {"type": "string"},
-    "tag":    {"type": "string"},
-    "aspect": {"type": "string"},
-    "action": {"type": "string"}
-  }
-}`)
-
-var schemaAddGlossaryTerm = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "urn":           {"type": "string"},
-    "glossary_term": {"type": "string"},
-    "aspect":        {"type": "string"},
-    "action":        {"type": "string"}
-  }
-}`)
-
-var schemaRemoveGlossaryTerm = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "urn":           {"type": "string"},
-    "glossary_term": {"type": "string"},
-    "aspect":        {"type": "string"},
-    "action":        {"type": "string"}
-  }
-}`)
-
-var schemaAddLink = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "urn":    {"type": "string"},
-    "url":    {"type": "string"},
-    "label":  {"type": "string"},
-    "action": {"type": "string"}
-  }
-}`)
-
-var schemaRemoveLink = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "urn":    {"type": "string"},
-    "url":    {"type": "string"},
-    "action": {"type": "string"}
+    "urn":    {"type": "string", "description": "URN of the deleted entity"},
+    "what":   {"type": "string", "description": "Entity type that was deleted"},
+    "action": {"type": "string", "description": "Always 'deleted'"}
   }
 }`)

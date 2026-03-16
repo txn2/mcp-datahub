@@ -172,14 +172,10 @@ func (t *Toolkit) toolRegistry() map[ToolName]toolRegistrar {
 		ToolGetDataProduct:  t.registerGetDataProductTool,
 		ToolListConnections: t.registerListConnectionsTool,
 
-		// Write tools
-		ToolUpdateDescription:  t.registerUpdateDescriptionTool,
-		ToolAddTag:             t.registerAddTagTool,
-		ToolRemoveTag:          t.registerRemoveTagTool,
-		ToolAddGlossaryTerm:    t.registerAddGlossaryTermTool,
-		ToolRemoveGlossaryTerm: t.registerRemoveGlossaryTermTool,
-		ToolAddLink:            t.registerAddLinkTool,
-		ToolRemoveLink:         t.registerRemoveLinkTool,
+		// Write tools (CRUD pattern)
+		ToolCreate: t.registerCreateTool,
+		ToolUpdate: t.registerUpdateTool,
+		ToolDelete: t.registerDeleteTool,
 	}
 }
 

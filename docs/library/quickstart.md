@@ -120,7 +120,7 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{},
 )
 ```
 
-All tools ship with sensible defaults (read tools marked read-only, write tools marked non-destructive and idempotent). See the [Tools API Reference](../reference/tools-api.md#withannotations) for the full annotation API.
+All tools ship with sensible defaults (read tools marked read-only; `datahub_create` non-destructive; `datahub_update` non-destructive and idempotent; `datahub_delete` destructive). See the [Tools API Reference](../reference/tools-api.md#withannotations) for the full annotation API.
 
 ## With Extensions
 

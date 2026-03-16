@@ -206,7 +206,7 @@ Annotation priority (highest to lowest):
 2. Toolkit-level override via `WithAnnotations()`
 3. Built-in default annotations
 
-All 16 tools ship with defaults: read tools are `ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: true`; write tools are `DestructiveHint: false, IdempotentHint: true, OpenWorldHint: true`.
+All 12 tools ship with defaults: read tools are `ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: true`; `datahub_create` is non-destructive and non-idempotent; `datahub_update` is non-destructive and idempotent; `datahub_delete` is destructive and idempotent.
 
 ## Extensions Configuration
 

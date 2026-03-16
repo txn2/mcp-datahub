@@ -49,14 +49,20 @@ var defaultDescriptions = map[ToolName]string{
 		"Use this to discover available connections before querying specific servers. " +
 		"Pass the connection name to other tools via the 'connection' parameter.",
 
-	// Write tools
-	ToolUpdateDescription:  "Update the description of a DataHub entity",
-	ToolAddTag:             "Add a tag to a DataHub entity",
-	ToolRemoveTag:          "Remove a tag from a DataHub entity",
-	ToolAddGlossaryTerm:    "Add a glossary term to a DataHub entity",
-	ToolRemoveGlossaryTerm: "Remove a glossary term from a DataHub entity",
-	ToolAddLink:            "Add a link to a DataHub entity",
-	ToolRemoveLink:         "Remove a link from a DataHub entity",
+	// Write tools (CRUD pattern)
+	ToolCreate: "Create a new entity or resource in DataHub. Set 'what' to choose the entity type: " +
+		"tag, domain, glossary_term, data_product, document, application, query, incident, " +
+		"structured_property, or data_contract. Returns the URN of the created entity.",
+
+	ToolUpdate: "Update metadata on an existing DataHub entity. Set 'what' to choose what to update " +
+		"and 'action' for the operation (add/remove/set). Supports: description, column_description, " +
+		"tag, glossary_term, link, owner, domain, structured_properties, structured_property, " +
+		"incident_status, incident, query, document_contents, document_status, " +
+		"document_related_entities, document_sub_type, and data_contract.",
+
+	ToolDelete: "Delete an entity or resource from DataHub. Set 'what' to choose the entity type: " +
+		"query, tag, domain, glossary_entity, data_product, application, document, or structured_property. " +
+		"This operation is destructive and cannot be undone.",
 }
 
 // DefaultDescription returns the default description for a tool.

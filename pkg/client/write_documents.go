@@ -1,0 +1,106 @@
+package client
+
+import (
+	"context"
+	"fmt"
+)
+
+// GraphQL mutations for document management.
+const (
+	updateDocumentContentsMutation = `mutation updateDocumentContents($urn: String!, $input: UpdateDocumentContentsInput!) {
+		updateDocumentContents(urn: $urn, input: $input)
+	}`
+
+	updateDocumentStatusMutation = `mutation updateDocumentStatus($urn: String!, $input: UpdateDocumentStatusInput!) {
+		updateDocumentStatus(urn: $urn, input: $input)
+	}`
+
+	//nolint:lll // GraphQL mutation
+	updateDocumentRelatedEntitiesMutation = `mutation updateDocumentRelatedEntities($urn: String!, $input: UpdateDocumentRelatedEntitiesInput!) {
+		updateDocumentRelatedEntities(urn: $urn, input: $input)
+	}`
+
+	updateDocumentSubTypeMutation = `mutation updateDocumentSubType($urn: String!, $input: UpdateDocumentSubTypeInput!) {
+		updateDocumentSubType(urn: $urn, input: $input)
+	}`
+
+	deleteDocumentMutation = `mutation deleteDocument($urn: String!) {
+		deleteDocument(urn: $urn)
+	}`
+)
+
+// UpdateDocumentContents updates the title and text of a document.
+func (c *Client) UpdateDocumentContents(ctx context.Context, urn, title, text string) error {
+	input := map[string]any{}
+	if title != "" {
+		input["title"] = title
+	}
+	if text != "" {
+		input["text"] = text
+	}
+	variables := map[string]any{"urn": urn, "input": input}
+	var resp struct {
+		UpdateDocumentContents bool `json:"updateDocumentContents"`
+	}
+	if err := c.Execute(ctx, updateDocumentContentsMutation, variables, &resp); err != nil {
+		return fmt.Errorf("UpdateDocumentContents: %w", err)
+	}
+	return nil
+}
+
+// UpdateDocumentStatus updates the publication status of a document.
+func (c *Client) UpdateDocumentStatus(ctx context.Context, urn, status string) error {
+	variables := map[string]any{
+		"urn":   urn,
+		"input": map[string]any{"status": status},
+	}
+	var resp struct {
+		UpdateDocumentStatus bool `json:"updateDocumentStatus"`
+	}
+	if err := c.Execute(ctx, updateDocumentStatusMutation, variables, &resp); err != nil {
+		return fmt.Errorf("UpdateDocumentStatus: %w", err)
+	}
+	return nil
+}
+
+// UpdateDocumentRelatedEntities updates entities related to a document.
+func (c *Client) UpdateDocumentRelatedEntities(ctx context.Context, urn string, entityURNs []string) error {
+	variables := map[string]any{
+		"urn":   urn,
+		"input": map[string]any{"entityUrns": entityURNs},
+	}
+	var resp struct {
+		UpdateDocumentRelatedEntities bool `json:"updateDocumentRelatedEntities"`
+	}
+	if err := c.Execute(ctx, updateDocumentRelatedEntitiesMutation, variables, &resp); err != nil {
+		return fmt.Errorf("UpdateDocumentRelatedEntities: %w", err)
+	}
+	return nil
+}
+
+// UpdateDocumentSubType updates the sub-type of a document.
+func (c *Client) UpdateDocumentSubType(ctx context.Context, urn, subType string) error {
+	variables := map[string]any{
+		"urn":   urn,
+		"input": map[string]any{"subType": subType},
+	}
+	var resp struct {
+		UpdateDocumentSubType bool `json:"updateDocumentSubType"`
+	}
+	if err := c.Execute(ctx, updateDocumentSubTypeMutation, variables, &resp); err != nil {
+		return fmt.Errorf("UpdateDocumentSubType: %w", err)
+	}
+	return nil
+}
+
+// DeleteDocument deletes a document entity.
+func (c *Client) DeleteDocument(ctx context.Context, urn string) error {
+	variables := map[string]any{"urn": urn}
+	var resp struct {
+		DeleteDocument bool `json:"deleteDocument"`
+	}
+	if err := c.Execute(ctx, deleteDocumentMutation, variables, &resp); err != nil {
+		return fmt.Errorf("DeleteDocument: %w", err)
+	}
+	return nil
+}

@@ -57,6 +57,9 @@ type DataHubClient interface {
 	// UpdateDescription sets the editable description for an entity.
 	UpdateDescription(ctx context.Context, urn, description string) error
 
+	// UpdateColumnDescription sets the description for a specific schema field.
+	UpdateColumnDescription(ctx context.Context, urn, fieldPath, description string) error
+
 	// AddTag adds a tag to an entity.
 	AddTag(ctx context.Context, urn, tagURN string) error
 
@@ -74,6 +77,17 @@ type DataHubClient interface {
 
 	// RemoveLink removes a link from an entity by URL.
 	RemoveLink(ctx context.Context, urn, linkURL string) error
+
+	// Query CRUD operations.
+
+	// CreateQuery creates a new Query entity.
+	CreateQuery(ctx context.Context, input client.CreateQueryInput) (*types.Query, error)
+
+	// UpdateQuery updates an existing Query entity.
+	UpdateQuery(ctx context.Context, input client.UpdateQueryInput) (*types.Query, error)
+
+	// DeleteQuery deletes a Query entity.
+	DeleteQuery(ctx context.Context, urn string) error
 
 	// Structured properties (DataHub 1.4.x+).
 
@@ -117,4 +131,85 @@ type DataHubClient interface {
 
 	// GetRelatedDocuments retrieves documents linked to an entity.
 	GetRelatedDocuments(ctx context.Context, urn string) ([]types.Document, error)
+
+	// Entity creation (GraphQL mutations).
+
+	// CreateTag creates a new tag entity.
+	CreateTag(ctx context.Context, name, description string) (string, error)
+
+	// CreateDomain creates a new domain entity.
+	CreateDomain(ctx context.Context, name, description string) (string, error)
+
+	// CreateGlossaryTerm creates a new glossary term entity.
+	CreateGlossaryTerm(ctx context.Context, name, description, parentNode string) (string, error)
+
+	// CreateDataProduct creates a new data product entity.
+	CreateDataProduct(ctx context.Context, name, description, domainURN string) (string, error)
+
+	// CreateDocument creates a new context document entity.
+	CreateDocument(ctx context.Context, input types.CreateDocumentInput) (string, error)
+
+	// CreateApplication creates a new application entity.
+	CreateApplication(ctx context.Context, name, description string) (string, error)
+
+	// CreateStructuredProperty creates a new structured property definition.
+	CreateStructuredProperty(ctx context.Context, input types.CreateStructuredPropertyInput) (string, error)
+
+	// UpsertDataContract creates or updates a data contract for a dataset.
+	UpsertDataContract(ctx context.Context, input types.UpsertDataContractInput) (string, error)
+
+	// Entity update operations.
+
+	// AddOwner adds an owner to an entity.
+	AddOwner(ctx context.Context, urn, ownerURN, ownershipType string) error
+
+	// RemoveOwner removes an owner from an entity.
+	RemoveOwner(ctx context.Context, urn, ownerURN string) error
+
+	// SetDomain assigns a domain to an entity.
+	SetDomain(ctx context.Context, entityURN, domainURN string) error
+
+	// UnsetDomain removes the domain from an entity.
+	UnsetDomain(ctx context.Context, entityURN string) error
+
+	// UpdateIncident updates an existing incident.
+	UpdateIncident(ctx context.Context, urn string, input types.UpdateIncidentInput) error
+
+	// UpdateStructuredProperty updates a structured property definition.
+	UpdateStructuredProperty(ctx context.Context, urn string, input types.UpdateStructuredPropertyInput) error
+
+	// UpdateDocumentContents updates the title and text of a document.
+	UpdateDocumentContents(ctx context.Context, urn, title, text string) error
+
+	// UpdateDocumentStatus updates the status of a document.
+	UpdateDocumentStatus(ctx context.Context, urn, status string) error
+
+	// UpdateDocumentRelatedEntities updates entities related to a document.
+	UpdateDocumentRelatedEntities(ctx context.Context, urn string, entityURNs []string) error
+
+	// UpdateDocumentSubType updates the sub-type of a document.
+	UpdateDocumentSubType(ctx context.Context, urn, subType string) error
+
+	// Entity deletion (GraphQL mutations).
+
+	// DeleteTag deletes a tag entity.
+	DeleteTag(ctx context.Context, urn string) error
+
+	// DeleteDomain deletes a domain entity.
+	DeleteDomain(ctx context.Context, urn string) error
+
+	// DeleteGlossaryEntity deletes a glossary term or node.
+	DeleteGlossaryEntity(ctx context.Context, urn string) error
+
+	// DeleteDataProduct deletes a data product entity.
+	DeleteDataProduct(ctx context.Context, urn string) error
+
+	// DeleteApplication deletes an application entity.
+	DeleteApplication(ctx context.Context, urn string) error
+
+	// DeleteDocument deletes a document entity.
+	DeleteDocument(ctx context.Context, urn string) error
+
+	// DeleteStructuredProperty deletes a structured property definition.
+	DeleteStructuredProperty(ctx context.Context, urn string) error
 }

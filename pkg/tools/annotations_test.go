@@ -20,14 +20,10 @@ func TestDefaultAnnotations(t *testing.T) {
 		{ToolGetGlossaryTerm, false},
 		{ToolGetDataProduct, false},
 		{ToolListConnections, false},
-		// Write tools
-		{ToolUpdateDescription, false},
-		{ToolAddTag, false},
-		{ToolRemoveTag, false},
-		{ToolAddGlossaryTerm, false},
-		{ToolRemoveGlossaryTerm, false},
-		{ToolAddLink, false},
-		{ToolRemoveLink, false},
+		// Write tools (CRUD pattern)
+		{ToolCreate, false},
+		{ToolUpdate, false},
+		{ToolDelete, false},
 		{ToolName("unknown_tool"), true},
 	}
 
@@ -76,28 +72,42 @@ func TestDefaultAnnotations_ReadOnlyTools(t *testing.T) {
 }
 
 func TestDefaultAnnotations_WriteTools(t *testing.T) {
-	writeTools := []ToolName{
-		ToolUpdateDescription, ToolAddTag, ToolRemoveTag,
-		ToolAddGlossaryTerm, ToolRemoveGlossaryTerm,
-		ToolAddLink, ToolRemoveLink,
+	// ToolCreate: non-destructive, not idempotent
+	createAnn := DefaultAnnotations(ToolCreate)
+	if createAnn.DestructiveHint == nil || *createAnn.DestructiveHint {
+		t.Error("expected DestructiveHint=false for ToolCreate")
+	}
+	if createAnn.IdempotentHint {
+		t.Error("expected IdempotentHint=false for ToolCreate")
 	}
 
-	for _, name := range writeTools {
-		t.Run(string(name), func(t *testing.T) {
-			ann := DefaultAnnotations(name)
-			if ann.ReadOnlyHint {
-				t.Errorf("expected ReadOnlyHint=false for %s", name)
-			}
-			if ann.DestructiveHint == nil || *ann.DestructiveHint {
-				t.Errorf("expected DestructiveHint=false for %s", name)
-			}
-			if !ann.IdempotentHint {
-				t.Errorf("expected IdempotentHint=true for %s", name)
-			}
-			if ann.OpenWorldHint == nil || !*ann.OpenWorldHint {
-				t.Errorf("expected OpenWorldHint=true for %s", name)
-			}
-		})
+	// ToolUpdate: non-destructive, idempotent
+	updateAnn := DefaultAnnotations(ToolUpdate)
+	if updateAnn.DestructiveHint == nil || *updateAnn.DestructiveHint {
+		t.Error("expected DestructiveHint=false for ToolUpdate")
+	}
+	if !updateAnn.IdempotentHint {
+		t.Error("expected IdempotentHint=true for ToolUpdate")
+	}
+
+	// ToolDelete: destructive, idempotent
+	deleteAnn := DefaultAnnotations(ToolDelete)
+	if deleteAnn.DestructiveHint == nil || !*deleteAnn.DestructiveHint {
+		t.Error("expected DestructiveHint=true for ToolDelete")
+	}
+	if !deleteAnn.IdempotentHint {
+		t.Error("expected IdempotentHint=true for ToolDelete")
+	}
+
+	// All write tools: OpenWorldHint=true, ReadOnlyHint=false
+	for _, name := range WriteTools() {
+		ann := DefaultAnnotations(name)
+		if ann.ReadOnlyHint {
+			t.Errorf("expected ReadOnlyHint=false for %s", name)
+		}
+		if ann.OpenWorldHint == nil || !*ann.OpenWorldHint {
+			t.Errorf("expected OpenWorldHint=true for %s", name)
+		}
 	}
 }
 

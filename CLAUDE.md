@@ -98,7 +98,7 @@ export DATAHUB_TOKEN=your_token
 ./mcp-datahub
 ```
 
-## Available Tools (16 total: 9 read + 7 write)
+## Available Tools (12 total: 9 read + 3 write)
 
 Each tool has a `Title` (human-readable display name shown in MCP clients like Claude Desktop),
 an `OutputSchema` (JSON Schema describing the response structure), and `Annotations`.
@@ -120,15 +120,13 @@ All are customizable via the three-tier priority pattern.
 
 ### Write Tools (require `WriteEnabled: true`)
 
-| Tool | Title | Description |
-|------|-------|-------------|
-| `datahub_update_description` | Update Description | Update entity description |
-| `datahub_add_tag` | Add Tag | Add a tag to an entity |
-| `datahub_remove_tag` | Remove Tag | Remove a tag from an entity |
-| `datahub_add_glossary_term` | Add Glossary Term | Add a glossary term to an entity |
-| `datahub_remove_glossary_term` | Remove Glossary Term | Remove a glossary term from an entity |
-| `datahub_add_link` | Add Link | Add a link to an entity |
-| `datahub_remove_link` | Remove Link | Remove a link from an entity |
+3 CRUD tools using the discriminator pattern (`what` parameter) to cover 35 operations:
+
+| Tool | Title | Operations | Description |
+|------|-------|------------|-------------|
+| `datahub_create` | Create Entity | 10 | Create tags, domains, glossary terms, data products, documents, applications, queries, incidents, structured properties, data contracts |
+| `datahub_update` | Update Entity | 17 | Update descriptions, tags, glossary terms, links, owners, domains, structured properties, incidents, queries, document contents/status/related entities/sub-type, data contracts |
+| `datahub_delete` | Delete Entity | 8 | Delete queries, tags, domains, glossary entities, data products, applications, documents, structured properties |
 
 ## Description Overrides
 
@@ -164,10 +162,12 @@ MCP tool annotations (behavior hints per the MCP specification) follow the same 
 2. **Toolkit-level**: `tools.NewToolkit(client, cfg, tools.WithAnnotations(map[tools.ToolName]*mcp.ToolAnnotations{...}))`
 3. **Default**: Built-in annotations from `pkg/tools/annotations.go`
 
-Default annotations for all 16 tools:
+Default annotations for all 12 tools:
 
 - **Read tools** (9): `ReadOnlyHint: true`, `IdempotentHint: true`, `OpenWorldHint: true`
-- **Write tools** (7): `DestructiveHint: false`, `IdempotentHint: true`, `OpenWorldHint: true`
+- **datahub_create**: `DestructiveHint: false`, `IdempotentHint: false`, `OpenWorldHint: true`
+- **datahub_update**: `DestructiveHint: false`, `IdempotentHint: true`, `OpenWorldHint: true`
+- **datahub_delete**: `DestructiveHint: true`, `IdempotentHint: true`, `OpenWorldHint: true`
 
 `OpenWorldHint: true` is correct because all tools communicate with an external DataHub instance.
 

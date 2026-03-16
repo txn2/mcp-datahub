@@ -2,6 +2,7 @@ package tools
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -23,6 +24,11 @@ func TextResult(text string) *mcp.CallToolResult {
 			&mcp.TextContent{Text: text},
 		},
 	}
+}
+
+// errRequired returns an error indicating a required parameter is missing.
+func errRequired(param string) error {
+	return fmt.Errorf("%s parameter is required", param)
 }
 
 // JSONResult creates a JSON result for tool responses.

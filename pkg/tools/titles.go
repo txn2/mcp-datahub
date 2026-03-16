@@ -15,14 +15,10 @@ var defaultTitles = map[ToolName]string{
 	ToolGetDataProduct:  "Get Data Product",
 	ToolListConnections: "List Connections",
 
-	// Write tools
-	ToolUpdateDescription:  "Update Description",
-	ToolAddTag:             "Add Tag",
-	ToolRemoveTag:          "Remove Tag",
-	ToolAddGlossaryTerm:    "Add Glossary Term",
-	ToolRemoveGlossaryTerm: "Remove Glossary Term",
-	ToolAddLink:            "Add Link",
-	ToolRemoveLink:         "Remove Link",
+	// Write tools (CRUD pattern)
+	ToolCreate: "Create Entity",
+	ToolUpdate: "Update Entity",
+	ToolDelete: "Delete Entity",
 }
 
 // DefaultTitle returns the default human-readable title for a tool.

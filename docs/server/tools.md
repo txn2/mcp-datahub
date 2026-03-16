@@ -1,17 +1,17 @@
 # Available Tools
 
-mcp-datahub provides 16 MCP tools for interacting with DataHub (9 read + 7 write).
+mcp-datahub provides 12 MCP tools for interacting with DataHub (9 read + 3 write), covering 35 write operations through the CRUD discriminator pattern.
 
 ## Tool Annotations
 
 All tools include [MCP tool annotations](https://modelcontextprotocol.io/specification/2025-03-26/server/tools#annotations) that describe their behavior to AI clients:
 
-| Hint | Read Tools | Write Tools | Description |
-|------|:----------:|:-----------:|-------------|
-| `ReadOnlyHint` | `true` | `false` | Whether the tool only reads data |
-| `DestructiveHint` | _(default)_ | `false` | Whether the tool may destructively update |
-| `IdempotentHint` | `true` | `true` | Whether repeated calls produce the same result |
-| `OpenWorldHint` | `true` | `true` | Whether the tool interacts with external entities |
+| Hint | Read Tools | `datahub_create` | `datahub_update` | `datahub_delete` | Description |
+|------|:----------:|:----------------:|:----------------:|:----------------:|-------------|
+| `ReadOnlyHint` | `true` | `false` | `false` | `false` | Whether the tool only reads data |
+| `DestructiveHint` | _(default)_ | `false` | `false` | `true` | Whether the tool may destructively update |
+| `IdempotentHint` | `true` | `false` | `true` | `true` | Whether repeated calls produce the same result |
+| `OpenWorldHint` | `true` | `true` | `true` | `true` | Whether the tool interacts with external entities |
 
 `OpenWorldHint` is `true` for all tools because every tool communicates with an external DataHub instance.
 
@@ -641,105 +641,91 @@ Get detailed information about a data product.
 
 ## Write Tools
 
-Write tools require `DATAHUB_WRITE_ENABLED=true` to be set. They use DataHub's REST API (`POST /aspects?action=ingestProposal`) with read-modify-write semantics for array aspects (tags, terms, links).
+Write tools require `DATAHUB_WRITE_ENABLED=true`. They use the CRUD discriminator pattern — 3 tools covering 35 operations via the `what` parameter.
 
 ---
 
-### datahub_update_description
+### datahub_create
 
-Update the description of an entity.
+Create a new entity or resource. Returns the URN of the created entity.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `urn` | string | Yes | Entity URN |
-| `description` | string | Yes | New description text |
+| `what` | string | Yes | Entity type: `tag`, `domain`, `glossary_term`, `data_product`, `document`, `application`, `query`, `incident`, `structured_property`, `data_contract` |
+| `name` | string | Varies | Name or title (required for most types) |
+| `description` | string | No | Description or content |
+| `parent_node` | string | No | Parent glossary node URN (glossary_term) |
+| `domain_urn` | string | No | Domain URN (data_product, required) |
+| `value` | string | No | SQL statement (query) |
+| `language` | string | No | Query language, default SQL (query) |
+| `dataset_urns` | string[] | No | Associated dataset URNs (query, data_contract) |
+| `entity_urns` | string[] | No | Affected entity URNs (incident) |
+| `incident_type` | string | No | Incident type (incident) |
+| `priority` | string | No | Priority: LOW, MEDIUM, HIGH, CRITICAL (incident) |
+| `qualified_name` | string | No | Fully qualified name (structured_property) |
+| `value_type` | string | No | Value type (structured_property) |
 | `connection` | string | No | Named connection to use |
 
 ---
 
-### datahub_add_tag
+### datahub_update
 
-Add a tag to an entity.
+Update metadata on an existing entity.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
+| `what` | string | Yes | What to update (see table below) |
+| `action` | string | No | `add`, `remove`, or `set` (default: `set`) |
 | `urn` | string | Yes | Entity URN |
-| `tag_urn` | string | Yes | Tag URN to add |
+| `value` | string | No | New value (description, status, label, message) |
+| `target_urn` | string | No | Target URN for add/remove (tag, glossary term, owner, domain) |
+| `url` | string | No | URL for link operations |
+| `field_path` | string | No | Schema field path (column_description) |
+| `name` | string | No | Updated name (query, incident, structured_property) |
+| `description` | string | No | Updated description |
+| `title` | string | No | Document title (document_contents) |
+| `text` | string | No | Document text (document_contents) |
+| `entity_urns` | string[] | No | Related entity URNs (document_related_entities) |
 | `connection` | string | No | Named connection to use |
+
+**`what` values and required `action`:**
+
+| what | action | Description |
+|------|--------|-------------|
+| `description` | set | Set entity description |
+| `column_description` | set | Set schema field description |
+| `tag` | add/remove | Add or remove a tag |
+| `glossary_term` | add/remove | Add or remove a glossary term |
+| `link` | add/remove | Add or remove a link |
+| `owner` | add/remove | Add or remove an owner |
+| `domain` | set/remove | Set or remove domain assignment |
+| `structured_properties` | set/remove | Set or remove structured property values |
+| `structured_property` | set | Update a structured property definition |
+| `incident_status` | set | Resolve an incident |
+| `incident` | set | Update incident details |
+| `query` | set | Update query properties |
+| `document_contents` | set | Update document title/text |
+| `document_status` | set | Update document status |
+| `document_related_entities` | set | Update document related entities |
+| `document_sub_type` | set | Update document sub-type |
+| `data_contract` | set | Upsert a data contract |
 
 ---
 
-### datahub_remove_tag
+### datahub_delete
 
-Remove a tag from an entity.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `urn` | string | Yes | Entity URN |
-| `tag_urn` | string | Yes | Tag URN to remove |
-| `connection` | string | No | Named connection to use |
-
----
-
-### datahub_add_glossary_term
-
-Add a glossary term to an entity.
+Delete an entity or resource. This is destructive and cannot be undone.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `urn` | string | Yes | Entity URN |
-| `term_urn` | string | Yes | Glossary term URN to add |
-| `connection` | string | No | Named connection to use |
-
----
-
-### datahub_remove_glossary_term
-
-Remove a glossary term from an entity.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `urn` | string | Yes | Entity URN |
-| `term_urn` | string | Yes | Glossary term URN to remove |
-| `connection` | string | No | Named connection to use |
-
----
-
-### datahub_add_link
-
-Add a link to an entity.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `urn` | string | Yes | Entity URN |
-| `link_url` | string | Yes | URL to add |
-| `link_label` | string | Yes | Display label for the link |
-| `connection` | string | No | Named connection to use |
-
----
-
-### datahub_remove_link
-
-Remove a link from an entity.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `urn` | string | Yes | Entity URN |
-| `link_url` | string | Yes | URL to remove |
+| `what` | string | Yes | Entity type: `query`, `tag`, `domain`, `glossary_entity`, `data_product`, `application`, `document`, `structured_property` |
+| `urn` | string | Yes | URN of the entity to delete |
 | `connection` | string | No | Named connection to use |
 
 ---
