@@ -148,7 +148,8 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 	}
 
 	// Validate the entity type is supported before choosing a path.
-	if _, err := LookupDescriptionAspect(entityType); err != nil {
+	aspectInfo, err := LookupDescriptionAspect(entityType)
+	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
 
@@ -158,15 +159,11 @@ func (c *Client) UpdateDescription(ctx context.Context, urn, description string)
 		return c.updateDescriptionGraphQL(ctx, urn, description)
 	}
 
-	return c.updateDescriptionREST(ctx, urn, description, entityType)
+	return c.updateDescriptionREST(ctx, urn, description, entityType, aspectInfo)
 }
 
 // updateDescriptionREST updates a description via REST read-modify-write.
-func (c *Client) updateDescriptionREST(ctx context.Context, urn, description, entityType string) error {
-	aspectInfo, err := LookupDescriptionAspect(entityType)
-	if err != nil {
-		return fmt.Errorf("UpdateDescription: %w", err)
-	}
+func (c *Client) updateDescriptionREST(ctx context.Context, urn, description, entityType string, aspectInfo DescriptionAspectInfo) error {
 
 	props, err := c.readEditableProperties(ctx, entityType, urn, aspectInfo.AspectName)
 	if err != nil {
