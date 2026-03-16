@@ -99,48 +99,6 @@ query getDocument($urn: String!) {
 }
 `
 
-	// SearchDocumentsQuery searches for documents with filtering.
-	SearchDocumentsQuery = `
-query searchDocuments($input: SearchDocumentsInput!) {
-  searchDocuments(input: $input) {
-    start
-    count
-    total
-    searchResults {
-      document {
-        urn
-        subType
-        info {
-          title
-          contents {
-            text
-          }
-          source {
-            sourceType
-            externalUrl
-          }
-          status {
-            state
-          }
-          created {
-            time
-          }
-          lastModified {
-            time
-          }
-          relatedAssets {
-            urn
-          }
-        }
-        settings {
-          showInGlobalContext
-        }
-      }
-    }
-  }
-}
-`
-
 	// GetRelatedDocumentsQuery retrieves documents linked to an entity.
 	// The relatedDocuments field is repeated per entity type because GraphQL
 	// inline fragments require each concrete type to declare its own fields —
@@ -225,48 +183,6 @@ query getRelatedDocuments($urn: String!, $input: RelatedDocumentsInput!) {
   }
 }
 `
-
-	// CreateDocumentMutation creates a new document.
-	CreateDocumentMutation = `
-mutation createDocument($input: CreateDocumentInput!) {
-  createDocument(input: $input)
-}
-`
-
-	// UpdateDocumentContentsMutation updates document content.
-	UpdateDocumentContentsMutation = `
-mutation updateDocumentContents($input: UpdateDocumentContentsInput!) {
-  updateDocumentContents(input: $input)
-}
-`
-
-	// UpdateDocumentRelatedEntitiesMutation updates related entities.
-	UpdateDocumentRelatedEntitiesMutation = `
-mutation updateDocumentRelatedEntities($input: UpdateDocumentRelatedEntitiesInput!) {
-  updateDocumentRelatedEntities(input: $input)
-}
-`
-
-	// UpdateDocumentStatusMutation updates document status.
-	UpdateDocumentStatusMutation = `
-mutation updateDocumentStatus($input: UpdateDocumentStatusInput!) {
-  updateDocumentStatus(input: $input)
-}
-`
-
-	// UpdateDocumentSettingsMutation updates document settings.
-	UpdateDocumentSettingsMutation = `
-mutation updateDocumentSettings($input: UpdateDocumentSettingsInput!) {
-  updateDocumentSettings(input: $input)
-}
-`
-
-	// DeleteDocumentMutation deletes a document.
-	DeleteDocumentMutation = `
-mutation deleteDocument($urn: String!) {
-  deleteDocument(urn: $urn)
-}
-`
 )
 
 // GetDocument retrieves a document by URN.
@@ -288,59 +204,11 @@ func (c *Client) GetDocument(ctx context.Context, urn string) (*types.Document, 
 	return parseDocumentResponse(&response.Document), nil
 }
 
-// SearchDocuments searches for documents.
-func (c *Client) SearchDocuments(ctx context.Context, query string, opts ...SearchOption) (*types.DocumentSearchResult, error) {
-	options := &searchOptions{
-		limit:  c.config.DefaultLimit,
-		offset: 0,
-	}
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	if options.limit > c.config.MaxLimit {
-		options.limit = c.config.MaxLimit
-	}
-
-	input := map[string]any{
-		"query": query,
-		"start": options.offset,
-		"count": options.limit,
-	}
-
-	variables := map[string]any{"input": input}
-
-	var response struct {
-		SearchDocuments struct {
-			Start         int `json:"start"`
-			Count         int `json:"count"`
-			Total         int `json:"total"`
-			SearchResults []struct {
-				Document documentResponse `json:"document"`
-			} `json:"searchResults"`
-		} `json:"searchDocuments"`
-	}
-
-	if err := c.Execute(ctx, SearchDocumentsQuery, variables, &response); err != nil {
-		return nil, fmt.Errorf("SearchDocuments(%q): %w", query, err)
-	}
-
-	result := &types.DocumentSearchResult{
-		Total: response.SearchDocuments.Total,
-	}
-
-	for _, sr := range response.SearchDocuments.SearchResults {
-		result.Documents = append(result.Documents, *parseDocumentResponse(&sr.Document))
-	}
-
-	return result, nil
-}
-
 // GetRelatedDocuments retrieves documents linked to an entity.
 func (c *Client) GetRelatedDocuments(ctx context.Context, urn string) ([]types.Document, error) {
 	variables := map[string]any{
 		"urn":   urn,
-		"input": map[string]any{"start": 0, "count": 100},
+		"input": map[string]any{"start": 0, "count": c.config.MaxLimit},
 	}
 
 	var response struct {
@@ -369,150 +237,6 @@ func (c *Client) GetRelatedDocuments(ctx context.Context, urn string) ([]types.D
 type relatedDocumentsResult struct {
 	Total     int                `json:"total"`
 	Documents []documentResponse `json:"documents"`
-}
-
-// CreateDocument creates a new context document.
-func (c *Client) CreateDocument(ctx context.Context, input types.CreateDocumentInput) (string, error) {
-	gqlInput := map[string]any{
-		"title": input.Title,
-		"contents": map[string]any{
-			"text": input.Content,
-		},
-	}
-
-	if input.SubType != "" {
-		gqlInput["subType"] = input.SubType
-	}
-	if input.State != "" {
-		gqlInput["state"] = input.State
-	}
-	if input.ShowInGlobalContext != nil {
-		gqlInput["settings"] = map[string]any{
-			"showInGlobalContext": *input.ShowInGlobalContext,
-		}
-	}
-	if len(input.RelatedAssets) > 0 {
-		assets := make([]map[string]any, len(input.RelatedAssets))
-		for i, urn := range input.RelatedAssets {
-			assets[i] = map[string]any{"urn": urn}
-		}
-		gqlInput["relatedAssets"] = assets
-	}
-
-	variables := map[string]any{"input": gqlInput}
-
-	var response struct {
-		CreateDocument string `json:"createDocument"`
-	}
-
-	if err := c.Execute(ctx, CreateDocumentMutation, variables, &response); err != nil {
-		return "", fmt.Errorf("CreateDocument: %w", err)
-	}
-
-	return response.CreateDocument, nil
-}
-
-// UpdateDocumentContents updates a document's title and/or content.
-func (c *Client) UpdateDocumentContents(ctx context.Context, urn string, title, content string) error {
-	gqlInput := map[string]any{"urn": urn}
-	if title != "" {
-		gqlInput["title"] = title
-	}
-	if content != "" {
-		gqlInput["contents"] = map[string]any{"text": content}
-	}
-
-	variables := map[string]any{"input": gqlInput}
-
-	var response struct {
-		UpdateDocumentContents bool `json:"updateDocumentContents"`
-	}
-
-	if err := c.Execute(ctx, UpdateDocumentContentsMutation, variables, &response); err != nil {
-		return fmt.Errorf("UpdateDocumentContents(%s): %w", urn, err)
-	}
-
-	return nil
-}
-
-// UpdateDocumentRelatedEntities updates the related entities for a document.
-func (c *Client) UpdateDocumentRelatedEntities(ctx context.Context, urn string, assetURNs []string) error {
-	assets := make([]map[string]any, len(assetURNs))
-	for i, assetURN := range assetURNs {
-		assets[i] = map[string]any{"urn": assetURN}
-	}
-
-	variables := map[string]any{
-		"input": map[string]any{
-			"urn":           urn,
-			"relatedAssets": assets,
-		},
-	}
-
-	var response struct {
-		UpdateDocumentRelatedEntities bool `json:"updateDocumentRelatedEntities"`
-	}
-
-	if err := c.Execute(ctx, UpdateDocumentRelatedEntitiesMutation, variables, &response); err != nil {
-		return fmt.Errorf("UpdateDocumentRelatedEntities(%s): %w", urn, err)
-	}
-
-	return nil
-}
-
-// UpdateDocumentStatus updates a document's publication status.
-func (c *Client) UpdateDocumentStatus(ctx context.Context, urn, state string) error {
-	variables := map[string]any{
-		"input": map[string]any{
-			"urn":   urn,
-			"state": state,
-		},
-	}
-
-	var response struct {
-		UpdateDocumentStatus bool `json:"updateDocumentStatus"`
-	}
-
-	if err := c.Execute(ctx, UpdateDocumentStatusMutation, variables, &response); err != nil {
-		return fmt.Errorf("UpdateDocumentStatus(%s): %w", urn, err)
-	}
-
-	return nil
-}
-
-// UpdateDocumentSettings updates a document's settings.
-func (c *Client) UpdateDocumentSettings(ctx context.Context, urn string, showInGlobalContext bool) error {
-	variables := map[string]any{
-		"input": map[string]any{
-			"urn":                 urn,
-			"showInGlobalContext": showInGlobalContext,
-		},
-	}
-
-	var response struct {
-		UpdateDocumentSettings bool `json:"updateDocumentSettings"`
-	}
-
-	if err := c.Execute(ctx, UpdateDocumentSettingsMutation, variables, &response); err != nil {
-		return fmt.Errorf("UpdateDocumentSettings(%s): %w", urn, err)
-	}
-
-	return nil
-}
-
-// DeleteDocument deletes a document.
-func (c *Client) DeleteDocument(ctx context.Context, urn string) error {
-	variables := map[string]any{"urn": urn}
-
-	var response struct {
-		DeleteDocument bool `json:"deleteDocument"`
-	}
-
-	if err := c.Execute(ctx, DeleteDocumentMutation, variables, &response); err != nil {
-		return fmt.Errorf("DeleteDocument(%s): %w", urn, err)
-	}
-
-	return nil
 }
 
 // documentResponse is the internal GraphQL response shape for a document.

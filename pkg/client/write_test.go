@@ -1415,8 +1415,8 @@ func TestUpdateDescription_DocumentEntityRejected(t *testing.T) {
 	if !errors.Is(err, ErrUnsupportedEntityType) {
 		t.Errorf("expected ErrUnsupportedEntityType, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "UpdateDocumentContents") {
-		t.Errorf("error should mention UpdateDocumentContents, got: %v", err)
+	if !strings.Contains(err.Error(), "document API") {
+		t.Errorf("error should mention document API, got: %v", err)
 	}
 }
 

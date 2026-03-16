@@ -45,15 +45,8 @@ type mockClient struct {
 	getDataContractFunc                   func(ctx context.Context, datasetURN string) (*types.DataContract, error)
 	semanticSearchFunc                    func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 	// Context documents (DataHub 1.4.x+)
-	getDocumentFunc       func(ctx context.Context, urn string) (*types.Document, error)
-	searchDocsFunc        func(ctx context.Context, query string, opts ...client.SearchOption) (*types.DocumentSearchResult, error)
-	getRelatedDocsFunc    func(ctx context.Context, urn string) ([]types.Document, error)
-	createDocumentFunc    func(ctx context.Context, input types.CreateDocumentInput) (string, error)
-	updateDocContFunc     func(ctx context.Context, urn string, title, content string) error
-	updateDocRelFunc      func(ctx context.Context, urn string, assetURNs []string) error
-	updateDocStatusFunc   func(ctx context.Context, urn, state string) error
-	updateDocSettingsFunc func(ctx context.Context, urn string, showInGlobalContext bool) error
-	deleteDocumentFunc    func(ctx context.Context, urn string) error
+	getDocumentFunc    func(ctx context.Context, urn string) (*types.Document, error)
+	getRelatedDocsFunc func(ctx context.Context, urn string) ([]types.Document, error)
 }
 
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
@@ -270,60 +263,11 @@ func (m *mockClient) GetDocument(ctx context.Context, urn string) (*types.Docume
 	return &types.Document{URN: urn}, nil
 }
 
-func (m *mockClient) SearchDocuments(ctx context.Context, query string, opts ...client.SearchOption) (*types.DocumentSearchResult, error) {
-	if m.searchDocsFunc != nil {
-		return m.searchDocsFunc(ctx, query, opts...)
-	}
-	return &types.DocumentSearchResult{}, nil
-}
-
 func (m *mockClient) GetRelatedDocuments(ctx context.Context, urn string) ([]types.Document, error) {
 	if m.getRelatedDocsFunc != nil {
 		return m.getRelatedDocsFunc(ctx, urn)
 	}
 	return nil, nil
-}
-
-func (m *mockClient) CreateDocument(ctx context.Context, input types.CreateDocumentInput) (string, error) {
-	if m.createDocumentFunc != nil {
-		return m.createDocumentFunc(ctx, input)
-	}
-	return "urn:li:document:test", nil
-}
-
-func (m *mockClient) UpdateDocumentContents(ctx context.Context, urn string, title, content string) error {
-	if m.updateDocContFunc != nil {
-		return m.updateDocContFunc(ctx, urn, title, content)
-	}
-	return nil
-}
-
-func (m *mockClient) UpdateDocumentRelatedEntities(ctx context.Context, urn string, assetURNs []string) error {
-	if m.updateDocRelFunc != nil {
-		return m.updateDocRelFunc(ctx, urn, assetURNs)
-	}
-	return nil
-}
-
-func (m *mockClient) UpdateDocumentStatus(ctx context.Context, urn, state string) error {
-	if m.updateDocStatusFunc != nil {
-		return m.updateDocStatusFunc(ctx, urn, state)
-	}
-	return nil
-}
-
-func (m *mockClient) UpdateDocumentSettings(ctx context.Context, urn string, showInGlobalContext bool) error {
-	if m.updateDocSettingsFunc != nil {
-		return m.updateDocSettingsFunc(ctx, urn, showInGlobalContext)
-	}
-	return nil
-}
-
-func (m *mockClient) DeleteDocument(ctx context.Context, urn string) error {
-	if m.deleteDocumentFunc != nil {
-		return m.deleteDocumentFunc(ctx, urn)
-	}
-	return nil
 }
 
 func TestNewToolkit(t *testing.T) {

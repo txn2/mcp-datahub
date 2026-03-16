@@ -115,27 +115,6 @@ type DataHubClient interface {
 	// GetDocument retrieves a context document by URN.
 	GetDocument(ctx context.Context, urn string) (*types.Document, error)
 
-	// SearchDocuments searches for context documents.
-	SearchDocuments(ctx context.Context, query string, opts ...client.SearchOption) (*types.DocumentSearchResult, error)
-
 	// GetRelatedDocuments retrieves documents linked to an entity.
 	GetRelatedDocuments(ctx context.Context, urn string) ([]types.Document, error)
-
-	// CreateDocument creates a new context document.
-	CreateDocument(ctx context.Context, input types.CreateDocumentInput) (string, error)
-
-	// UpdateDocumentContents updates a document's title and/or content.
-	UpdateDocumentContents(ctx context.Context, urn string, title, content string) error
-
-	// UpdateDocumentRelatedEntities updates the related entities for a document.
-	UpdateDocumentRelatedEntities(ctx context.Context, urn string, assetURNs []string) error
-
-	// UpdateDocumentStatus updates a document's publication status.
-	UpdateDocumentStatus(ctx context.Context, urn, state string) error
-
-	// UpdateDocumentSettings updates a document's settings (e.g. global context visibility).
-	UpdateDocumentSettings(ctx context.Context, urn string, showInGlobalContext bool) error
-
-	// DeleteDocument deletes a document.
-	DeleteDocument(ctx context.Context, urn string) error
 }

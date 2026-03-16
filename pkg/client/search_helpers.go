@@ -22,6 +22,9 @@ type searchResultItem struct {
 			Contents struct {
 				Text string `json:"text"`
 			} `json:"contents"`
+			Status struct {
+				State string `json:"state"`
+			} `json:"status"`
 		} `json:"info"`
 		Ownership struct {
 			Owners []struct {
