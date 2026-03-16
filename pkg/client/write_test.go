@@ -305,31 +305,29 @@ func TestAddTag_NoExistingTags(t *testing.T) {
 }
 
 func TestAddTag_DomainEntity(t *testing.T) {
+	// Domain entities use GraphQL addTag mutation instead of REST.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusNotFound)
-			return
+		var req graphQLRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
 		}
-		proposal, aspectJSON := extractProposalWireFormat(t, r.Body)
-		if proposal["entityType"] != "domain" {
-			t.Errorf("entityType = %v, want domain", proposal["entityType"])
+		input, ok := req.Variables["input"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected input variable")
 		}
-		if proposal["aspectName"] != "globalTags" {
-			t.Errorf("aspectName = %v, want globalTags", proposal["aspectName"])
+		if input["tagUrn"] != "urn:li:tag:PII" {
+			t.Errorf("tagUrn = %v, want urn:li:tag:PII", input["tagUrn"])
 		}
-		var tags globalTagsAspect
-		if err := json.Unmarshal([]byte(aspectJSON), &tags); err != nil {
-			t.Fatalf("failed to unmarshal inner aspect: %v", err)
+		if input["resourceUrn"] != "urn:li:domain:engineering" {
+			t.Errorf("resourceUrn = %v, want urn:li:domain:engineering", input["resourceUrn"])
 		}
-		if len(tags.Tags) != 1 {
-			t.Errorf("expected 1 tag, got %d", len(tags.Tags))
-		}
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data": {"addTag": true}}`))
 	}))
 	defer server.Close()
 
 	c := &Client{
-		endpoint:   server.URL + "/api/graphql",
+		endpoint:   server.URL,
 		token:      "test-token",
 		httpClient: server.Client(),
 		logger:     NopLogger{},

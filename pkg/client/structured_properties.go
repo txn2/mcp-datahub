@@ -233,8 +233,8 @@ func (c *Client) UpsertStructuredProperties(ctx context.Context, urn string, pro
 	propInputs := make([]map[string]any, 0, len(properties))
 	for _, p := range properties {
 		propInputs = append(propInputs, map[string]any{
-			"propertyUrn": p.PropertyURN,
-			"values":      p.Values,
+			"structuredPropertyUrn": p.PropertyURN,
+			"values":                p.Values,
 		})
 	}
 
