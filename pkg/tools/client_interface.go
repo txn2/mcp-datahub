@@ -109,4 +109,12 @@ type DataHubClient interface {
 
 	// SemanticSearch performs natural language semantic search across entities.
 	SemanticSearch(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
+
+	// Context documents (DataHub 1.4.x+).
+
+	// GetDocument retrieves a context document by URN.
+	GetDocument(ctx context.Context, urn string) (*types.Document, error)
+
+	// GetRelatedDocuments retrieves documents linked to an entity.
+	GetRelatedDocuments(ctx context.Context, urn string) ([]types.Document, error)
 }

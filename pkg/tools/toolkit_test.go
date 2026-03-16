@@ -44,6 +44,9 @@ type mockClient struct {
 	resolveIncidentFunc                   func(ctx context.Context, incidentURN, message string) error
 	getDataContractFunc                   func(ctx context.Context, datasetURN string) (*types.DataContract, error)
 	semanticSearchFunc                    func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
+	// Context documents (DataHub 1.4.x+)
+	getDocumentFunc    func(ctx context.Context, urn string) (*types.Document, error)
+	getRelatedDocsFunc func(ctx context.Context, urn string) ([]types.Document, error)
 }
 
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
@@ -251,6 +254,20 @@ func (m *mockClient) SemanticSearch(ctx context.Context, query string, opts ...c
 		return m.semanticSearchFunc(ctx, query, opts...)
 	}
 	return &types.SearchResult{}, nil
+}
+
+func (m *mockClient) GetDocument(ctx context.Context, urn string) (*types.Document, error) {
+	if m.getDocumentFunc != nil {
+		return m.getDocumentFunc(ctx, urn)
+	}
+	return &types.Document{URN: urn}, nil
+}
+
+func (m *mockClient) GetRelatedDocuments(ctx context.Context, urn string) ([]types.Document, error) {
+	if m.getRelatedDocsFunc != nil {
+		return m.getRelatedDocsFunc(ctx, urn)
+	}
+	return nil, nil
 }
 
 func TestNewToolkit(t *testing.T) {
