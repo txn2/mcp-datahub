@@ -563,6 +563,29 @@ func TestUpsertStructuredProperties(t *testing.T) {
 				if input["assetUrn"] != tt.urn {
 					t.Errorf("assetUrn = %v, want %v", input["assetUrn"], tt.urn)
 				}
+				// Verify values are wrapped in typed value objects
+				params, ok := input["structuredPropertyInputParams"].([]any)
+				if !ok {
+					t.Fatal("expected structuredPropertyInputParams in input")
+				}
+				for i, param := range params {
+					p := param.(map[string]any)
+					vals, ok := p["values"].([]any)
+					if !ok {
+						t.Fatalf("param[%d]: expected values array", i)
+					}
+					for j, val := range vals {
+						vm, ok := val.(map[string]any)
+						if !ok {
+							t.Fatalf("param[%d].values[%d]: expected typed value map, got %T", i, j, val)
+						}
+						_, hasStr := vm["stringValue"]
+						_, hasNum := vm["numberValue"]
+						if !hasStr && !hasNum {
+							t.Errorf("param[%d].values[%d]: expected stringValue or numberValue key", i, j)
+						}
+					}
+				}
 			}
 		})
 	}
@@ -675,6 +698,33 @@ func TestPropertyValueEntry_ToAny(t *testing.T) {
 			got := tt.entry.toAny()
 			if got != tt.want {
 				t.Errorf("toAny() = %v (type %T), want %v (type %T)", got, got, tt.want, tt.want)
+			}
+		})
+	}
+}
+
+func TestToTypedPropertyValue(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   any
+		wantKey string
+	}{
+		{name: "string", input: "hello", wantKey: "stringValue"},
+		{name: "float64", input: float64(42), wantKey: "numberValue"},
+		{name: "float32", input: float32(3.14), wantKey: "numberValue"},
+		{name: "int", input: 7, wantKey: "numberValue"},
+		{name: "int64", input: int64(99), wantKey: "numberValue"},
+		{name: "bool fallback", input: true, wantKey: "stringValue"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toTypedPropertyValue(tt.input)
+			if _, ok := got[tt.wantKey]; !ok {
+				t.Errorf("toTypedPropertyValue(%v) missing key %q, got %v", tt.input, tt.wantKey, got)
+			}
+			if len(got) != 1 {
+				t.Errorf("toTypedPropertyValue(%v) should have exactly 1 key, got %d", tt.input, len(got))
 			}
 		})
 	}

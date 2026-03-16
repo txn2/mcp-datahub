@@ -232,9 +232,13 @@ func (c *Client) ListStructuredPropertyDefinitions(ctx context.Context) ([]types
 func (c *Client) UpsertStructuredProperties(ctx context.Context, urn string, properties []types.StructuredPropertyInput) error {
 	propInputs := make([]map[string]any, 0, len(properties))
 	for _, p := range properties {
+		typedValues := make([]map[string]any, 0, len(p.Values))
+		for _, v := range p.Values {
+			typedValues = append(typedValues, toTypedPropertyValue(v))
+		}
 		propInputs = append(propInputs, map[string]any{
 			"structuredPropertyUrn": p.PropertyURN,
-			"values":                p.Values,
+			"values":                typedValues,
 		})
 	}
 
@@ -334,6 +338,27 @@ func (v propertyValueEntry) toAny() any {
 		return *v.NumberValue
 	}
 	return nil
+}
+
+// toTypedPropertyValue wraps a raw Go value in the typed map that the
+// DataHub UpsertStructuredProperties GraphQL mutation expects.
+// Strings become {"stringValue": v}, numbers become {"numberValue": v}.
+func toTypedPropertyValue(v any) map[string]any {
+	switch val := v.(type) {
+	case string:
+		return map[string]any{"stringValue": val}
+	case float64:
+		return map[string]any{"numberValue": val}
+	case float32:
+		return map[string]any{"numberValue": float64(val)}
+	case int:
+		return map[string]any{"numberValue": float64(val)}
+	case int64:
+		return map[string]any{"numberValue": float64(val)}
+	default:
+		// Fall back to stringValue for unknown types.
+		return map[string]any{"stringValue": fmt.Sprintf("%v", v)}
+	}
 }
 
 // toValue converts a GraphQL response entry to the domain type.
