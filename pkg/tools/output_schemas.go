@@ -24,8 +24,6 @@ var defaultOutputSchemas = map[ToolName]json.RawMessage{
 	ToolRemoveGlossaryTerm: schemaRemoveGlossaryTerm,
 	ToolAddLink:            schemaAddLink,
 	ToolRemoveLink:         schemaRemoveLink,
-	ToolCreateDocument:     schemaCreateDocument,
-	ToolUpdateDocument:     schemaUpdateDocument,
 }
 
 // DefaultOutputSchema returns the default output JSON Schema for a tool.
@@ -423,22 +421,6 @@ var schemaRemoveLink = json.RawMessage(`{
   "properties": {
     "urn":    {"type": "string"},
     "url":    {"type": "string"},
-    "action": {"type": "string"}
-  }
-}`)
-
-var schemaCreateDocument = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "urn":    {"type": "string", "description": "URN of the created document"},
-    "action": {"type": "string"}
-  }
-}`)
-
-var schemaUpdateDocument = json.RawMessage(`{
-  "type": "object",
-  "properties": {
-    "urn":    {"type": "string"},
     "action": {"type": "string"}
   }
 }`)

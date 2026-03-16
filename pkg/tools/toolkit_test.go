@@ -990,8 +990,8 @@ func TestToolkitGetWriteClient_Enabled(t *testing.T) {
 
 func TestWriteTools(t *testing.T) {
 	wt := WriteTools()
-	if len(wt) != 9 {
-		t.Errorf("expected 9 write tools, got %d", len(wt))
+	if len(wt) != 7 {
+		t.Errorf("expected 7 write tools, got %d", len(wt))
 	}
 
 	expected := map[ToolName]bool{
@@ -1002,8 +1002,6 @@ func TestWriteTools(t *testing.T) {
 		ToolRemoveGlossaryTerm: true,
 		ToolAddLink:            true,
 		ToolRemoveLink:         true,
-		ToolCreateDocument:     true,
-		ToolUpdateDocument:     true,
 	}
 	for _, name := range wt {
 		if !expected[name] {

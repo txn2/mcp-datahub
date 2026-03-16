@@ -23,8 +23,6 @@ var defaultTitles = map[ToolName]string{
 	ToolRemoveGlossaryTerm: "Remove Glossary Term",
 	ToolAddLink:            "Add Link",
 	ToolRemoveLink:         "Remove Link",
-	ToolCreateDocument:     "Create Document",
-	ToolUpdateDocument:     "Update Document",
 }
 
 // DefaultTitle returns the default human-readable title for a tool.
