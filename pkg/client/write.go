@@ -137,14 +137,32 @@ func (a *descriptionAspect) setDescription(fieldName, value string) error {
 	return nil
 }
 
-// UpdateDescription sets the editable description for any entity using read-modify-write.
-// Resolves the correct aspect name and field name based on the entity type in the URN.
+// UpdateDescription sets the editable description for any entity.
+// Uses GraphQL for domain, glossaryTerm, and glossaryNode entities because the REST
+// API does not support their description aspects. Uses REST read-modify-write for all
+// other entity types.
 func (c *Client) UpdateDescription(ctx context.Context, urn, description string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
 	}
 
+	// Validate the entity type is supported before choosing a path.
+	if _, err := LookupDescriptionAspect(entityType); err != nil {
+		return fmt.Errorf("UpdateDescription: %w", err)
+	}
+
+	// Domain, glossaryTerm, and glossaryNode do not support REST aspect writes
+	// for descriptions. Use the GraphQL updateDescription mutation instead.
+	if graphQLWriteTypes[entityType] {
+		return c.updateDescriptionGraphQL(ctx, urn, description)
+	}
+
+	return c.updateDescriptionREST(ctx, urn, description, entityType)
+}
+
+// updateDescriptionREST updates a description via REST read-modify-write.
+func (c *Client) updateDescriptionREST(ctx context.Context, urn, description, entityType string) error {
 	aspectInfo, err := LookupDescriptionAspect(entityType)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
@@ -226,7 +244,10 @@ type tagAssociation struct {
 	Tag string `json:"tag"`
 }
 
-// AddTag adds a tag to an entity using read-modify-write on the globalTags aspect.
+// AddTag adds a tag to an entity.
+// Uses GraphQL for domain, glossaryTerm, and glossaryNode entities because
+// the REST API does not register globalTags as an aspect for these types.
+// Uses REST read-modify-write for all other entity types.
 func (c *Client) AddTag(ctx context.Context, urn, tagURN string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
@@ -235,6 +256,10 @@ func (c *Client) AddTag(ctx context.Context, urn, tagURN string) error {
 
 	if !globalTagsSupportedTypes[entityType] {
 		return fmt.Errorf("AddTag: %w: %s", ErrUnsupportedTagEntity, entityType)
+	}
+
+	if graphQLWriteTypes[entityType] {
+		return c.addTagGraphQL(ctx, urn, tagURN)
 	}
 
 	// Read current tags
@@ -261,7 +286,10 @@ func (c *Client) AddTag(ctx context.Context, urn, tagURN string) error {
 	})
 }
 
-// RemoveTag removes a tag from an entity using read-modify-write on the globalTags aspect.
+// RemoveTag removes a tag from an entity.
+// Uses GraphQL for domain, glossaryTerm, and glossaryNode entities because
+// the REST API does not register globalTags as an aspect for these types.
+// Uses REST read-modify-write for all other entity types.
 func (c *Client) RemoveTag(ctx context.Context, urn, tagURN string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
@@ -270,6 +298,10 @@ func (c *Client) RemoveTag(ctx context.Context, urn, tagURN string) error {
 
 	if !globalTagsSupportedTypes[entityType] {
 		return fmt.Errorf("RemoveTag: %w: %s", ErrUnsupportedTagEntity, entityType)
+	}
+
+	if graphQLWriteTypes[entityType] {
+		return c.removeTagGraphQL(ctx, urn, tagURN)
 	}
 
 	// Read current tags
@@ -326,7 +358,10 @@ type termAssociation struct {
 	URN string `json:"urn"`
 }
 
-// AddGlossaryTerm adds a glossary term to an entity using read-modify-write.
+// AddGlossaryTerm adds a glossary term to an entity.
+// Uses GraphQL for domain, glossaryTerm, and glossaryNode entities because
+// the REST API does not register glossaryTerms as an aspect for these types.
+// Uses REST read-modify-write for all other entity types.
 func (c *Client) AddGlossaryTerm(ctx context.Context, urn, termURN string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
@@ -335,6 +370,10 @@ func (c *Client) AddGlossaryTerm(ctx context.Context, urn, termURN string) error
 
 	if !glossaryTermsSupportedTypes[entityType] {
 		return fmt.Errorf("AddGlossaryTerm: %w: %s", ErrUnsupportedGlossaryTermEntity, entityType)
+	}
+
+	if graphQLWriteTypes[entityType] {
+		return c.addTermGraphQL(ctx, urn, termURN)
 	}
 
 	terms, err := c.readGlossaryTerms(ctx, entityType, urn)
@@ -360,7 +399,10 @@ func (c *Client) AddGlossaryTerm(ctx context.Context, urn, termURN string) error
 	})
 }
 
-// RemoveGlossaryTerm removes a glossary term from an entity using read-modify-write.
+// RemoveGlossaryTerm removes a glossary term from an entity.
+// Uses GraphQL for domain, glossaryTerm, and glossaryNode entities because
+// the REST API does not register glossaryTerms as an aspect for these types.
+// Uses REST read-modify-write for all other entity types.
 func (c *Client) RemoveGlossaryTerm(ctx context.Context, urn, termURN string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
@@ -369,6 +411,10 @@ func (c *Client) RemoveGlossaryTerm(ctx context.Context, urn, termURN string) er
 
 	if !glossaryTermsSupportedTypes[entityType] {
 		return fmt.Errorf("RemoveGlossaryTerm: %w: %s", ErrUnsupportedGlossaryTermEntity, entityType)
+	}
+
+	if graphQLWriteTypes[entityType] {
+		return c.removeTermGraphQL(ctx, urn, termURN)
 	}
 
 	terms, err := c.readGlossaryTerms(ctx, entityType, urn)

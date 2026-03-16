@@ -68,7 +68,7 @@ mutation raiseIncident($input: RaiseIncidentInput!) {
 
 	// UpdateIncidentStatusMutation resolves or reactivates an incident.
 	UpdateIncidentStatusMutation = `
-mutation updateIncidentStatus($urn: String!, $input: UpdateIncidentStatusInput!) {
+mutation updateIncidentStatus($urn: String!, $input: IncidentStatusInput!) {
   updateIncidentStatus(urn: $urn, input: $input)
 }
 `
