@@ -45,14 +45,15 @@ type mockClient struct {
 	getDataContractFunc                   func(ctx context.Context, datasetURN string) (*types.DataContract, error)
 	semanticSearchFunc                    func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 	// Context documents (DataHub 1.4.x+)
-	getDocumentFunc     func(ctx context.Context, urn string) (*types.Document, error)
-	searchDocsFunc      func(ctx context.Context, query string, opts ...client.SearchOption) (*types.DocumentSearchResult, error)
-	getRelatedDocsFunc  func(ctx context.Context, urn string) ([]types.Document, error)
-	createDocumentFunc  func(ctx context.Context, input types.CreateDocumentInput) (string, error)
-	updateDocContFunc   func(ctx context.Context, urn string, title, content string) error
-	updateDocRelFunc    func(ctx context.Context, urn string, assetURNs []string) error
-	updateDocStatusFunc func(ctx context.Context, urn, state string) error
-	deleteDocumentFunc  func(ctx context.Context, urn string) error
+	getDocumentFunc       func(ctx context.Context, urn string) (*types.Document, error)
+	searchDocsFunc        func(ctx context.Context, query string, opts ...client.SearchOption) (*types.DocumentSearchResult, error)
+	getRelatedDocsFunc    func(ctx context.Context, urn string) ([]types.Document, error)
+	createDocumentFunc    func(ctx context.Context, input types.CreateDocumentInput) (string, error)
+	updateDocContFunc     func(ctx context.Context, urn string, title, content string) error
+	updateDocRelFunc      func(ctx context.Context, urn string, assetURNs []string) error
+	updateDocStatusFunc   func(ctx context.Context, urn, state string) error
+	updateDocSettingsFunc func(ctx context.Context, urn string, showInGlobalContext bool) error
+	deleteDocumentFunc    func(ctx context.Context, urn string) error
 }
 
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
@@ -307,6 +308,13 @@ func (m *mockClient) UpdateDocumentRelatedEntities(ctx context.Context, urn stri
 func (m *mockClient) UpdateDocumentStatus(ctx context.Context, urn, state string) error {
 	if m.updateDocStatusFunc != nil {
 		return m.updateDocStatusFunc(ctx, urn, state)
+	}
+	return nil
+}
+
+func (m *mockClient) UpdateDocumentSettings(ctx context.Context, urn string, showInGlobalContext bool) error {
+	if m.updateDocSettingsFunc != nil {
+		return m.updateDocSettingsFunc(ctx, urn, showInGlobalContext)
 	}
 	return nil
 }

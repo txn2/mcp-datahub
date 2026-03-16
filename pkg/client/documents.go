@@ -142,6 +142,11 @@ query searchDocuments($input: SearchDocumentsInput!) {
 `
 
 	// GetRelatedDocumentsQuery retrieves documents linked to an entity.
+	// The relatedDocuments field is repeated per entity type because GraphQL
+	// inline fragments require each concrete type to declare its own fields —
+	// there is no shared interface to query against. Only entity types that
+	// support relatedDocuments in DataHub are included: Dataset, GlossaryTerm,
+	// GlossaryNode, and Container.
 	GetRelatedDocumentsQuery = `
 query getRelatedDocuments($urn: String!, $input: RelatedDocumentsInput!) {
   entity(urn: $urn) {
@@ -352,7 +357,7 @@ func (c *Client) GetRelatedDocuments(ctx context.Context, urn string) ([]types.D
 		return nil, nil
 	}
 
-	var docs []types.Document
+	docs := make([]types.Document, 0, len(response.Entity.RelatedDocuments.Documents))
 	for _, d := range response.Entity.RelatedDocuments.Documents {
 		docs = append(docs, *parseDocumentResponse(&d))
 	}

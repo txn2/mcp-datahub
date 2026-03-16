@@ -126,16 +126,31 @@ func (t *Toolkit) enrichEntityWith14xFeatures(ctx context.Context, c DataHubClie
 		}()
 	}
 
-	// Related documents (datasets, glossary terms, glossary nodes, containers)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if docs, err := c.GetRelatedDocuments(ctx, entity.URN); err == nil && len(docs) > 0 {
-			entity.RelatedDocuments = docs
-		}
-	}()
+	// Related documents — only entity types whose GraphQL type implements
+	// the relatedDocuments field. Skips the round-trip for unsupported types.
+	if relatedDocumentsSupported(entity.Type) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if docs, err := c.GetRelatedDocuments(ctx, entity.URN); err == nil && len(docs) > 0 {
+				entity.RelatedDocuments = docs
+			}
+		}()
+	}
 
 	wg.Wait()
+}
+
+// relatedDocumentsSupported returns true for entity types whose GraphQL schema
+// includes the relatedDocuments field. Matches the inline fragments in
+// GetRelatedDocumentsQuery (Dataset, GlossaryTerm, GlossaryNode, Container).
+func relatedDocumentsSupported(entityType string) bool {
+	switch entityType {
+	case "DATASET", "GLOSSARY_TERM", "GLOSSARY_NODE", "CONTAINER":
+		return true
+	default:
+		return false
+	}
 }
 
 // enrichEntityWithQueryContext flattens entity fields to top level and appends

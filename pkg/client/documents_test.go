@@ -442,6 +442,36 @@ func TestUpdateDocumentStatus(t *testing.T) {
 	}
 }
 
+func TestUpdateDocumentSettings(t *testing.T) {
+	var capturedInput map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedInput = extractGraphQLInput(t, r)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data": {"updateDocumentSettings": true}}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL,
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+		config:     DefaultConfig(),
+	}
+
+	err := c.UpdateDocumentSettings(context.Background(), "urn:li:document:doc-1", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if capturedInput["urn"] != "urn:li:document:doc-1" {
+		t.Errorf("urn = %v, want urn:li:document:doc-1", capturedInput["urn"])
+	}
+	if capturedInput["showInGlobalContext"] != false {
+		t.Errorf("showInGlobalContext = %v, want false", capturedInput["showInGlobalContext"])
+	}
+}
+
 func TestDeleteDocument(t *testing.T) {
 	tests := []struct {
 		name     string

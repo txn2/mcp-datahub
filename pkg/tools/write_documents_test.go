@@ -82,6 +82,8 @@ func TestHandleCreateDocument(t *testing.T) {
 }
 
 func TestHandleUpdateDocument(t *testing.T) {
+	boolVal := func(b bool) *bool { return &b }
+
 	tests := []struct {
 		name           string
 		input          UpdateDocumentInput
@@ -90,6 +92,7 @@ func TestHandleUpdateDocument(t *testing.T) {
 		contentsCalled bool
 		statusCalled   bool
 		assetsCalled   bool
+		settingsCalled bool
 	}{
 		{
 			name:           "update title and content",
@@ -107,6 +110,26 @@ func TestHandleUpdateDocument(t *testing.T) {
 			assetsCalled: true,
 		},
 		{
+			name:           "update global context",
+			input:          UpdateDocumentInput{URN: "urn:li:document:doc-1", GlobalContext: boolVal(false)},
+			settingsCalled: true,
+		},
+		{
+			name: "update all fields",
+			input: UpdateDocumentInput{
+				URN:           "urn:li:document:doc-1",
+				Title:         "New",
+				Content:       "Body",
+				State:         "PUBLISHED",
+				RelatedAssets: []string{"urn:li:dataset:ds1"},
+				GlobalContext: boolVal(true),
+			},
+			contentsCalled: true,
+			statusCalled:   true,
+			assetsCalled:   true,
+			settingsCalled: true,
+		},
+		{
 			name:       "missing urn",
 			input:      UpdateDocumentInput{Title: "New"},
 			wantErr:    true,
@@ -116,7 +139,7 @@ func TestHandleUpdateDocument(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var contentsCalled, statusCalled, assetsCalled bool
+			var contentsCalled, statusCalled, assetsCalled, settingsCalled bool
 
 			mock := &mockClient{}
 			mock.updateDocContFunc = func(_ context.Context, _, _, _ string) error {
@@ -129,6 +152,10 @@ func TestHandleUpdateDocument(t *testing.T) {
 			}
 			mock.updateDocRelFunc = func(_ context.Context, _ string, _ []string) error {
 				assetsCalled = true
+				return nil
+			}
+			mock.updateDocSettingsFunc = func(_ context.Context, _ string, _ bool) error {
+				settingsCalled = true
 				return nil
 			}
 
@@ -158,8 +185,35 @@ func TestHandleUpdateDocument(t *testing.T) {
 			if assetsCalled != tt.assetsCalled {
 				t.Errorf("assetsCalled = %v, want %v", assetsCalled, tt.assetsCalled)
 			}
+			if settingsCalled != tt.settingsCalled {
+				t.Errorf("settingsCalled = %v, want %v", settingsCalled, tt.settingsCalled)
+			}
 		})
 	}
+}
+
+func TestHandleUpdateDocument_PartialFailure(t *testing.T) {
+	mock := &mockClient{}
+	mock.updateDocContFunc = func(_ context.Context, _, _, _ string) error {
+		return nil // succeeds
+	}
+	mock.updateDocStatusFunc = func(_ context.Context, _, _ string) error {
+		return errors.New("status update denied")
+	}
+
+	toolkit := NewToolkit(mock, Config{WriteEnabled: true})
+	input := UpdateDocumentInput{
+		URN:   "urn:li:document:doc-1",
+		Title: "Updated",
+		State: "PUBLISHED",
+	}
+	result, _, _ := toolkit.handleUpdateDocument(t.Context(), nil, input)
+
+	if !result.IsError {
+		t.Fatal("expected error result")
+	}
+	assertResultContains(t, result, "UpdateDocumentStatus failed")
+	assertResultContains(t, result, "already updated: contents")
 }
 
 func TestHandleCreateDocument_WriteDisabled(t *testing.T) {

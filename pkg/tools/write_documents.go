@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -27,6 +28,7 @@ type UpdateDocumentInput struct {
 	Content       string   `json:"content,omitempty" jsonschema_description:"New body text (omit to keep current)"`
 	State         string   `json:"state,omitempty" jsonschema_description:"New state: PUBLISHED or UNPUBLISHED (omit to keep current)"`
 	RelatedAssets []string `json:"related_assets,omitempty" jsonschema_description:"Replace linked entity URNs (omit to keep current)"`
+	GlobalContext *bool    `json:"global_context,omitempty" jsonschema_description:"Update global search visibility (omit to keep current)"`
 	Connection    string   `json:"connection,omitempty" jsonschema_description:"Named connection to use (see datahub_list_connections)"`
 }
 
@@ -140,24 +142,37 @@ func (t *Toolkit) handleUpdateDocument(
 		return ErrorResult("Write error: " + err.Error()), nil, nil
 	}
 
+	// Track which mutations succeed so partial failures are surfaced.
+	var completed []string
+
 	// Update contents (title and/or content)
 	if input.Title != "" || input.Content != "" {
 		if contentsErr := datahubClient.UpdateDocumentContents(ctx, input.URN, input.Title, input.Content); contentsErr != nil {
-			return ErrorResult("UpdateDocumentContents failed: " + contentsErr.Error()), nil, nil
+			return ErrorResult(partialUpdateError("UpdateDocumentContents", contentsErr, completed)), nil, nil
 		}
+		completed = append(completed, "contents")
 	}
 
 	// Update status
 	if input.State != "" {
 		if statusErr := datahubClient.UpdateDocumentStatus(ctx, input.URN, input.State); statusErr != nil {
-			return ErrorResult("UpdateDocumentStatus failed: " + statusErr.Error()), nil, nil
+			return ErrorResult(partialUpdateError("UpdateDocumentStatus", statusErr, completed)), nil, nil
 		}
+		completed = append(completed, "status")
 	}
 
 	// Update related assets
 	if input.RelatedAssets != nil {
 		if assetsErr := datahubClient.UpdateDocumentRelatedEntities(ctx, input.URN, input.RelatedAssets); assetsErr != nil {
-			return ErrorResult("UpdateDocumentRelatedEntities failed: " + assetsErr.Error()), nil, nil
+			return ErrorResult(partialUpdateError("UpdateDocumentRelatedEntities", assetsErr, completed)), nil, nil
+		}
+		completed = append(completed, "related_assets")
+	}
+
+	// Update global context visibility
+	if input.GlobalContext != nil {
+		if settingsErr := datahubClient.UpdateDocumentSettings(ctx, input.URN, *input.GlobalContext); settingsErr != nil {
+			return ErrorResult(partialUpdateError("UpdateDocumentSettings", settingsErr, completed)), nil, nil
 		}
 	}
 
@@ -171,4 +186,14 @@ func (t *Toolkit) handleUpdateDocument(
 		return ErrorResult("failed to format result: " + jsonErr.Error()), nil, nil
 	}
 	return jsonResult, &output, nil
+}
+
+// partialUpdateError formats an error message that includes which mutations
+// already succeeded, so the caller knows the document may be partially updated.
+func partialUpdateError(failedOp string, err error, completed []string) string {
+	msg := failedOp + " failed: " + err.Error()
+	if len(completed) > 0 {
+		msg += " (already updated: " + strings.Join(completed, ", ") + ")"
+	}
+	return msg
 }

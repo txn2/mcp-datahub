@@ -70,12 +70,16 @@ func parseSearchResult(sr searchResultItem) types.SearchEntity {
 	if sr.Entity.Properties.Description != "" {
 		description = sr.Entity.Properties.Description
 	}
-	// For Document the title comes from info, content serves as description
-	if sr.Entity.Info.Title != "" {
-		name = sr.Entity.Info.Title
-	}
-	if sr.Entity.Info.Contents.Text != "" && description == "" {
-		description = sr.Entity.Info.Contents.Text
+	// For Document the title comes from info, content serves as description.
+	// Guard behind type check to avoid mis-attributing info fields from
+	// non-document entities in the polymorphic GraphQL union response.
+	if sr.Entity.Type == "DOCUMENT" {
+		if sr.Entity.Info.Title != "" {
+			name = sr.Entity.Info.Title
+		}
+		if sr.Entity.Info.Contents.Text != "" && description == "" {
+			description = sr.Entity.Info.Contents.Text
+		}
 	}
 
 	entity := types.SearchEntity{

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -1402,6 +1403,20 @@ func TestUpdateDescription_UnsupportedEntityType(t *testing.T) {
 	}
 	if !errors.Is(err, ErrUnsupportedEntityType) {
 		t.Errorf("expected ErrUnsupportedEntityType, got: %v", err)
+	}
+}
+
+func TestUpdateDescription_DocumentEntityRejected(t *testing.T) {
+	c := &Client{logger: NopLogger{}}
+	err := c.UpdateDescription(context.Background(), "urn:li:document:doc-1", "desc")
+	if err == nil {
+		t.Fatal("expected error for document entity type")
+	}
+	if !errors.Is(err, ErrUnsupportedEntityType) {
+		t.Errorf("expected ErrUnsupportedEntityType, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "UpdateDocumentContents") {
+		t.Errorf("error should mention UpdateDocumentContents, got: %v", err)
 	}
 }
 

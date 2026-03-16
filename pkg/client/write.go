@@ -144,11 +144,16 @@ func (a *descriptionAspect) setDescription(fieldName, value string) error {
 // UpdateDescription sets the editable description for any entity.
 // Uses GraphQL for domain, glossaryTerm, and glossaryNode entities because the REST
 // API does not support their description aspects. Uses REST read-modify-write for all
-// other entity types.
+// other entity types. Document entities are not supported — use UpdateDocumentContents.
 func (c *Client) UpdateDescription(ctx context.Context, urn, description string) error {
 	entityType, err := entityTypeFromURN(urn)
 	if err != nil {
 		return fmt.Errorf("UpdateDescription: %w", err)
+	}
+
+	// Document entities use UpdateDocumentContents for content changes.
+	if entityType == entityTypeDocument {
+		return fmt.Errorf("UpdateDescription: %w: %s (use UpdateDocumentContents)", ErrUnsupportedEntityType, entityType)
 	}
 
 	// Validate the entity type is supported before choosing a path.

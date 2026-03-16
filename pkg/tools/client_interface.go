@@ -133,6 +133,9 @@ type DataHubClient interface {
 	// UpdateDocumentStatus updates a document's publication status.
 	UpdateDocumentStatus(ctx context.Context, urn, state string) error
 
+	// UpdateDocumentSettings updates a document's settings (e.g. global context visibility).
+	UpdateDocumentSettings(ctx context.Context, urn string, showInGlobalContext bool) error
+
 	// DeleteDocument deletes a document.
 	DeleteDocument(ctx context.Context, urn string) error
 }
