@@ -25,6 +25,7 @@ const (
 	entityTypeGlossaryNode = "glossaryNode"
 	entityTypeGlossaryTerm = "glossaryTerm"
 	entityTypeDomain       = "domain"
+	entityTypeDocument     = "document"
 )
 
 // entityTypeFromURN derives the DataHub entity type string from a parsed URN.
@@ -69,6 +70,7 @@ var globalTagsSupportedTypes = map[string]bool{
 	entityTypeDataset: true, entityTypeDashboard: true, entityTypeChart: true,
 	entityTypeDataFlow: true, entityTypeDataJob: true, entityTypeContainer: true, entityTypeDataProduct: true,
 	entityTypeDomain: true, entityTypeGlossaryTerm: true, entityTypeGlossaryNode: true,
+	entityTypeDocument: true,
 }
 
 // glossaryTermsSupportedTypes lists entity types that support glossaryTerms associations.
@@ -78,6 +80,7 @@ var glossaryTermsSupportedTypes = map[string]bool{
 	entityTypeDataset: true, entityTypeDashboard: true, entityTypeChart: true,
 	entityTypeDataFlow: true, entityTypeDataJob: true, entityTypeContainer: true, entityTypeDataProduct: true,
 	entityTypeDomain: true, entityTypeGlossaryTerm: true, entityTypeGlossaryNode: true,
+	entityTypeDocument: true,
 }
 
 // institutionalMemorySupportedTypes lists entity types that support institutional memory (links).
@@ -85,6 +88,7 @@ var institutionalMemorySupportedTypes = map[string]bool{
 	entityTypeDataset: true, entityTypeDashboard: true, entityTypeChart: true,
 	entityTypeDataFlow: true, entityTypeDataJob: true, entityTypeContainer: true, entityTypeDataProduct: true,
 	entityTypeGlossaryTerm: true, entityTypeGlossaryNode: true, entityTypeDomain: true,
+	entityTypeDocument: true,
 }
 
 // LookupDescriptionAspect returns the aspect info for updating the description of the given entity type.

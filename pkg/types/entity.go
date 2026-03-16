@@ -50,6 +50,10 @@ type Entity struct {
 	// Nil when running against DataHub < 1.4.x or for non-dataset entities.
 	DataContract *DataContract `json:"data_contract,omitempty"`
 
+	// RelatedDocuments contains context documents linked to this entity (DataHub 1.4.x+).
+	// Nil when running against DataHub < 1.4.x or when no documents are linked.
+	RelatedDocuments []Document `json:"related_documents,omitempty"`
+
 	// Created is the creation timestamp.
 	Created int64 `json:"created,omitempty"`
 

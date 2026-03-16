@@ -33,6 +33,8 @@ var defaultAnnotations = map[ToolName]*mcp.ToolAnnotations{
 	ToolRemoveGlossaryTerm: {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 	ToolAddLink:            {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 	ToolRemoveLink:         {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolCreateDocument:     {DestructiveHint: boolPtr(false), IdempotentHint: false, OpenWorldHint: boolPtr(true)},
+	ToolUpdateDocument:     {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 }
 
 // DefaultAnnotations returns the default annotations for a tool.

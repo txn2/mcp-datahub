@@ -91,6 +91,18 @@ query search($input: SearchInput!) {
             description
           }
         }
+        ... on Document {
+          subType
+          info {
+            title
+            contents {
+              text
+            }
+            status {
+              state
+            }
+          }
+        }
       }
       matchedFields {
         name

@@ -385,57 +385,10 @@ func (c *Client) Search(ctx context.Context, query string, opts ...SearchOption)
 
 	var response struct {
 		Search struct {
-			Start         int `json:"start"`
-			Count         int `json:"count"`
-			Total         int `json:"total"`
-			SearchResults []struct {
-				Entity struct {
-					URN         string `json:"urn"`
-					Type        string `json:"type"`
-					Name        string `json:"name"`
-					Description string `json:"description"`
-					Platform    struct {
-						Name string `json:"name"`
-					} `json:"platform"`
-					// For DataProduct, GlossaryTerm, Tag - name/description in properties
-					Properties struct {
-						Name        string `json:"name"`
-						Description string `json:"description"`
-					} `json:"properties"`
-					Ownership struct {
-						Owners []struct {
-							Owner struct {
-								URN      string `json:"urn"`
-								Username string `json:"username"`
-								Name     string `json:"name"`
-							} `json:"owner"`
-							Type string `json:"type"`
-						} `json:"owners"`
-					} `json:"ownership"`
-					Tags struct {
-						Tags []struct {
-							Tag struct {
-								URN         string `json:"urn"`
-								Name        string `json:"name"`
-								Description string `json:"description"`
-							} `json:"tag"`
-						} `json:"tags"`
-					} `json:"tags"`
-					Domain struct {
-						Domain struct {
-							URN        string `json:"urn"`
-							Properties struct {
-								Name        string `json:"name"`
-								Description string `json:"description"`
-							} `json:"properties"`
-						} `json:"domain"`
-					} `json:"domain"`
-				} `json:"entity"`
-				MatchedFields []struct {
-					Name  string `json:"name"`
-					Value string `json:"value"`
-				} `json:"matchedFields"`
-			} `json:"searchResults"`
+			Start         int                `json:"start"`
+			Count         int                `json:"count"`
+			Total         int                `json:"total"`
+			SearchResults []searchResultItem `json:"searchResults"`
 		} `json:"search"`
 	}
 
@@ -450,63 +403,7 @@ func (c *Client) Search(ctx context.Context, query string, opts ...SearchOption)
 	}
 
 	for _, sr := range response.Search.SearchResults {
-		name := sr.Entity.Name
-		description := sr.Entity.Description
-		// For DataProduct, GlossaryTerm, Tag the name/description come from properties
-		if sr.Entity.Properties.Name != "" {
-			name = sr.Entity.Properties.Name
-		}
-		if sr.Entity.Properties.Description != "" {
-			description = sr.Entity.Properties.Description
-		}
-
-		entity := types.SearchEntity{
-			URN:         sr.Entity.URN,
-			Type:        sr.Entity.Type,
-			Name:        name,
-			Description: description,
-			Platform:    sr.Entity.Platform.Name,
-		}
-
-		// Parse ownership
-		for _, o := range sr.Entity.Ownership.Owners {
-			ownerName := o.Owner.Username
-			if o.Owner.Name != "" {
-				ownerName = o.Owner.Name
-			}
-			entity.Owners = append(entity.Owners, types.Owner{
-				URN:  o.Owner.URN,
-				Name: ownerName,
-				Type: types.OwnershipType(o.Type),
-			})
-		}
-
-		// Parse tags
-		for _, t := range sr.Entity.Tags.Tags {
-			entity.Tags = append(entity.Tags, types.Tag{
-				URN:         t.Tag.URN,
-				Name:        t.Tag.Name,
-				Description: t.Tag.Description,
-			})
-		}
-
-		// Parse domain
-		if sr.Entity.Domain.Domain.URN != "" {
-			entity.Domain = &types.Domain{
-				URN:         sr.Entity.Domain.Domain.URN,
-				Name:        sr.Entity.Domain.Domain.Properties.Name,
-				Description: sr.Entity.Domain.Domain.Properties.Description,
-			}
-		}
-
-		for _, mf := range sr.MatchedFields {
-			entity.MatchedFields = append(entity.MatchedFields, types.MatchedField{
-				Name:  mf.Name,
-				Value: mf.Value,
-			})
-		}
-
-		result.Entities = append(result.Entities, entity)
+		result.Entities = append(result.Entities, parseSearchResult(sr))
 	}
 
 	return result, nil

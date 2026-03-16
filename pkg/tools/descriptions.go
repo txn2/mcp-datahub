@@ -57,6 +57,11 @@ var defaultDescriptions = map[ToolName]string{
 	ToolRemoveGlossaryTerm: "Remove a glossary term from a DataHub entity",
 	ToolAddLink:            "Add a link to a DataHub entity",
 	ToolRemoveLink:         "Remove a link from a DataHub entity",
+	ToolCreateDocument: "Create a context document for AI knowledge capture. Documents can be linked to " +
+		"data assets and used as context by AI agents. Set global_context=false for " +
+		"entity-specific context that won't appear in global search.",
+	ToolUpdateDocument: "Update a context document's title, content, status, or linked entities. " +
+		"Only specified fields are updated; omitted fields keep their current values.",
 }
 
 // DefaultDescription returns the default description for a tool.

@@ -59,6 +59,7 @@ var graphQLWriteTypes = map[string]bool{
 	entityTypeDomain:       true,
 	entityTypeGlossaryTerm: true,
 	entityTypeGlossaryNode: true,
+	entityTypeDocument:     true,
 }
 
 // addTagGraphQL adds a tag to an entity using the GraphQL addTag mutation.

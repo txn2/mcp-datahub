@@ -64,3 +64,15 @@ type RemoveLinkOutput struct {
 	Aspect string `json:"aspect"`
 	Action string `json:"action"`
 }
+
+// CreateDocumentOutput is the structured output of the datahub_create_document tool.
+type CreateDocumentOutput struct {
+	URN    string `json:"urn"`
+	Action string `json:"action"`
+}
+
+// UpdateDocumentOutput is the structured output of the datahub_update_document tool.
+type UpdateDocumentOutput struct {
+	URN    string `json:"urn"`
+	Action string `json:"action"`
+}

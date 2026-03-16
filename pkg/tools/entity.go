@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -50,6 +51,11 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 		return ErrorResult("Connection error: " + err.Error()), nil, nil
 	}
 
+	// Document entities use a dedicated query with richer fields
+	if strings.HasPrefix(input.URN, "urn:li:document:") {
+		return t.handleGetDocumentEntity(ctx, datahubClient, input.URN)
+	}
+
 	entity, err := datahubClient.GetEntity(ctx, input.URN)
 	if err != nil {
 		return ErrorResult("GetEntity failed for " + input.URN + ": " + err.Error()), nil, nil
@@ -67,6 +73,21 @@ func (t *Toolkit) handleGetEntity(ctx context.Context, _ *mcp.CallToolRequest, i
 	}
 
 	return formatJSONResult(entity)
+}
+
+// handleGetDocumentEntity handles get_entity for document URNs by using the
+// dedicated GetDocument query which returns richer document-specific fields.
+func (t *Toolkit) handleGetDocumentEntity(ctx context.Context, c DataHubClient, urn string) (*mcp.CallToolResult, any, error) {
+	doc, err := c.GetDocument(ctx, urn)
+	if err != nil {
+		return ErrorResult("GetDocument failed for " + urn + ": " + err.Error()), nil, nil
+	}
+
+	if doc == nil {
+		return ErrorResult("GetDocument returned nil for " + urn), nil, nil
+	}
+
+	return formatJSONResult(doc)
 }
 
 // enrichEntityWith14xFeatures enriches an entity with DataHub 1.4.x data.
@@ -104,6 +125,15 @@ func (t *Toolkit) enrichEntityWith14xFeatures(ctx context.Context, c DataHubClie
 			}
 		}()
 	}
+
+	// Related documents (datasets, glossary terms, glossary nodes, containers)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if docs, err := c.GetRelatedDocuments(ctx, entity.URN); err == nil && len(docs) > 0 {
+			entity.RelatedDocuments = docs
+		}
+	}()
 
 	wg.Wait()
 }

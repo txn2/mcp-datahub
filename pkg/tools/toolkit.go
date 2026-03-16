@@ -180,6 +180,8 @@ func (t *Toolkit) toolRegistry() map[ToolName]toolRegistrar {
 		ToolRemoveGlossaryTerm: t.registerRemoveGlossaryTermTool,
 		ToolAddLink:            t.registerAddLinkTool,
 		ToolRemoveLink:         t.registerRemoveLinkTool,
+		ToolCreateDocument:     t.registerCreateDocumentTool,
+		ToolUpdateDocument:     t.registerUpdateDocumentTool,
 	}
 }
 

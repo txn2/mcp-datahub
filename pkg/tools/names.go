@@ -23,6 +23,8 @@ const (
 	ToolRemoveGlossaryTerm ToolName = "datahub_remove_glossary_term"
 	ToolAddLink            ToolName = "datahub_add_link"
 	ToolRemoveLink         ToolName = "datahub_remove_link"
+	ToolCreateDocument     ToolName = "datahub_create_document"
+	ToolUpdateDocument     ToolName = "datahub_update_document"
 )
 
 // AllTools returns all available read-only tool names.
@@ -51,5 +53,7 @@ func WriteTools() []ToolName {
 		ToolRemoveGlossaryTerm,
 		ToolAddLink,
 		ToolRemoveLink,
+		ToolCreateDocument,
+		ToolUpdateDocument,
 	}
 }
