@@ -681,8 +681,17 @@ Create a new entity or resource. Returns the URN of the created entity.
 | `entity_urns` | string[] | No | Affected entity URNs (incident) |
 | `incident_type` | string | No | Incident type (incident) |
 | `priority` | string | No | Priority: LOW, MEDIUM, HIGH, CRITICAL (incident) |
-| `qualified_name` | string | No | Fully qualified name (structured_property) |
-| `value_type` | string | No | Value type (structured_property) |
+| `qualified_name` | string | No | Fully qualified name (structured_property, required) |
+| `value_type` | string | No | Value type: string, number, date, urn (structured_property, required) |
+| `entity_types` | string[] | No | Applicable entity types (structured_property, required) |
+| `cardinality` | string | No | SINGLE or MULTIPLE (structured_property) |
+| `status` | string | No | Publication status: PUBLISHED or UNPUBLISHED (document) |
+| `sub_type` | string | No | Document sub-type (document) |
+| `related_assets` | string[] | No | Related asset URNs (document) |
+| `global_context` | bool | No | Show in global search (document) |
+| `schema_assertions` | string[] | No | Schema assertion URNs (data_contract) |
+| `freshness_assertions` | string[] | No | Freshness assertion URNs (data_contract) |
+| `data_quality_assertions` | string[] | No | Data quality assertion URNs (data_contract) |
 | `connection` | string | No | Named connection to use |
 
 ---
@@ -696,7 +705,7 @@ Update metadata on an existing entity.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `what` | string | Yes | What to update (see table below) |
-| `action` | string | No | `add`, `remove`, or `set` (default: `set`) |
+| `action` | string | Varies | `add`/`remove` (required for tag, glossary_term, link, owner); `set`/`remove` (domain, structured_properties, default: set); not used for other what values |
 | `urn` | string | Yes | Entity URN |
 | `value` | string | No | New value (description, status, label, message) |
 | `target_urn` | string | No | Target URN for add/remove (tag, glossary term, owner, domain) |
@@ -704,32 +713,43 @@ Update metadata on an existing entity.
 | `field_path` | string | No | Schema field path (column_description) |
 | `name` | string | No | Updated name (query, incident, structured_property) |
 | `description` | string | No | Updated description |
+| `ownership_type` | string | No | Ownership type, e.g. TECHNICAL_OWNER (owner add only) |
+| `properties` | object[] | No | Structured property values to set (structured_properties) |
+| `property_urns` | string[] | No | Property URNs to remove (structured_properties) |
+| `language` | string | No | Query language (query only) |
+| `dataset_urns` | string[] | No | Dataset URNs (query, data_contract) |
+| `incident_type` | string | No | Incident type (incident only) |
+| `priority` | string | No | Priority: LOW, MEDIUM, HIGH, CRITICAL (incident only) |
+| `state` | string | No | Incident state: ACTIVE, RESOLVED (incident_status, required) |
 | `title` | string | No | Document title (document_contents) |
 | `text` | string | No | Document text (document_contents) |
 | `entity_urns` | string[] | No | Related entity URNs (document_related_entities) |
+| `schema_assertions` | string[] | No | Schema assertion URNs (data_contract) |
+| `freshness_assertions` | string[] | No | Freshness assertion URNs (data_contract) |
+| `data_quality_assertions` | string[] | No | Data quality assertion URNs (data_contract) |
 | `connection` | string | No | Named connection to use |
 
 **`what` values and required `action`:**
 
 | what | action | Description |
 |------|--------|-------------|
-| `description` | set | Set entity description |
-| `column_description` | set | Set schema field description |
-| `tag` | add/remove | Add or remove a tag |
-| `glossary_term` | add/remove | Add or remove a glossary term |
-| `link` | add/remove | Add or remove a link |
-| `owner` | add/remove | Add or remove an owner |
-| `domain` | set/remove | Set or remove domain assignment |
-| `structured_properties` | set/remove | Set or remove structured property values |
-| `structured_property` | set | Update a structured property definition |
-| `incident_status` | set | Resolve an incident |
-| `incident` | set | Update incident details |
-| `query` | set | Update query properties |
-| `document_contents` | set | Update document title/text |
-| `document_status` | set | Update document status |
-| `document_related_entities` | set | Update document related entities |
-| `document_sub_type` | set | Update document sub-type |
-| `data_contract` | set | Upsert a data contract |
+| `description` | _(not used)_ | Set entity description |
+| `column_description` | _(not used)_ | Set schema field description |
+| `tag` | **required**: add/remove | Add or remove a tag |
+| `glossary_term` | **required**: add/remove | Add or remove a glossary term |
+| `link` | **required**: add/remove | Add or remove a link |
+| `owner` | **required**: add/remove | Add or remove an owner |
+| `domain` | set/remove (default: set) | Set or remove domain assignment |
+| `structured_properties` | set/remove (default: set) | Set or remove structured property values |
+| `structured_property` | _(not used)_ | Update a structured property definition |
+| `incident_status` | _(not used)_ | Update incident status (requires `state`) |
+| `incident` | _(not used)_ | Update incident details |
+| `query` | _(not used)_ | Update query properties |
+| `document_contents` | _(not used)_ | Update document title/text |
+| `document_status` | _(not used)_ | Update document status |
+| `document_related_entities` | _(not used)_ | Update document related entities |
+| `document_sub_type` | _(not used)_ | Update document sub-type |
+| `data_contract` | _(not used)_ | Upsert a data contract |
 
 ---
 

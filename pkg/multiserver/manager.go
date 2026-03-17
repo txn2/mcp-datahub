@@ -109,6 +109,28 @@ func (m *Manager) HasConnection(name string) bool {
 	return ok
 }
 
+// IsWriteEnabled checks whether write operations are allowed for a connection.
+// Returns nil (inherit from toolkit) if no explicit override is set.
+// Returns the explicit override value if set.
+func (m *Manager) IsWriteEnabled(name string) *bool {
+	// Normalize empty to default
+	if name == "" {
+		name = m.config.Default
+	}
+
+	// Primary connection has no per-connection override
+	if name == m.config.Default {
+		return nil
+	}
+
+	conn, ok := m.config.Connections[name]
+	if !ok {
+		return nil
+	}
+
+	return conn.WriteEnabled
+}
+
 // Config returns the manager's configuration.
 func (m *Manager) Config() Config {
 	return m.config

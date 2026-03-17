@@ -1174,6 +1174,121 @@ func TestToolkitGetWriteClient_Enabled(t *testing.T) {
 	}
 }
 
+func TestToolkitGetWriteClient_PerConnectionDisabled(t *testing.T) {
+	writeDisabled := false
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {
+				URL:          "https://staging.datahub.example.com",
+				Token:        "staging-token",
+				WriteEnabled: &writeDisabled,
+			},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	// Global write enabled, but staging has write_enabled=false
+	toolkit := NewToolkitWithManager(mgr, Config{WriteEnabled: true})
+
+	// Default connection should work
+	_, err := toolkit.getWriteClient("")
+	if err != nil {
+		t.Fatalf("expected write to succeed on default connection: %v", err)
+	}
+
+	// Staging connection should be blocked
+	_, err = toolkit.getWriteClient("staging")
+	if err == nil {
+		t.Fatal("expected error when writing to connection with write_enabled=false")
+	}
+	if !errors.Is(err, client.ErrWriteDisabled) {
+		t.Errorf("expected ErrWriteDisabled, got: %v", err)
+	}
+}
+
+func TestToolkitGetWriteClient_PerConnectionEnabled(t *testing.T) {
+	writeEnabled := true
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {
+				URL:          "https://staging.datahub.example.com",
+				Token:        "staging-token",
+				WriteEnabled: &writeEnabled,
+			},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	// Global write enabled, staging also explicitly enabled
+	toolkit := NewToolkitWithManager(mgr, Config{WriteEnabled: true})
+
+	// Both should work
+	_, err := toolkit.getWriteClient("")
+	if err != nil {
+		t.Fatalf("expected write to succeed on default: %v", err)
+	}
+	_, err = toolkit.getWriteClient("staging")
+	if err != nil {
+		t.Fatalf("expected write to succeed on staging: %v", err)
+	}
+}
+
+func TestToolkitGetWriteClient_PerConnectionOverridesGlobal(t *testing.T) {
+	writeEnabled := true
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {
+				URL:          "https://staging.datahub.example.com",
+				Token:        "staging-token",
+				WriteEnabled: &writeEnabled,
+			},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	// Global write DISABLED, but staging has explicit write_enabled=true
+	toolkit := NewToolkitWithManager(mgr, Config{WriteEnabled: false})
+
+	// Default connection should be blocked (inherits global false)
+	_, err := toolkit.getWriteClient("")
+	if err == nil {
+		t.Fatal("expected error for default connection with global write disabled")
+	}
+	if !errors.Is(err, client.ErrWriteDisabled) {
+		t.Errorf("expected ErrWriteDisabled, got: %v", err)
+	}
+
+	// Staging should work (explicit true overrides global false)
+	_, err = toolkit.getWriteClient("staging")
+	if err != nil {
+		t.Fatalf("expected write to succeed on staging with explicit write_enabled=true: %v", err)
+	}
+}
+
 func TestWriteTools(t *testing.T) {
 	wt := WriteTools()
 	if len(wt) != 3 {

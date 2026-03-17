@@ -54,8 +54,10 @@ var defaultDescriptions = map[ToolName]string{
 		"tag, domain, glossary_term, data_product, document, application, query, incident, " +
 		"structured_property, or data_contract. Returns the URN of the created entity.",
 
-	ToolUpdate: "Update metadata on an existing DataHub entity. Set 'what' to choose what to update " +
-		"and 'action' for the operation (add/remove/set). Supports: description, column_description, " +
+	ToolUpdate: "Update metadata on an existing DataHub entity. Set 'what' to choose what to update. " +
+		"For tag/glossary_term/link/owner: 'action' is required (add or remove). " +
+		"For domain/structured_properties: 'action' defaults to set (set or remove). " +
+		"Other what values do not use 'action'. Supports: description, column_description, " +
 		"tag, glossary_term, link, owner, domain, structured_properties, structured_property, " +
 		"incident_status, incident, query, document_contents, document_status, " +
 		"document_related_entities, document_sub_type, and data_contract.",

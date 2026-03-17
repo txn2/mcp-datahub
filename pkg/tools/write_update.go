@@ -15,7 +15,7 @@ type UpdateInput struct {
 	What string `json:"what" jsonschema_description:"What to update: description, column_description, tag, glossary_term, link, owner, domain, structured_properties, structured_property, incident_status, incident, query, document_contents, document_status, document_related_entities, document_sub_type, or data_contract" jsonschema_enum:"description,column_description,tag,glossary_term,link,owner,domain,structured_properties,structured_property,incident_status,incident,query,document_contents,document_status,document_related_entities,document_sub_type,data_contract"`
 
 	//nolint:lll // struct tag cannot be split
-	Action string `json:"action,omitempty" jsonschema_description:"Action to perform: add, remove, or set (default: set)" jsonschema_enum:"add,remove,set"`
+	Action string `json:"action,omitempty" jsonschema_description:"Action: add/remove (tag, glossary_term, link, owner), set/remove (domain, structured_properties), not used for other what values" jsonschema_enum:"add,remove,set"`
 
 	// Entity identification
 	URN string `json:"urn" jsonschema_description:"URN of the entity to update"`
@@ -101,11 +101,7 @@ func (t *Toolkit) handleUpdate(
 		return ErrorResult("urn parameter is required"), nil, nil
 	}
 
-	// Default action to set
 	action := input.Action
-	if action == "" {
-		action = actionSet
-	}
 
 	datahubClient, err := t.getWriteClient(input.Connection)
 	if err != nil {

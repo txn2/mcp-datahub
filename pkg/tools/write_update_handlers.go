@@ -44,6 +44,9 @@ func (t *Toolkit) handleUpdateColumnDescription(
 func (t *Toolkit) handleUpdateTag(
 	ctx context.Context, c DataHubClient, input UpdateInput, action string,
 ) (UpdateOutput, error) {
+	if action == "" {
+		return UpdateOutput{}, errRequired("action (add or remove)")
+	}
 	if input.TargetURN == "" {
 		return UpdateOutput{}, errRequired("target_urn")
 	}
@@ -66,6 +69,9 @@ func (t *Toolkit) handleUpdateTag(
 func (t *Toolkit) handleUpdateGlossaryTerm(
 	ctx context.Context, c DataHubClient, input UpdateInput, action string,
 ) (UpdateOutput, error) {
+	if action == "" {
+		return UpdateOutput{}, errRequired("action (add or remove)")
+	}
 	if input.TargetURN == "" {
 		return UpdateOutput{}, errRequired("target_urn")
 	}
@@ -88,6 +94,9 @@ func (t *Toolkit) handleUpdateGlossaryTerm(
 func (t *Toolkit) handleUpdateLink(
 	ctx context.Context, c DataHubClient, input UpdateInput, action string,
 ) (UpdateOutput, error) {
+	if action == "" {
+		return UpdateOutput{}, errRequired("action (add or remove)")
+	}
 	if input.URL == "" {
 		return UpdateOutput{}, errRequired("url")
 	}
@@ -110,6 +119,9 @@ func (t *Toolkit) handleUpdateLink(
 func (t *Toolkit) handleUpdateOwner(
 	ctx context.Context, c DataHubClient, input UpdateInput, action string,
 ) (UpdateOutput, error) {
+	if action == "" {
+		return UpdateOutput{}, errRequired("action (add or remove)")
+	}
 	if input.TargetURN == "" {
 		return UpdateOutput{}, errRequired("target_urn (owner URN)")
 	}
@@ -136,6 +148,9 @@ func (t *Toolkit) handleUpdateOwner(
 func (t *Toolkit) handleUpdateDomain(
 	ctx context.Context, c DataHubClient, input UpdateInput, action string,
 ) (UpdateOutput, error) {
+	if action == "" {
+		action = actionSet
+	}
 	switch action {
 	case actionSet:
 		if input.TargetURN == "" {
@@ -158,6 +173,9 @@ func (t *Toolkit) handleUpdateDomain(
 func (t *Toolkit) handleUpdateStructuredProperties(
 	ctx context.Context, c DataHubClient, input UpdateInput, action string,
 ) (UpdateOutput, error) {
+	if action == "" {
+		action = actionSet
+	}
 	switch action {
 	case actionSet:
 		if len(input.Properties) == 0 {

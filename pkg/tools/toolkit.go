@@ -311,7 +311,22 @@ func (t *Toolkit) isWriteEnabled() bool {
 
 // getWriteClient returns the DataHub client for write operations.
 // Returns ErrWriteDisabled if write operations are not enabled.
+// Per-connection WriteEnabled overrides the global toolkit setting:
+//   - nil: inherit from toolkit config (global WriteEnabled)
+//   - true: explicitly enabled (overrides global false)
+//   - false: explicitly disabled (overrides global true)
 func (t *Toolkit) getWriteClient(connection string) (DataHubClient, error) {
+	if t.manager != nil {
+		if override := t.manager.IsWriteEnabled(connection); override != nil {
+			if !*override {
+				return nil, client.ErrWriteDisabled
+			}
+			// Explicit true — skip global check
+			return t.getClient(connection)
+		}
+	}
+
+	// No per-connection override: use global toolkit flag
 	if !t.isWriteEnabled() {
 		return nil, client.ErrWriteDisabled
 	}
