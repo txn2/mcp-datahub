@@ -41,6 +41,7 @@ type mockClient struct {
 	removeStructuredPropertiesFunc        func(ctx context.Context, urn string, propertyURNs []string) error
 	getIncidentsFunc                      func(ctx context.Context, urn string) (*types.IncidentResult, error)
 	raiseIncidentFunc                     func(ctx context.Context, input types.RaiseIncidentInput) (string, error)
+	updateIncidentStatusFunc              func(ctx context.Context, incidentURN, state, message string) error
 	resolveIncidentFunc                   func(ctx context.Context, incidentURN, message string) error
 	getDataContractFunc                   func(ctx context.Context, datasetURN string) (*types.DataContract, error)
 	semanticSearchFunc                    func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
@@ -264,6 +265,13 @@ func (m *mockClient) RaiseIncident(ctx context.Context, input types.RaiseInciden
 		return m.raiseIncidentFunc(ctx, input)
 	}
 	return "", nil
+}
+
+func (m *mockClient) UpdateIncidentStatus(ctx context.Context, incidentURN, state, message string) error {
+	if m.updateIncidentStatusFunc != nil {
+		return m.updateIncidentStatusFunc(ctx, incidentURN, state, message)
+	}
+	return nil
 }
 
 func (m *mockClient) ResolveIncident(ctx context.Context, incidentURN, message string) error {

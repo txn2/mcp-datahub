@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // GraphQL mutations for ownership management.
@@ -21,10 +22,23 @@ func (c *Client) AddOwner(ctx context.Context, urn, ownerURN, ownershipType stri
 	if ownershipType == "" {
 		ownershipType = "TECHNICAL_OWNER"
 	}
+
+	// Detect owner entity type from URN prefix.
+	ownerEntityType := "CORP_USER"
+	if strings.HasPrefix(ownerURN, "urn:li:corpGroup:") {
+		ownerEntityType = "CORP_GROUP"
+	}
+
+	// Guard against double-prefixed ownership type URN.
+	ownershipTypeURN := ownershipType
+	if !strings.HasPrefix(ownershipType, "urn:li:ownershipType:") {
+		ownershipTypeURN = "urn:li:ownershipType:" + ownershipType
+	}
+
 	input := map[string]any{
 		"ownerUrn":         ownerURN,
-		"ownerEntityType":  "CORP_USER",
-		"ownershipTypeUrn": "urn:li:ownershipType:" + ownershipType,
+		"ownerEntityType":  ownerEntityType,
+		"ownershipTypeUrn": ownershipTypeURN,
 		"resourceUrn":      urn,
 	}
 	var resp struct {

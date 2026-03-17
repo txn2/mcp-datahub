@@ -120,6 +120,9 @@ func (c *Client) RaiseIncident(ctx context.Context, input types.RaiseIncidentInp
 	if input.Description != "" {
 		gqlInput["description"] = input.Description
 	}
+	if input.Priority != "" {
+		gqlInput["priority"] = input.Priority
+	}
 
 	variables := map[string]any{
 		"input": gqlInput,
@@ -136,10 +139,13 @@ func (c *Client) RaiseIncident(ctx context.Context, input types.RaiseIncidentInp
 	return response.RaiseIncident, nil
 }
 
-// ResolveIncident marks an incident as resolved.
-func (c *Client) ResolveIncident(ctx context.Context, incidentURN, message string) error {
+// UpdateIncidentStatus changes the state of an incident (ACTIVE or RESOLVED).
+func (c *Client) UpdateIncidentStatus(ctx context.Context, incidentURN, state, message string) error {
+	if state == "" {
+		state = "RESOLVED"
+	}
 	gqlInput := map[string]any{
-		"state": "RESOLVED",
+		"state": state,
 	}
 	if message != "" {
 		gqlInput["message"] = message
@@ -155,10 +161,15 @@ func (c *Client) ResolveIncident(ctx context.Context, incidentURN, message strin
 	}
 
 	if err := c.Execute(ctx, UpdateIncidentStatusMutation, variables, &response); err != nil {
-		return fmt.Errorf("ResolveIncident: %w", err)
+		return fmt.Errorf("UpdateIncidentStatus: %w", err)
 	}
 
 	return nil
+}
+
+// ResolveIncident marks an incident as resolved. It delegates to UpdateIncidentStatus.
+func (c *Client) ResolveIncident(ctx context.Context, incidentURN, message string) error {
+	return c.UpdateIncidentStatus(ctx, incidentURN, "RESOLVED", message)
 }
 
 // incidentsResponse maps the GraphQL incidents response.

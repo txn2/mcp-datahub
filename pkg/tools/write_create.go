@@ -212,6 +212,7 @@ func (t *Toolkit) handleCreateIncident(ctx context.Context, c DataHubClient, inp
 		Type:         input.IncidentType,
 		Title:        input.Name,
 		Description:  input.Description,
+		Priority:     input.Priority,
 		ResourceURNs: input.EntityURNs,
 	})
 }

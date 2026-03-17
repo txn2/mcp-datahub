@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -197,6 +198,6 @@ func (t *Toolkit) dispatchUpdateEntity(
 	case "data_contract":
 		return t.handleUpdateDataContract(ctx, c, input)
 	default:
-		return UpdateOutput{}, errRequired("valid what value")
+		return UpdateOutput{}, fmt.Errorf("unsupported what value: %s", input.What)
 	}
 }

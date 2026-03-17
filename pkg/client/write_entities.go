@@ -184,6 +184,16 @@ func (c *Client) CreateStructuredProperty(ctx context.Context, input types.Creat
 	if len(input.EntityTypes) > 0 {
 		gqlInput["entityTypes"] = input.EntityTypes
 	}
+	if len(input.AllowedValues) > 0 {
+		av := make([]map[string]any, len(input.AllowedValues))
+		for i, v := range input.AllowedValues {
+			av[i] = map[string]any{
+				"value":       map[string]any{"stringValue": v.Value},
+				"description": v.Description,
+			}
+		}
+		gqlInput["allowedValues"] = av
+	}
 
 	var resp struct {
 		CreateStructuredProperty struct {

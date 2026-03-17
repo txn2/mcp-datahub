@@ -59,7 +59,7 @@ func (t *Toolkit) handleUpdateTag(
 		}
 		return UpdateOutput{URN: input.URN, What: "tag", Action: "removed", TargetURN: input.TargetURN}, nil
 	default:
-		return UpdateOutput{}, errRequired("action (add or remove)")
+		return UpdateOutput{}, errInvalidAction(action, "add", "remove")
 	}
 }
 
@@ -81,7 +81,7 @@ func (t *Toolkit) handleUpdateGlossaryTerm(
 		}
 		return UpdateOutput{URN: input.URN, What: "glossary_term", Action: "removed", TargetURN: input.TargetURN}, nil
 	default:
-		return UpdateOutput{}, errRequired("action (add or remove)")
+		return UpdateOutput{}, errInvalidAction(action, "add", "remove")
 	}
 }
 
@@ -103,7 +103,7 @@ func (t *Toolkit) handleUpdateLink(
 		}
 		return UpdateOutput{URN: input.URN, What: "link", Action: "removed"}, nil
 	default:
-		return UpdateOutput{}, errRequired("action (add or remove)")
+		return UpdateOutput{}, errInvalidAction(action, "add", "remove")
 	}
 }
 
@@ -129,7 +129,7 @@ func (t *Toolkit) handleUpdateOwner(
 		}
 		return UpdateOutput{URN: input.URN, What: "owner", Action: "removed", TargetURN: input.TargetURN}, nil
 	default:
-		return UpdateOutput{}, errRequired("action (add or remove)")
+		return UpdateOutput{}, errInvalidAction(action, "add", "remove")
 	}
 }
 
@@ -151,7 +151,7 @@ func (t *Toolkit) handleUpdateDomain(
 		}
 		return UpdateOutput{URN: input.URN, What: "domain", Action: "removed"}, nil
 	default:
-		return UpdateOutput{}, errRequired("action (set or remove)")
+		return UpdateOutput{}, errInvalidAction(action, "set", "remove")
 	}
 }
 
@@ -176,7 +176,7 @@ func (t *Toolkit) handleUpdateStructuredProperties(
 		}
 		return UpdateOutput{URN: input.URN, What: "structured_properties", Action: "removed"}, nil
 	default:
-		return UpdateOutput{}, errRequired("action (set or remove)")
+		return UpdateOutput{}, errInvalidAction(action, "set", "remove")
 	}
 }
 
@@ -195,10 +195,14 @@ func (t *Toolkit) handleUpdateStructuredProperty(
 func (t *Toolkit) handleUpdateIncidentStatus(
 	ctx context.Context, c DataHubClient, input UpdateInput,
 ) (UpdateOutput, error) {
-	if err := c.ResolveIncident(ctx, input.URN, input.Value); err != nil {
+	state := input.State
+	if state == "" {
+		state = "RESOLVED"
+	}
+	if err := c.UpdateIncidentStatus(ctx, input.URN, state, input.Value); err != nil {
 		return UpdateOutput{}, err
 	}
-	return UpdateOutput{URN: input.URN, What: "incident_status", Action: "resolved"}, nil
+	return UpdateOutput{URN: input.URN, What: "incident_status", Action: "updated to " + state}, nil
 }
 
 func (t *Toolkit) handleUpdateIncident(

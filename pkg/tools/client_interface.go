@@ -111,6 +111,9 @@ type DataHubClient interface {
 	// RaiseIncident creates a new incident on entities.
 	RaiseIncident(ctx context.Context, input types.RaiseIncidentInput) (string, error)
 
+	// UpdateIncidentStatus changes the state of an incident (ACTIVE or RESOLVED).
+	UpdateIncidentStatus(ctx context.Context, incidentURN, state, message string) error
+
 	// ResolveIncident marks an incident as resolved.
 	ResolveIncident(ctx context.Context, incidentURN, message string) error
 

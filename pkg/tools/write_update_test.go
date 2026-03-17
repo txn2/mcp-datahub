@@ -134,6 +134,14 @@ func TestHandleUpdate_MissingRequiredFields(t *testing.T) {
 		{"document_status_no_value", UpdateInput{What: "document_status", URN: urn}},
 		{"document_sub_type_no_value", UpdateInput{What: "document_sub_type", URN: urn}},
 		{"tag_invalid_action", UpdateInput{What: "tag", Action: "set", URN: urn, TargetURN: "urn:li:tag:PII"}},
+		{"glossary_term_invalid_action", UpdateInput{What: "glossary_term", Action: "set", URN: urn, TargetURN: "urn:li:glossaryTerm:X"}},
+		{"link_invalid_action", UpdateInput{What: "link", Action: "set", URN: urn, URL: "https://example.com"}},
+		{"owner_invalid_action", UpdateInput{What: "owner", Action: "set", URN: urn, TargetURN: "urn:li:corpuser:user1"}},
+		{"domain_invalid_action", UpdateInput{What: "domain", Action: "add", URN: urn, TargetURN: "urn:li:domain:eng"}},
+		{"structured_properties_invalid_action", UpdateInput{
+			What: "structured_properties", Action: "add", URN: urn,
+			Properties: []types.StructuredPropertyInput{{PropertyURN: "urn:li:sp:test", Values: []any{"v"}}},
+		}},
 	}
 
 	for _, tt := range tests {

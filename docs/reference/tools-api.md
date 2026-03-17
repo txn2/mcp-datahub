@@ -206,7 +206,9 @@ func DefaultAnnotations(name ToolName) *mcp.ToolAnnotations
 | Tool Category | ReadOnlyHint | DestructiveHint | IdempotentHint | OpenWorldHint |
 |---------------|:------------:|:---------------:|:--------------:|:-------------:|
 | Read tools (9) | `true` | _(default)_ | `true` | `true` |
-| Write tools (7) | `false` | `false` | `true` | `true` |
+| `datahub_create` | `false` | `false` | `false` | `true` |
+| `datahub_update` | `false` | `false` | `true` | `true` |
+| `datahub_delete` | `false` | `true` | `true` | `true` |
 
 `OpenWorldHint` is `true` for all tools because every tool communicates with an external DataHub instance.
 

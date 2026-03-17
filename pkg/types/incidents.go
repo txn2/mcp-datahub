@@ -59,6 +59,9 @@ type RaiseIncidentInput struct {
 	// Description explains the incident.
 	Description string `json:"description,omitempty"`
 
+	// Priority is the incident priority: LOW, MEDIUM, HIGH, CRITICAL.
+	Priority string `json:"priority,omitempty"`
+
 	// ResourceURNs are the entity URNs affected by this incident.
 	// Only the first element is sent to the DataHub API (resourceUrn field).
 	ResourceURNs []string `json:"resource_urns"`
