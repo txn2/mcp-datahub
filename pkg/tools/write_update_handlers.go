@@ -211,7 +211,6 @@ func (t *Toolkit) handleUpdateIncident(
 	if err := c.UpdateIncident(ctx, input.URN, types.UpdateIncidentInput{
 		Title:       input.Name,
 		Description: input.Description,
-		Type:        input.IncidentType,
 		Priority:    input.Priority,
 	}); err != nil {
 		return UpdateOutput{}, err

@@ -21,12 +21,6 @@ func (c *Client) UpdateIncident(ctx context.Context, urn string, input types.Upd
 	if input.Description != "" {
 		gqlInput["description"] = input.Description
 	}
-	if input.Type != "" {
-		gqlInput["type"] = input.Type
-	}
-	if input.CustomType != "" {
-		gqlInput["customType"] = input.CustomType
-	}
 	if input.Priority != "" {
 		gqlInput["priority"] = input.Priority
 	}

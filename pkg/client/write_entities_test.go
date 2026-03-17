@@ -220,7 +220,7 @@ func TestCreateDataProduct(t *testing.T) {
 			prodName:  "Analytics",
 			desc:      "Analytics data product",
 			domainURN: "urn:li:domain:engineering",
-			response:  `{"data": {"createDataProduct": "urn:li:dataProduct:Analytics"}}`,
+			response:  `{"data": {"createDataProduct": {"urn": "urn:li:dataProduct:Analytics"}}}`,
 			wantURN:   "urn:li:dataProduct:Analytics",
 		},
 		{
@@ -244,11 +244,12 @@ func TestCreateDataProduct(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				input := extractGraphQLInput(t, r)
-				if input["name"] != tt.prodName {
-					t.Errorf("name = %v, want %v", input["name"], tt.prodName)
-				}
 				if input["domainUrn"] != tt.domainURN {
 					t.Errorf("domainUrn = %v, want %v", input["domainUrn"], tt.domainURN)
+				}
+				props, _ := input["properties"].(map[string]any)
+				if props["name"] != tt.prodName {
+					t.Errorf("properties.name = %v, want %v", props["name"], tt.prodName)
 				}
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(tt.response))
@@ -299,11 +300,12 @@ func TestCreateDocument(t *testing.T) {
 				if input["title"] != "Design Doc" {
 					t.Errorf("title = %v", input["title"])
 				}
-				if input["content"] != "Architecture overview" {
-					t.Errorf("content = %v", input["content"])
+				contents, _ := input["contents"].(map[string]any)
+				if contents["text"] != "Architecture overview" {
+					t.Errorf("contents.text = %v", contents["text"])
 				}
-				if input["status"] != "PUBLISHED" {
-					t.Errorf("status = %v", input["status"])
+				if input["state"] != "PUBLISHED" {
+					t.Errorf("state = %v", input["state"])
 				}
 				if input["subType"] != "DESIGN_DOC" {
 					t.Errorf("subType = %v", input["subType"])
@@ -328,8 +330,8 @@ func TestCreateDocument(t *testing.T) {
 			wantURN:  "urn:li:document:simple",
 			checkInput: func(t *testing.T, input map[string]any) {
 				t.Helper()
-				if _, hasStatus := input["status"]; hasStatus {
-					t.Error("expected no status when empty")
+				if _, hasState := input["state"]; hasState {
+					t.Error("expected no state when empty")
 				}
 				if _, hasSubType := input["subType"]; hasSubType {
 					t.Error("expected no subType when empty")
@@ -403,7 +405,7 @@ func TestCreateApplication(t *testing.T) {
 			name:     "success",
 			appName:  "MyApp",
 			desc:     "My application",
-			response: `{"data": {"createApplication": "urn:li:application:MyApp"}}`,
+			response: `{"data": {"createApplication": {"urn": "urn:li:application:MyApp"}}}`,
 			wantURN:  "urn:li:application:MyApp",
 		},
 		{
@@ -419,11 +421,12 @@ func TestCreateApplication(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				input := extractGraphQLInput(t, r)
-				if input["name"] != tt.appName {
-					t.Errorf("name = %v, want %v", input["name"], tt.appName)
+				props, _ := input["properties"].(map[string]any)
+				if props["name"] != tt.appName {
+					t.Errorf("properties.name = %v, want %v", props["name"], tt.appName)
 				}
-				if input["description"] != tt.desc {
-					t.Errorf("description = %v, want %v", input["description"], tt.desc)
+				if props["description"] != tt.desc {
+					t.Errorf("properties.description = %v, want %v", props["description"], tt.desc)
 				}
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(tt.response))
@@ -487,15 +490,14 @@ func TestCreateStructuredProperty(t *testing.T) {
 				if input["cardinality"] != "SINGLE" {
 					t.Errorf("cardinality = %v", input["cardinality"])
 				}
-				// Verify AllowedValues mapping wraps value in stringValue
+				// Verify AllowedValues mapping uses flat structure
 				avList, _ := input["allowedValues"].([]any)
 				if len(avList) != 2 {
 					t.Fatalf("allowedValues length = %d, want 2", len(avList))
 				}
 				av0, _ := avList[0].(map[string]any)
-				valObj, _ := av0["value"].(map[string]any)
-				if valObj["stringValue"] != "30d" {
-					t.Errorf("allowedValues[0].value.stringValue = %v, want 30d", valObj["stringValue"])
+				if av0["stringValue"] != "30d" {
+					t.Errorf("allowedValues[0].stringValue = %v, want 30d", av0["stringValue"])
 				}
 				if av0["description"] != "30 days" {
 					t.Errorf("allowedValues[0].description = %v, want 30 days", av0["description"])

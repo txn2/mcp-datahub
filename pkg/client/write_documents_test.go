@@ -25,15 +25,16 @@ func TestUpdateDocumentContents(t *testing.T) {
 			response: `{"data": {"updateDocumentContents": true}}`,
 			checkVars: func(t *testing.T, vars map[string]any) {
 				t.Helper()
-				if vars["urn"] != "urn:li:document:doc1" {
-					t.Errorf("urn = %v, want urn:li:document:doc1", vars["urn"])
-				}
 				input, _ := vars["input"].(map[string]any)
+				if input["urn"] != "urn:li:document:doc1" {
+					t.Errorf("input.urn = %v, want urn:li:document:doc1", input["urn"])
+				}
 				if input["title"] != "Updated Title" {
 					t.Errorf("title = %v, want Updated Title", input["title"])
 				}
-				if input["text"] != "Updated body text" {
-					t.Errorf("text = %v, want Updated body text", input["text"])
+				contents, _ := input["contents"].(map[string]any)
+				if contents["text"] != "Updated body text" {
+					t.Errorf("contents.text = %v, want Updated body text", contents["text"])
 				}
 			},
 		},
@@ -49,8 +50,8 @@ func TestUpdateDocumentContents(t *testing.T) {
 				if input["title"] != "Title Only" {
 					t.Errorf("title = %v, want Title Only", input["title"])
 				}
-				if _, hasText := input["text"]; hasText {
-					t.Error("expected no text key when text is empty")
+				if _, hasContents := input["contents"]; hasContents {
+					t.Error("expected no contents key when text is empty")
 				}
 			},
 		},
@@ -118,12 +119,12 @@ func TestUpdateDocumentStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				vars := extractGraphQLVariables(t, r)
-				if vars["urn"] != tt.urn {
-					t.Errorf("urn = %v, want %v", vars["urn"], tt.urn)
-				}
 				input, _ := vars["input"].(map[string]any)
-				if input["status"] != tt.status {
-					t.Errorf("status = %v, want %v", input["status"], tt.status)
+				if input["urn"] != tt.urn {
+					t.Errorf("input.urn = %v, want %v", input["urn"], tt.urn)
+				}
+				if input["state"] != tt.status {
+					t.Errorf("state = %v, want %v", input["state"], tt.status)
 				}
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(tt.response))
@@ -172,17 +173,17 @@ func TestUpdateDocumentRelatedEntities(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				vars := extractGraphQLVariables(t, r)
-				if vars["urn"] != tt.urn {
-					t.Errorf("urn = %v, want %v", vars["urn"], tt.urn)
-				}
 				input, _ := vars["input"].(map[string]any)
-				urns, _ := input["entityUrns"].([]any)
+				if input["urn"] != tt.urn {
+					t.Errorf("input.urn = %v, want %v", input["urn"], tt.urn)
+				}
+				urns, _ := input["relatedAssets"].([]any)
 				if len(urns) != len(tt.entityURNs) {
-					t.Errorf("entityUrns length = %d, want %d", len(urns), len(tt.entityURNs))
+					t.Errorf("relatedAssets length = %d, want %d", len(urns), len(tt.entityURNs))
 				}
 				for i, u := range urns {
 					if u != tt.entityURNs[i] {
-						t.Errorf("entityUrns[%d] = %v, want %v", i, u, tt.entityURNs[i])
+						t.Errorf("relatedAssets[%d] = %v, want %v", i, u, tt.entityURNs[i])
 					}
 				}
 				w.Header().Set("Content-Type", "application/json")
@@ -232,10 +233,10 @@ func TestUpdateDocumentSubType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				vars := extractGraphQLVariables(t, r)
-				if vars["urn"] != tt.urn {
-					t.Errorf("urn = %v, want %v", vars["urn"], tt.urn)
-				}
 				input, _ := vars["input"].(map[string]any)
+				if input["urn"] != tt.urn {
+					t.Errorf("input.urn = %v, want %v", input["urn"], tt.urn)
+				}
 				if input["subType"] != tt.subType {
 					t.Errorf("subType = %v, want %v", input["subType"], tt.subType)
 				}

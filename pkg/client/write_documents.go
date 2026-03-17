@@ -7,21 +7,20 @@ import (
 
 // GraphQL mutations for document management.
 const (
-	updateDocumentContentsMutation = `mutation updateDocumentContents($urn: String!, $input: UpdateDocumentContentsInput!) {
-		updateDocumentContents(urn: $urn, input: $input)
+	updateDocumentContentsMutation = `mutation updateDocumentContents($input: UpdateDocumentContentsInput!) {
+		updateDocumentContents(input: $input)
 	}`
 
-	updateDocumentStatusMutation = `mutation updateDocumentStatus($urn: String!, $input: UpdateDocumentStatusInput!) {
-		updateDocumentStatus(urn: $urn, input: $input)
+	updateDocumentStatusMutation = `mutation updateDocumentStatus($input: UpdateDocumentStatusInput!) {
+		updateDocumentStatus(input: $input)
 	}`
 
-	//nolint:lll // GraphQL mutation
-	updateDocumentRelatedEntitiesMutation = `mutation updateDocumentRelatedEntities($urn: String!, $input: UpdateDocumentRelatedEntitiesInput!) {
-		updateDocumentRelatedEntities(urn: $urn, input: $input)
+	updateDocumentRelatedEntitiesMutation = `mutation updateDocumentRelatedEntities($input: UpdateDocumentRelatedEntitiesInput!) {
+		updateDocumentRelatedEntities(input: $input)
 	}`
 
-	updateDocumentSubTypeMutation = `mutation updateDocumentSubType($urn: String!, $input: UpdateDocumentSubTypeInput!) {
-		updateDocumentSubType(urn: $urn, input: $input)
+	updateDocumentSubTypeMutation = `mutation updateDocumentSubType($input: UpdateDocumentSubTypeInput!) {
+		updateDocumentSubType(input: $input)
 	}`
 
 	deleteDocumentMutation = `mutation deleteDocument($urn: String!) {
@@ -31,14 +30,14 @@ const (
 
 // UpdateDocumentContents updates the title and text of a document.
 func (c *Client) UpdateDocumentContents(ctx context.Context, urn, title, text string) error {
-	input := map[string]any{}
+	input := map[string]any{"urn": urn}
 	if title != "" {
 		input["title"] = title
 	}
 	if text != "" {
-		input["text"] = text
+		input["contents"] = map[string]any{"text": text}
 	}
-	variables := map[string]any{"urn": urn, "input": input}
+	variables := map[string]any{"input": input}
 	var resp struct {
 		UpdateDocumentContents bool `json:"updateDocumentContents"`
 	}
@@ -51,8 +50,7 @@ func (c *Client) UpdateDocumentContents(ctx context.Context, urn, title, text st
 // UpdateDocumentStatus updates the publication status of a document.
 func (c *Client) UpdateDocumentStatus(ctx context.Context, urn, status string) error {
 	variables := map[string]any{
-		"urn":   urn,
-		"input": map[string]any{"status": status},
+		"input": map[string]any{"urn": urn, "state": status},
 	}
 	var resp struct {
 		UpdateDocumentStatus bool `json:"updateDocumentStatus"`
@@ -66,8 +64,7 @@ func (c *Client) UpdateDocumentStatus(ctx context.Context, urn, status string) e
 // UpdateDocumentRelatedEntities updates entities related to a document.
 func (c *Client) UpdateDocumentRelatedEntities(ctx context.Context, urn string, entityURNs []string) error {
 	variables := map[string]any{
-		"urn":   urn,
-		"input": map[string]any{"entityUrns": entityURNs},
+		"input": map[string]any{"urn": urn, "relatedAssets": entityURNs},
 	}
 	var resp struct {
 		UpdateDocumentRelatedEntities bool `json:"updateDocumentRelatedEntities"`
@@ -81,8 +78,7 @@ func (c *Client) UpdateDocumentRelatedEntities(ctx context.Context, urn string, 
 // UpdateDocumentSubType updates the sub-type of a document.
 func (c *Client) UpdateDocumentSubType(ctx context.Context, urn, subType string) error {
 	variables := map[string]any{
-		"urn":   urn,
-		"input": map[string]any{"subType": subType},
+		"input": map[string]any{"urn": urn, "subType": subType},
 	}
 	var resp struct {
 		UpdateDocumentSubType bool `json:"updateDocumentSubType"`

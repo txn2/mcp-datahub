@@ -45,9 +45,8 @@ func TestUpdateStructuredProperty(t *testing.T) {
 					t.Fatalf("newAllowedValues length = %d, want 1", len(avList))
 				}
 				av0, _ := avList[0].(map[string]any)
-				valObj, _ := av0["value"].(map[string]any)
-				if valObj["stringValue"] != "180d" {
-					t.Errorf("newAllowedValues[0].value.stringValue = %v, want 180d", valObj["stringValue"])
+				if av0["stringValue"] != "180d" {
+					t.Errorf("newAllowedValues[0].stringValue = %v, want 180d", av0["stringValue"])
 				}
 				if av0["description"] != "180 days" {
 					t.Errorf("newAllowedValues[0].description = %v", av0["description"])

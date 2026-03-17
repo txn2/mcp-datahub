@@ -29,7 +29,7 @@ func (c *Client) UpdateStructuredProperty(ctx context.Context, urn string, input
 		values := make([]map[string]any, len(input.NewAllowedValues))
 		for i, v := range input.NewAllowedValues {
 			values[i] = map[string]any{
-				"value":       map[string]any{"stringValue": v.Value},
+				"stringValue": v.Value,
 				"description": v.Description,
 			}
 		}

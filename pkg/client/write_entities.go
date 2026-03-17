@@ -22,7 +22,9 @@ const (
 	}`
 
 	createDataProductMutation = `mutation createDataProduct($input: CreateDataProductInput!) {
-		createDataProduct(input: $input)
+		createDataProduct(input: $input) {
+			urn
+		}
 	}`
 
 	createDocumentMutation = `mutation createDocument($input: CreateDocumentInput!) {
@@ -30,7 +32,9 @@ const (
 	}`
 
 	createApplicationMutation = `mutation createApplication($input: CreateApplicationInput!) {
-		createApplication(input: $input)
+		createApplication(input: $input) {
+			urn
+		}
 	}`
 
 	createStructuredPropertyMutation = `mutation createStructuredProperty($input: CreateStructuredPropertyInput!) {
@@ -100,17 +104,21 @@ func (c *Client) CreateDataProduct(ctx context.Context, name, description, domai
 		return "", fmt.Errorf("CreateDataProduct: domainURN is required")
 	}
 	input := map[string]any{
-		"name":        name,
-		"description": description,
-		"domainUrn":   domainURN,
+		"domainUrn": domainURN,
+		"properties": map[string]any{
+			"name":        name,
+			"description": description,
+		},
 	}
 	var resp struct {
-		CreateDataProduct string `json:"createDataProduct"`
+		CreateDataProduct struct {
+			URN string `json:"urn"`
+		} `json:"createDataProduct"`
 	}
 	if err := c.Execute(ctx, createDataProductMutation, map[string]any{"input": input}, &resp); err != nil {
 		return "", fmt.Errorf("CreateDataProduct: %w", err)
 	}
-	return resp.CreateDataProduct, nil
+	return resp.CreateDataProduct.URN, nil
 }
 
 // CreateDocument creates a new context document entity in DataHub.
@@ -119,11 +127,11 @@ func (c *Client) CreateDocument(ctx context.Context, input types.CreateDocumentI
 		return "", fmt.Errorf("CreateDocument: title is required")
 	}
 	gqlInput := map[string]any{
-		"title":   input.Title,
-		"content": input.Content,
+		"title":    input.Title,
+		"contents": map[string]any{"text": input.Content},
 	}
 	if input.Status != "" {
-		gqlInput["status"] = input.Status
+		gqlInput["state"] = input.Status
 	}
 	if input.SubType != "" {
 		gqlInput["subType"] = input.SubType
@@ -147,16 +155,20 @@ func (c *Client) CreateDocument(ctx context.Context, input types.CreateDocumentI
 // CreateApplication creates a new application entity in DataHub.
 func (c *Client) CreateApplication(ctx context.Context, name, description string) (string, error) {
 	input := map[string]any{
-		"name":        name,
-		"description": description,
+		"properties": map[string]any{
+			"name":        name,
+			"description": description,
+		},
 	}
 	var resp struct {
-		CreateApplication string `json:"createApplication"`
+		CreateApplication struct {
+			URN string `json:"urn"`
+		} `json:"createApplication"`
 	}
 	if err := c.Execute(ctx, createApplicationMutation, map[string]any{"input": input}, &resp); err != nil {
 		return "", fmt.Errorf("CreateApplication: %w", err)
 	}
-	return resp.CreateApplication, nil
+	return resp.CreateApplication.URN, nil
 }
 
 // CreateStructuredProperty creates a new structured property definition in DataHub.
@@ -188,7 +200,7 @@ func (c *Client) CreateStructuredProperty(ctx context.Context, input types.Creat
 		av := make([]map[string]any, len(input.AllowedValues))
 		for i, v := range input.AllowedValues {
 			av[i] = map[string]any{
-				"value":       map[string]any{"stringValue": v.Value},
+				"stringValue": v.Value,
 				"description": v.Description,
 			}
 		}

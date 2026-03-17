@@ -62,18 +62,14 @@ type UpsertDataContractInput struct {
 }
 
 // UpdateIncidentInput contains parameters for updating an existing incident.
+// Note: type and customType are set at creation time via RaiseIncidentInput
+// and cannot be changed via updateIncident.
 type UpdateIncidentInput struct {
 	// Title is the updated title (empty means no change).
 	Title string
 
 	// Description is the updated description (empty means no change).
 	Description string
-
-	// Type is the updated incident type (empty means no change).
-	Type string
-
-	// CustomType is the custom incident type when Type is "CUSTOM".
-	CustomType string
 
 	// Priority is the updated priority (empty means no change).
 	// Values: LOW, MEDIUM, HIGH, CRITICAL.

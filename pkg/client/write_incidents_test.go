@@ -24,8 +24,6 @@ func TestUpdateIncident(t *testing.T) {
 			input: types.UpdateIncidentInput{
 				Title:       "Updated title",
 				Description: "Updated desc",
-				Type:        "CUSTOM",
-				CustomType:  "SLA_BREACH",
 				Priority:    "HIGH",
 			},
 			response: `{"data": {"updateIncident": true}}`,
@@ -41,14 +39,15 @@ func TestUpdateIncident(t *testing.T) {
 				if input["description"] != "Updated desc" {
 					t.Errorf("description = %v", input["description"])
 				}
-				if input["type"] != "CUSTOM" {
-					t.Errorf("type = %v", input["type"])
-				}
-				if input["customType"] != "SLA_BREACH" {
-					t.Errorf("customType = %v", input["customType"])
-				}
 				if input["priority"] != "HIGH" {
 					t.Errorf("priority = %v", input["priority"])
+				}
+				// type and customType are not supported in UpdateIncidentInput
+				if _, has := input["type"]; has {
+					t.Error("type should not be sent in UpdateIncidentInput")
+				}
+				if _, has := input["customType"]; has {
+					t.Error("customType should not be sent in UpdateIncidentInput")
 				}
 			},
 		},
@@ -67,9 +66,6 @@ func TestUpdateIncident(t *testing.T) {
 				}
 				if _, has := input["description"]; has {
 					t.Error("expected no description when empty")
-				}
-				if _, has := input["type"]; has {
-					t.Error("expected no type when empty")
 				}
 				if _, has := input["priority"]; has {
 					t.Error("expected no priority when empty")
