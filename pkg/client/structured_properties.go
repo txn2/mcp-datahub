@@ -7,7 +7,9 @@ import (
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
-// GraphQL queries and mutations for structured properties (DataHub 1.4.x+).
+// GraphQL queries and mutations for structured properties.
+// Read queries and CRUD mutations: DataHub 1.3.x+.
+// deleteStructuredProperty: DataHub 1.4.x+.
 const (
 	// GetStructuredPropertiesQuery reads structured property values assigned to an entity.
 	// Uses a named fragment to avoid duplicating the field selection across entity types.
@@ -156,7 +158,7 @@ mutation removeStructuredProperties($input: RemoveStructuredPropertiesInput!) {
 
 // GetStructuredProperties retrieves structured property values assigned to an entity.
 // Returns empty results (not an error) when structured properties are not available,
-// which is common on DataHub versions before 1.4.x.
+// which is common on DataHub versions before 1.3.x.
 func (c *Client) GetStructuredProperties(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error) {
 	variables := map[string]any{
 		"urn": urn,
@@ -171,7 +173,7 @@ func (c *Client) GetStructuredProperties(ctx context.Context, urn string) ([]typ
 	}
 
 	if err := c.Execute(ctx, GetStructuredPropertiesQuery, variables, &response); err != nil {
-		// Return empty result when structured properties are not supported (DataHub < 1.4.x)
+		// Return empty result when structured properties are not supported (DataHub < 1.3.x)
 		c.logger.Debug("GetStructuredProperties graceful fallback", "urn", urn, "error", err.Error())
 		return nil, nil
 	}
@@ -190,7 +192,7 @@ func (c *Client) GetStructuredProperties(ctx context.Context, urn string) ([]typ
 
 // ListStructuredPropertyDefinitions retrieves all structured property definitions.
 // Returns empty results (not an error) when structured properties are not available,
-// which is common on DataHub versions before 1.4.x.
+// which is common on DataHub versions before 1.3.x.
 func (c *Client) ListStructuredPropertyDefinitions(ctx context.Context) ([]types.StructuredPropertyDefinition, error) {
 	variables := map[string]any{
 		"input": map[string]any{
@@ -214,7 +216,7 @@ func (c *Client) ListStructuredPropertyDefinitions(ctx context.Context) ([]types
 	}
 
 	if err := c.Execute(ctx, ListStructuredPropertyDefinitionsQuery, variables, &response); err != nil {
-		// Return empty result when STRUCTURED_PROPERTY type is not supported (DataHub < 1.4.x)
+		// Return empty result when STRUCTURED_PROPERTY type is not supported (DataHub < 1.3.x)
 		c.logger.Debug("ListStructuredPropertyDefinitions graceful fallback", "error", err.Error())
 		return nil, nil
 	}

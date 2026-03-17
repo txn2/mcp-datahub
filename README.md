@@ -265,7 +265,18 @@ See the [library documentation](https://mcp-datahub.txn2.com/library/) for compl
 | `datahub_update` | 17 | Update descriptions, tags, glossary terms, links, owners, domains, structured properties, incidents, queries, documents, data contracts |
 | `datahub_delete` | 8 | Delete queries, tags, domains, glossary entities, data products, applications, documents, structured properties |
 
-Write tools use a mix of GraphQL mutations and REST API calls. They are disabled by default for safety.
+Write tools are disabled by default for safety.
+
+### DataHub Version Compatibility
+
+**Minimum: DataHub 1.3.x. Full feature set: DataHub 1.4.x.**
+
+| DataHub Version | Features |
+|---|---|
+| 1.3.x+ (minimum) | All read tools, core write operations (tags, domains, glossary, data products, queries, owners, links, descriptions, incidents, structured properties, data contracts) |
+| 1.4.x+ (full) | + Documents (create/update/delete), applications (create/delete), `updateIncident`, `deleteStructuredProperty` |
+
+The client gracefully handles version differences — read queries return empty results (not errors) when a feature is unavailable on older versions.
 
 See the [tools reference](https://mcp-datahub.txn2.com/server/tools/) for detailed documentation.
 

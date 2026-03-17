@@ -7,7 +7,9 @@ import (
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
-// GraphQL queries and mutations for incidents (DataHub 1.4.x+).
+// GraphQL queries and mutations for incidents.
+// Read queries: DataHub 1.3.x+. Mutations: raiseIncident/updateIncidentStatus
+// require DataHub 1.3.x+; updateIncident and resourceUrns (plural) require 1.4.x+.
 const (
 	// GetIncidentsQuery retrieves active incidents for an entity.
 	// Uses a named fragment to avoid duplicating the incident field selection
@@ -76,7 +78,7 @@ mutation updateIncidentStatus($urn: String!, $input: IncidentStatusInput!) {
 
 // GetIncidents retrieves active incidents for an entity.
 // Returns empty results (not an error) when incidents are not available,
-// which is common on DataHub versions before 1.4.x.
+// which is common on DataHub versions before 1.3.x.
 func (c *Client) GetIncidents(ctx context.Context, urn string) (*types.IncidentResult, error) {
 	variables := map[string]any{
 		"urn":   urn,
@@ -91,7 +93,7 @@ func (c *Client) GetIncidents(ctx context.Context, urn string) (*types.IncidentR
 	}
 
 	if err := c.Execute(ctx, GetIncidentsQuery, variables, &response); err != nil {
-		// Return empty result when incidents are not supported (DataHub < 1.4.x)
+		// Return empty result when incidents are not supported (DataHub < 1.3.x)
 		c.logger.Debug("GetIncidents graceful fallback", "urn", urn, "error", err.Error())
 		return &types.IncidentResult{}, nil
 	}

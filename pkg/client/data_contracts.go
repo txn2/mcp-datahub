@@ -6,7 +6,7 @@ import (
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
-// GraphQL query for data contracts (DataHub 1.4.x+).
+// GraphQL query for data contracts (DataHub 1.3.x+).
 const (
 	// GetDataContractQuery retrieves the data contract status for a dataset.
 	GetDataContractQuery = `
