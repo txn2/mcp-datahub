@@ -8,8 +8,8 @@ import (
 )
 
 // GraphQL queries and mutations for incidents.
-// Read queries: DataHub 1.3.x+. Mutations: raiseIncident/updateIncidentStatus
-// require DataHub 1.3.x+; updateIncident and resourceUrns (plural) require 1.4.x+.
+// All incident queries and mutations (raiseIncident, updateIncidentStatus,
+// updateIncident) require DataHub 1.3.x+.
 const (
 	// GetIncidentsQuery retrieves active incidents for an entity.
 	// Uses a named fragment to avoid duplicating the incident field selection

@@ -240,8 +240,8 @@ All tools accept an optional `connection` parameter to target a specific server.
 
 | DataHub Version | Features Available |
 |---|---|
-| 1.3.x+ (minimum) | All read tools, tags, domains, glossary, data products, queries, owners, links, descriptions, incidents (basic), structured properties (CRUD), data contracts |
-| 1.4.x+ (full) | + Documents (create/update/delete), applications (create/delete), `updateIncident`, `deleteStructuredProperty` |
+| 1.3.x+ (minimum) | All read tools, all write operations except documents (tags, domains, glossary, data products, queries, owners, links, descriptions, incidents, applications, structured properties incl. delete, data contracts) |
+| 1.4.x+ (full) | + Documents (create/update/delete) |
 
 The client handles variations across DataHub versions gracefully:
 - Uses search fallback when `listDataProducts` query unavailable

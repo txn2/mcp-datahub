@@ -6,20 +6,16 @@ mcp-datahub provides 12 MCP tools for interacting with DataHub (9 read + 3 write
 
 **Minimum: DataHub 1.3.x. Full feature set: DataHub 1.4.x.**
 
-All read tools and core write operations work with DataHub 1.3.x+. The following operations require DataHub 1.4.x+:
+All read tools and most write operations work with DataHub 1.3.x+. Only document operations require DataHub 1.4.x+:
 
 | Operation | Tool | Requires |
 |-----------|------|----------|
 | `what=document` | `datahub_create` | DataHub 1.4.x+ |
-| `what=application` | `datahub_create` | DataHub 1.4.x+ |
 | `what=document_contents` | `datahub_update` | DataHub 1.4.x+ |
 | `what=document_status` | `datahub_update` | DataHub 1.4.x+ |
 | `what=document_related_entities` | `datahub_update` | DataHub 1.4.x+ |
 | `what=document_sub_type` | `datahub_update` | DataHub 1.4.x+ |
-| `what=incident` (updateIncident) | `datahub_update` | DataHub 1.4.x+ |
 | `what=document` | `datahub_delete` | DataHub 1.4.x+ |
-| `what=application` | `datahub_delete` | DataHub 1.4.x+ |
-| `what=structured_property` | `datahub_delete` | DataHub 1.4.x+ |
 
 The client gracefully handles version differences for read queries — returning empty results (not errors) when a feature is unavailable.
 

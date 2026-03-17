@@ -8,8 +8,7 @@ import (
 )
 
 // GraphQL queries and mutations for structured properties.
-// Read queries and CRUD mutations: DataHub 1.3.x+.
-// deleteStructuredProperty: DataHub 1.4.x+.
+// All structured property queries and CRUD mutations require DataHub 1.3.x+.
 const (
 	// GetStructuredPropertiesQuery reads structured property values assigned to an entity.
 	// Uses a named fragment to avoid duplicating the field selection across entity types.

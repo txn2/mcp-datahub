@@ -273,8 +273,8 @@ Write tools are disabled by default for safety.
 
 | DataHub Version | Features |
 |---|---|
-| 1.3.x+ (minimum) | All read tools, core write operations (tags, domains, glossary, data products, queries, owners, links, descriptions, incidents, structured properties, data contracts) |
-| 1.4.x+ (full) | + Documents (create/update/delete), applications (create/delete), `updateIncident`, `deleteStructuredProperty` |
+| 1.3.x+ (minimum) | All read tools, all write operations except documents (tags, domains, glossary, data products, queries, owners, links, descriptions, incidents, applications, structured properties incl. delete, data contracts) |
+| 1.4.x+ (full) | + Documents (create/update/delete) |
 
 The client gracefully handles version differences — read queries return empty results (not errors) when a feature is unavailable on older versions.
 

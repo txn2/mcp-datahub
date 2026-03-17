@@ -1,6 +1,6 @@
 package types
 
-// Incident represents a DataHub incident on an entity (DataHub 1.4.x+).
+// Incident represents a DataHub incident on an entity (DataHub 1.3.x+).
 type Incident struct {
 	// URN is the unique identifier for this incident.
 	URN string `json:"urn"`

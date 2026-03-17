@@ -256,7 +256,7 @@ func TestGetStructuredProperties_GraphQLError_ReturnsEmpty(t *testing.T) {
 		logger:     NopLogger{},
 	}
 
-	// Should return empty results (not error) for backward compatibility with DataHub < 1.4.x
+	// Should return empty results (not error) for backward compatibility
 	result, err := c.GetStructuredProperties(context.Background(), "urn:li:dataset:nonexistent")
 	if err != nil {
 		t.Fatalf("expected nil error for graceful degradation, got: %v", err)
@@ -472,7 +472,7 @@ func TestListStructuredPropertyDefinitions_GraphQLError_ReturnsEmpty(t *testing.
 		logger:     NopLogger{},
 	}
 
-	// Should return empty results (not error) for backward compatibility with DataHub < 1.4.x
+	// Should return empty results (not error) for backward compatibility
 	result, err := c.ListStructuredPropertyDefinitions(context.Background())
 	if err != nil {
 		t.Fatalf("expected nil error for graceful degradation, got: %v", err)

@@ -89,7 +89,7 @@ type DataHubClient interface {
 	// DeleteQuery deletes a Query entity.
 	DeleteQuery(ctx context.Context, urn string) error
 
-	// Structured properties (DataHub 1.4.x+).
+	// Structured properties (DataHub 1.3.x+).
 
 	// GetStructuredProperties retrieves structured property values assigned to an entity.
 	GetStructuredProperties(ctx context.Context, urn string) ([]types.StructuredPropertyValue, error)
@@ -103,7 +103,7 @@ type DataHubClient interface {
 	// RemoveStructuredProperties removes structured properties from an entity.
 	RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error
 
-	// Incidents (DataHub 1.4.x+).
+	// Incidents (DataHub 1.3.x+).
 
 	// GetIncidents retrieves active incidents for an entity.
 	GetIncidents(ctx context.Context, urn string) (*types.IncidentResult, error)
@@ -117,7 +117,7 @@ type DataHubClient interface {
 	// ResolveIncident marks an incident as resolved.
 	ResolveIncident(ctx context.Context, incidentURN, message string) error
 
-	// Data contracts (DataHub 1.4.x+).
+	// Data contracts (DataHub 1.3.x+).
 
 	// GetDataContract retrieves the data contract status for a dataset.
 	GetDataContract(ctx context.Context, datasetURN string) (*types.DataContract, error)
