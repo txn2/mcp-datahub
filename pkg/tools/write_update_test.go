@@ -2,7 +2,10 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
@@ -130,78 +133,79 @@ func TestHandleUpdate_MetadataOperations(t *testing.T) {
 	urn := "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)"
 
 	tests := []struct {
-		name       string
-		input      UpdateInput
-		wantWhat   string
-		wantAction string
+		name          string
+		input         UpdateInput
+		wantWhat      string
+		wantAction    string
+		wantTargetURN string
 	}{
 		{
 			"tag_add",
 			UpdateInput{What: "tag", Action: "add", URN: urn, TargetURN: "urn:li:tag:PII"},
-			"tag", "added",
+			"tag", "added", "urn:li:tag:PII",
 		},
 		{
 			"tag_remove",
 			UpdateInput{What: "tag", Action: "remove", URN: urn, TargetURN: "urn:li:tag:PII"},
-			"tag", "removed",
+			"tag", "removed", "urn:li:tag:PII",
 		},
 		{
 			"glossary_term_add",
 			UpdateInput{What: "glossary_term", Action: "add", URN: urn, TargetURN: "urn:li:glossaryTerm:X"},
-			"glossary_term", "added",
+			"glossary_term", "added", "urn:li:glossaryTerm:X",
 		},
 		{
 			"glossary_term_remove",
 			UpdateInput{What: "glossary_term", Action: "remove", URN: urn, TargetURN: "urn:li:glossaryTerm:X"},
-			"glossary_term", "removed",
+			"glossary_term", "removed", "urn:li:glossaryTerm:X",
 		},
 		{
 			"link_add",
 			UpdateInput{What: "link", Action: "add", URN: urn, URL: "https://example.com", Value: "docs"},
-			"link", "added",
+			"link", "added", "",
 		},
 		{
 			"link_remove",
 			UpdateInput{What: "link", Action: "remove", URN: urn, URL: "https://example.com"},
-			"link", "removed",
+			"link", "removed", "",
 		},
 		{
 			"owner_add",
 			UpdateInput{What: "owner", Action: "add", URN: urn, TargetURN: "urn:li:corpuser:user1"},
-			"owner", "added",
+			"owner", "added", "urn:li:corpuser:user1",
 		},
 		{
 			"owner_remove",
 			UpdateInput{What: "owner", Action: "remove", URN: urn, TargetURN: "urn:li:corpuser:user1"},
-			"owner", "removed",
+			"owner", "removed", "urn:li:corpuser:user1",
 		},
 		{
 			"domain_set",
 			UpdateInput{What: "domain", Action: "set", URN: urn, TargetURN: "urn:li:domain:eng"},
-			"domain", "set",
+			"domain", "set", "urn:li:domain:eng",
 		},
 		{
 			"domain_remove",
 			UpdateInput{What: "domain", Action: "remove", URN: urn},
-			"domain", "removed",
+			"domain", "removed", "",
 		},
 		{
 			"domain_default_action",
 			UpdateInput{What: "domain", URN: urn, TargetURN: "urn:li:domain:eng"},
-			"domain", "set",
+			"domain", "set", "urn:li:domain:eng",
 		},
 		{"structured_properties_set", UpdateInput{
 			What: "structured_properties", Action: "set", URN: urn,
 			Properties: []types.StructuredPropertyInput{{PropertyURN: "urn:li:sp:test", Values: []any{"v"}}},
-		}, "structured_properties", "updated"},
+		}, "structured_properties", "updated", ""},
 		{"structured_properties_remove", UpdateInput{
 			What: "structured_properties", Action: "remove", URN: urn,
 			PropertyURNs: []string{"urn:li:sp:test"},
-		}, "structured_properties", "removed"},
+		}, "structured_properties", "removed", ""},
 		{"structured_properties_default_action", UpdateInput{
 			What: "structured_properties", URN: urn,
 			Properties: []types.StructuredPropertyInput{{PropertyURN: "urn:li:sp:test", Values: []any{"v"}}},
-		}, "structured_properties", "updated"},
+		}, "structured_properties", "updated", ""},
 	}
 
 	for _, tt := range tests {
@@ -222,6 +226,9 @@ func TestHandleUpdate_MetadataOperations(t *testing.T) {
 			}
 			if typed.Action != tt.wantAction {
 				t.Errorf("action = %q, want %q", typed.Action, tt.wantAction)
+			}
+			if typed.TargetURN != tt.wantTargetURN {
+				t.Errorf("target_urn = %q, want %q", typed.TargetURN, tt.wantTargetURN)
 			}
 		})
 	}
@@ -287,6 +294,12 @@ func TestHandleUpdate_MissingRequiredFields(t *testing.T) {
 			What: "structured_properties", Action: "add", URN: urn,
 			Properties: []types.StructuredPropertyInput{{PropertyURN: "urn:li:sp:test", Values: []any{"v"}}},
 		}},
+		{"structured_properties_set_empty", UpdateInput{
+			What: "structured_properties", Action: "set", URN: urn,
+		}},
+		{"structured_properties_remove_empty", UpdateInput{
+			What: "structured_properties", Action: "remove", URN: urn,
+		}},
 	}
 
 	for _, tt := range tests {
@@ -296,5 +309,30 @@ func TestHandleUpdate_MissingRequiredFields(t *testing.T) {
 				t.Errorf("expected error for %s", tt.name)
 			}
 		})
+	}
+}
+
+func TestHandleUpdate_ClientErrorPropagation(t *testing.T) {
+	clientErr := errors.New("DataHub API error")
+	mock := &mockClient{
+		addTagFunc: func(_ context.Context, _, _ string) error {
+			return clientErr
+		},
+	}
+	toolkit := NewToolkit(mock, Config{WriteEnabled: true})
+
+	result, _, _ := toolkit.handleUpdate(context.Background(), nil, UpdateInput{
+		What: "tag", Action: "add",
+		URN: "urn:li:dataset:test", TargetURN: "urn:li:tag:PII",
+	})
+	if !result.IsError {
+		t.Fatal("expected error when client returns error")
+	}
+	tc, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatal("expected TextContent")
+	}
+	if tc.Text == "" {
+		t.Error("error message should not be empty")
 	}
 }

@@ -60,6 +60,9 @@ func TestHandleDelete_AllTypes(t *testing.T) {
 			if !ok {
 				t.Fatal("output should be *DeleteOutput")
 			}
+			if typed.What != tt.what {
+				t.Errorf("what = %q, want %q", typed.What, tt.what)
+			}
 			if typed.Action != "deleted" {
 				t.Errorf("action = %q, want deleted", typed.Action)
 			}
