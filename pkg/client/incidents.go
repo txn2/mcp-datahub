@@ -110,9 +110,9 @@ func (c *Client) RaiseIncident(ctx context.Context, input types.RaiseIncidentInp
 	}
 
 	gqlInput := map[string]any{
-		"type":        input.Type,
-		"title":       input.Title,
-		"resourceUrn": input.ResourceURNs[0],
+		"type":         input.Type,
+		"title":        input.Title,
+		"resourceUrns": input.ResourceURNs,
 	}
 	if input.CustomType != "" {
 		gqlInput["customType"] = input.CustomType

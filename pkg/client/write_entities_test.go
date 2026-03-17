@@ -515,6 +515,15 @@ func TestCreateStructuredProperty(t *testing.T) {
 			name: "missing valueType returns error",
 			input: types.CreateStructuredPropertyInput{
 				QualifiedName: "io.acryl.test",
+				EntityTypes:   []string{"dataset"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing entityTypes returns error",
+			input: types.CreateStructuredPropertyInput{
+				QualifiedName: "io.acryl.test",
+				ValueType:     "string",
 			},
 			wantErr: true,
 		},
@@ -523,6 +532,7 @@ func TestCreateStructuredProperty(t *testing.T) {
 			input: types.CreateStructuredPropertyInput{
 				QualifiedName: "io.acryl.test",
 				ValueType:     "string",
+				EntityTypes:   []string{"dataset"},
 			},
 			response: `{"errors": [{"message": "creation failed"}]}`,
 			wantErr:  true,

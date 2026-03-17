@@ -208,6 +208,9 @@ func (t *Toolkit) handleCreateIncident(ctx context.Context, c DataHubClient, inp
 	if input.Name == "" {
 		return "", errRequired("name (title)")
 	}
+	if input.IncidentType == "" {
+		return "", errRequired("incident_type")
+	}
 	return c.RaiseIncident(ctx, types.RaiseIncidentInput{
 		Type:         input.IncidentType,
 		Title:        input.Name,
@@ -225,6 +228,9 @@ func (t *Toolkit) handleCreateStructuredProperty(
 	}
 	if input.ValueType == "" {
 		return "", errRequired("value_type")
+	}
+	if len(input.EntityTypes) == 0 {
+		return "", errRequired("entity_types")
 	}
 	return c.CreateStructuredProperty(ctx, types.CreateStructuredPropertyInput{
 		QualifiedName: input.QualifiedName,

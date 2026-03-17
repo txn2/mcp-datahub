@@ -179,6 +179,9 @@ func (c *Client) CreateStructuredProperty(ctx context.Context, input types.Creat
 	if input.ValueType == "" {
 		return "", fmt.Errorf("CreateStructuredProperty: valueType is required")
 	}
+	if len(input.EntityTypes) == 0 {
+		return "", fmt.Errorf("CreateStructuredProperty: entityTypes is required")
+	}
 
 	gqlInput := map[string]any{
 		"qualifiedName": input.QualifiedName,
@@ -193,9 +196,7 @@ func (c *Client) CreateStructuredProperty(ctx context.Context, input types.Creat
 	if input.Cardinality != "" {
 		gqlInput["cardinality"] = input.Cardinality
 	}
-	if len(input.EntityTypes) > 0 {
-		gqlInput["entityTypes"] = input.EntityTypes
-	}
+	gqlInput["entityTypes"] = input.EntityTypes
 	if len(input.AllowedValues) > 0 {
 		av := make([]map[string]any, len(input.AllowedValues))
 		for i, v := range input.AllowedValues {

@@ -657,6 +657,14 @@ func TestRemoveStructuredProperties(t *testing.T) {
 				if input["assetUrn"] != tt.urn {
 					t.Errorf("assetUrn = %v, want %v", input["assetUrn"], tt.urn)
 				}
+				// Verify correct GraphQL field name (structuredPropertyUrns, not propertyUrns)
+				urns, ok := input["structuredPropertyUrns"].([]any)
+				if !ok {
+					t.Fatalf("expected structuredPropertyUrns array, got %T", input["structuredPropertyUrns"])
+				}
+				if len(urns) != len(tt.propertyURNs) {
+					t.Errorf("structuredPropertyUrns length = %d, want %d", len(urns), len(tt.propertyURNs))
+				}
 			}
 		})
 	}

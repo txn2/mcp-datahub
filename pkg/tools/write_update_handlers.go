@@ -195,14 +195,13 @@ func (t *Toolkit) handleUpdateStructuredProperty(
 func (t *Toolkit) handleUpdateIncidentStatus(
 	ctx context.Context, c DataHubClient, input UpdateInput,
 ) (UpdateOutput, error) {
-	state := input.State
-	if state == "" {
-		state = "RESOLVED"
+	if input.State == "" {
+		return UpdateOutput{}, errRequired("state (ACTIVE or RESOLVED)")
 	}
-	if err := c.UpdateIncidentStatus(ctx, input.URN, state, input.Value); err != nil {
+	if err := c.UpdateIncidentStatus(ctx, input.URN, input.State, input.Value); err != nil {
 		return UpdateOutput{}, err
 	}
-	return UpdateOutput{URN: input.URN, What: "incident_status", Action: "updated to " + state}, nil
+	return UpdateOutput{URN: input.URN, What: "incident_status", Action: "updated to " + input.State}, nil
 }
 
 func (t *Toolkit) handleUpdateIncident(

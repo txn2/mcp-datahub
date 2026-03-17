@@ -366,8 +366,8 @@ var schemaUpdate = json.RawMessage(`{
   "properties": {
     "urn":        {"type": "string", "description": "URN of the updated entity"},
     "what":       {"type": "string", "description": "What was updated"},
-    "action":     {"type": "string", "description": "Action performed (added, removed, updated)"},
-    "target_urn": {"type": "string", "description": "URN of the target (tag, term, owner, etc.) when applicable"}
+    "action":     {"type": "string", "description": "Action performed (added, removed, set, updated, or updated to STATE)"},
+    "target_urn": {"type": "string", "description": "Target URN (tag, term, owner, domain) when applicable"}
   }
 }`)
 

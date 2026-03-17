@@ -36,8 +36,11 @@ func TestHandleCreate_AllTypes(t *testing.T) {
 		{"document", CreateInput{What: "document", Name: "TestDoc"}},
 		{"application", CreateInput{What: "application", Name: "TestApp"}},
 		{"query", CreateInput{What: "query", Value: "SELECT 1"}},
-		{"incident", CreateInput{What: "incident", Name: "Down", EntityURNs: []string{"urn:li:dataset:test"}}},
-		{"structured_property", CreateInput{What: "structured_property", QualifiedName: "io.test.prop", ValueType: "string"}},
+		{"incident", CreateInput{What: "incident", Name: "Down", IncidentType: "OPERATIONAL", EntityURNs: []string{"urn:li:dataset:test"}}},
+		{"structured_property", CreateInput{
+			What: "structured_property", QualifiedName: "io.test.prop",
+			ValueType: "string", EntityTypes: []string{"dataset"},
+		}},
 		{"data_contract", CreateInput{What: "data_contract", DatasetURNs: []string{"urn:li:dataset:test"}}},
 	}
 
@@ -88,9 +91,11 @@ func TestHandleCreate_MissingRequiredFields(t *testing.T) {
 		{"application_no_name", CreateInput{What: "application"}},
 		{"query_no_value", CreateInput{What: "query"}},
 		{"incident_no_urns", CreateInput{What: "incident", Name: "test"}},
-		{"incident_no_name", CreateInput{What: "incident", EntityURNs: []string{"urn:li:dataset:test"}}},
-		{"structured_property_no_qname", CreateInput{What: "structured_property", ValueType: "string"}},
-		{"structured_property_no_vtype", CreateInput{What: "structured_property", QualifiedName: "io.test"}},
+		{"incident_no_name", CreateInput{What: "incident", IncidentType: "OPERATIONAL", EntityURNs: []string{"urn:li:dataset:test"}}},
+		{"incident_no_type", CreateInput{What: "incident", Name: "Down", EntityURNs: []string{"urn:li:dataset:test"}}},
+		{"structured_property_no_qname", CreateInput{What: "structured_property", ValueType: "string", EntityTypes: []string{"dataset"}}},
+		{"structured_property_no_vtype", CreateInput{What: "structured_property", QualifiedName: "io.test", EntityTypes: []string{"dataset"}}},
+		{"structured_property_no_etypes", CreateInput{What: "structured_property", QualifiedName: "io.test", ValueType: "string"}},
 		{"data_contract_no_dataset", CreateInput{What: "data_contract"}},
 	}
 

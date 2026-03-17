@@ -270,8 +270,8 @@ func (c *Client) UpsertStructuredProperties(ctx context.Context, urn string, pro
 func (c *Client) RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error {
 	variables := map[string]any{
 		"input": map[string]any{
-			"assetUrn":     urn,
-			"propertyUrns": propertyURNs,
+			"assetUrn":               urn,
+			"structuredPropertyUrns": propertyURNs,
 		},
 	}
 
