@@ -295,53 +295,53 @@ func TestWriteToolsViaServer(t *testing.T) {
 		arguments map[string]any
 	}{
 		{
-			"update_description", ToolUpdateDescription,
+			"create_tag", ToolCreate,
 			map[string]any{
-				"urn":         "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
-				"description": "Updated description",
+				"what": "tag",
+				"name": "TestTag",
 			},
 		},
 		{
-			"add_tag", ToolAddTag,
+			"update_description", ToolUpdate,
 			map[string]any{
-				"urn":     "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
-				"tag_urn": "urn:li:tag:PII",
+				"what":  "description",
+				"urn":   "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"value": "Updated description",
 			},
 		},
 		{
-			"remove_tag", ToolRemoveTag,
+			"update_add_tag", ToolUpdate,
 			map[string]any{
-				"urn":     "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
-				"tag_urn": "urn:li:tag:PII",
+				"what":       "tag",
+				"action":     "add",
+				"urn":        "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"target_urn": "urn:li:tag:PII",
 			},
 		},
 		{
-			"add_glossary_term", ToolAddGlossaryTerm,
+			"update_remove_tag", ToolUpdate,
 			map[string]any{
-				"urn":      "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
-				"term_urn": "urn:li:glossaryTerm:Classification",
+				"what":       "tag",
+				"action":     "remove",
+				"urn":        "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"target_urn": "urn:li:tag:PII",
 			},
 		},
 		{
-			"remove_glossary_term", ToolRemoveGlossaryTerm,
+			"update_add_link", ToolUpdate,
 			map[string]any{
-				"urn":      "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
-				"term_urn": "urn:li:glossaryTerm:Classification",
+				"what":   "link",
+				"action": "add",
+				"urn":    "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
+				"url":    "https://docs.example.com",
+				"value":  "Documentation",
 			},
 		},
 		{
-			"add_link", ToolAddLink,
+			"delete_tag", ToolDelete,
 			map[string]any{
-				"urn":         "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
-				"url":         "https://docs.example.com",
-				"description": "Documentation",
-			},
-		},
-		{
-			"remove_link", ToolRemoveLink,
-			map[string]any{
-				"urn": "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)",
-				"url": "https://docs.example.com",
+				"what": "tag",
+				"urn":  "urn:li:tag:TestTag",
 			},
 		},
 	}

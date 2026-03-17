@@ -1,6 +1,6 @@
 package types
 
-// Incident represents a DataHub incident on an entity (DataHub 1.4.x+).
+// Incident represents a DataHub incident on an entity (DataHub 1.3.x+).
 type Incident struct {
 	// URN is the unique identifier for this incident.
 	URN string `json:"urn"`
@@ -59,7 +59,9 @@ type RaiseIncidentInput struct {
 	// Description explains the incident.
 	Description string `json:"description,omitempty"`
 
+	// Priority is the incident priority: LOW, MEDIUM, HIGH, CRITICAL.
+	Priority string `json:"priority,omitempty"`
+
 	// ResourceURNs are the entity URNs affected by this incident.
-	// Only the first element is sent to the DataHub API (resourceUrn field).
 	ResourceURNs []string `json:"resource_urns"`
 }

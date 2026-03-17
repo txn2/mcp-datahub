@@ -112,7 +112,7 @@ toolkit := tools.NewToolkit(datahubClient, tools.Config{},
 )
 ```
 
-All 16 tools ship with default annotations: read tools are marked `ReadOnlyHint: true`, write tools are marked `DestructiveHint: false` and `IdempotentHint: true`.
+All 12 tools ship with default annotations: read tools are marked `ReadOnlyHint: true`; `datahub_create` is non-destructive and non-idempotent; `datahub_update` is non-destructive and idempotent; `datahub_delete` is destructive and idempotent.
 
 #### Extensions (Logging, Metrics, Error Hints)
 
@@ -257,17 +257,26 @@ See the [library documentation](https://mcp-datahub.txn2.com/library/) for compl
 
 ### Write Tools (require `DATAHUB_WRITE_ENABLED=true`)
 
-| Tool | Description |
-|------|-------------|
-| `datahub_update_description` | Update the description of an entity |
-| `datahub_add_tag` | Add a tag to an entity |
-| `datahub_remove_tag` | Remove a tag from an entity |
-| `datahub_add_glossary_term` | Add a glossary term to an entity |
-| `datahub_remove_glossary_term` | Remove a glossary term from an entity |
-| `datahub_add_link` | Add a link to an entity |
-| `datahub_remove_link` | Remove a link from an entity |
+3 CRUD tools using the `what` discriminator pattern — 35 operations total:
 
-Write tools use DataHub's REST API (`POST /aspects?action=ingestProposal`) with read-modify-write semantics for array aspects (tags, terms, links). They are disabled by default for safety.
+| Tool | Operations | Description |
+|------|------------|-------------|
+| `datahub_create` | 10 | Create tags, domains, glossary terms, data products, documents, applications, queries, incidents, structured properties, data contracts |
+| `datahub_update` | 17 | Update descriptions, tags, glossary terms, links, owners, domains, structured properties, incidents, queries, documents, data contracts |
+| `datahub_delete` | 8 | Delete queries, tags, domains, glossary entities, data products, applications, documents, structured properties |
+
+Write tools are disabled by default for safety.
+
+### DataHub Version Compatibility
+
+**Minimum: DataHub 1.3.x. Full feature set: DataHub 1.4.x.**
+
+| DataHub Version | Features |
+|---|---|
+| 1.3.x+ (minimum) | All read tools, all write operations except documents (tags, domains, glossary, data products, queries, owners, links, descriptions, incidents, applications, structured properties incl. delete, data contracts) |
+| 1.4.x+ (full) | + Documents (create/update/delete) |
+
+The client gracefully handles version differences — read queries return empty results (not errors) when a feature is unavailable on older versions.
 
 See the [tools reference](https://mcp-datahub.txn2.com/server/tools/) for detailed documentation.
 

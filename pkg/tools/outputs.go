@@ -10,57 +10,24 @@ type BrowseOutput struct {
 	DataProducts []types.DataProduct `json:"data_products,omitempty"`
 }
 
-// UpdateDescriptionOutput is the structured output of the datahub_update_description tool.
-type UpdateDescriptionOutput struct {
+// CreateOutput is the structured output of the datahub_create tool.
+type CreateOutput struct {
 	URN    string `json:"urn"`
-	Aspect string `json:"aspect"`
+	What   string `json:"what"`
 	Action string `json:"action"`
 }
 
-// AddTagOutput is the structured output of the datahub_add_tag tool.
-type AddTagOutput struct {
-	URN    string `json:"urn"`
-	Tag    string `json:"tag"`
-	Aspect string `json:"aspect"`
-	Action string `json:"action"`
+// UpdateOutput is the structured output of the datahub_update tool.
+type UpdateOutput struct {
+	URN       string `json:"urn"`
+	What      string `json:"what"`
+	Action    string `json:"action"`
+	TargetURN string `json:"target_urn,omitempty"`
 }
 
-// RemoveTagOutput is the structured output of the datahub_remove_tag tool.
-type RemoveTagOutput struct {
+// DeleteOutput is the structured output of the datahub_delete tool.
+type DeleteOutput struct {
 	URN    string `json:"urn"`
-	Tag    string `json:"tag"`
-	Aspect string `json:"aspect"`
-	Action string `json:"action"`
-}
-
-// AddGlossaryTermOutput is the structured output of the datahub_add_glossary_term tool.
-type AddGlossaryTermOutput struct {
-	URN    string `json:"urn"`
-	Term   string `json:"term"`
-	Aspect string `json:"aspect"`
-	Action string `json:"action"`
-}
-
-// RemoveGlossaryTermOutput is the structured output of the datahub_remove_glossary_term tool.
-type RemoveGlossaryTermOutput struct {
-	URN    string `json:"urn"`
-	Term   string `json:"term"`
-	Aspect string `json:"aspect"`
-	Action string `json:"action"`
-}
-
-// AddLinkOutput is the structured output of the datahub_add_link tool.
-type AddLinkOutput struct {
-	URN    string `json:"urn"`
-	URL    string `json:"url"`
-	Aspect string `json:"aspect"`
-	Action string `json:"action"`
-}
-
-// RemoveLinkOutput is the structured output of the datahub_remove_link tool.
-type RemoveLinkOutput struct {
-	URN    string `json:"urn"`
-	URL    string `json:"url"`
-	Aspect string `json:"aspect"`
+	What   string `json:"what"`
 	Action string `json:"action"`
 }

@@ -7,7 +7,9 @@ import (
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
-// GraphQL queries and mutations for incidents (DataHub 1.4.x+).
+// GraphQL queries and mutations for incidents.
+// All incident queries and mutations (raiseIncident, updateIncidentStatus,
+// updateIncident) require DataHub 1.3.x+.
 const (
 	// GetIncidentsQuery retrieves active incidents for an entity.
 	// Uses a named fragment to avoid duplicating the incident field selection
@@ -76,7 +78,7 @@ mutation updateIncidentStatus($urn: String!, $input: IncidentStatusInput!) {
 
 // GetIncidents retrieves active incidents for an entity.
 // Returns empty results (not an error) when incidents are not available,
-// which is common on DataHub versions before 1.4.x.
+// which is common on DataHub versions before 1.3.x.
 func (c *Client) GetIncidents(ctx context.Context, urn string) (*types.IncidentResult, error) {
 	variables := map[string]any{
 		"urn":   urn,
@@ -91,7 +93,7 @@ func (c *Client) GetIncidents(ctx context.Context, urn string) (*types.IncidentR
 	}
 
 	if err := c.Execute(ctx, GetIncidentsQuery, variables, &response); err != nil {
-		// Return empty result when incidents are not supported (DataHub < 1.4.x)
+		// Return empty result when incidents are not supported (DataHub < 1.3.x)
 		c.logger.Debug("GetIncidents graceful fallback", "urn", urn, "error", err.Error())
 		return &types.IncidentResult{}, nil
 	}
@@ -110,15 +112,18 @@ func (c *Client) RaiseIncident(ctx context.Context, input types.RaiseIncidentInp
 	}
 
 	gqlInput := map[string]any{
-		"type":        input.Type,
-		"title":       input.Title,
-		"resourceUrn": input.ResourceURNs[0],
+		"type":         input.Type,
+		"title":        input.Title,
+		"resourceUrns": input.ResourceURNs,
 	}
 	if input.CustomType != "" {
 		gqlInput["customType"] = input.CustomType
 	}
 	if input.Description != "" {
 		gqlInput["description"] = input.Description
+	}
+	if input.Priority != "" {
+		gqlInput["priority"] = input.Priority
 	}
 
 	variables := map[string]any{
@@ -136,10 +141,13 @@ func (c *Client) RaiseIncident(ctx context.Context, input types.RaiseIncidentInp
 	return response.RaiseIncident, nil
 }
 
-// ResolveIncident marks an incident as resolved.
-func (c *Client) ResolveIncident(ctx context.Context, incidentURN, message string) error {
+// UpdateIncidentStatus changes the state of an incident (ACTIVE or RESOLVED).
+func (c *Client) UpdateIncidentStatus(ctx context.Context, incidentURN, state, message string) error {
+	if state == "" {
+		state = "RESOLVED"
+	}
 	gqlInput := map[string]any{
-		"state": "RESOLVED",
+		"state": state,
 	}
 	if message != "" {
 		gqlInput["message"] = message
@@ -155,10 +163,15 @@ func (c *Client) ResolveIncident(ctx context.Context, incidentURN, message strin
 	}
 
 	if err := c.Execute(ctx, UpdateIncidentStatusMutation, variables, &response); err != nil {
-		return fmt.Errorf("ResolveIncident: %w", err)
+		return fmt.Errorf("UpdateIncidentStatus: %w", err)
 	}
 
 	return nil
+}
+
+// ResolveIncident marks an incident as resolved. It delegates to UpdateIncidentStatus.
+func (c *Client) ResolveIncident(ctx context.Context, incidentURN, message string) error {
+	return c.UpdateIncidentStatus(ctx, incidentURN, "RESOLVED", message)
 }
 
 // incidentsResponse maps the GraphQL incidents response.

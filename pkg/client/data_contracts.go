@@ -6,7 +6,7 @@ import (
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
-// GraphQL query for data contracts (DataHub 1.4.x+).
+// GraphQL query for data contracts (DataHub 1.3.x+).
 const (
 	// GetDataContractQuery retrieves the data contract status for a dataset.
 	GetDataContractQuery = `
@@ -36,8 +36,7 @@ query getDataContract($urn: String!) {
 )
 
 // GetDataContract retrieves the data contract status for a dataset.
-// Returns nil (not an error) when data contracts are not available,
-// which is common on DataHub versions before 1.4.x.
+// Returns nil (not an error) when data contracts are not available.
 func (c *Client) GetDataContract(ctx context.Context, datasetURN string) (*types.DataContract, error) {
 	variables := map[string]any{
 		"urn": datasetURN,
@@ -52,7 +51,7 @@ func (c *Client) GetDataContract(ctx context.Context, datasetURN string) (*types
 	}
 
 	if err := c.Execute(ctx, GetDataContractQuery, variables, &response); err != nil {
-		// Return nil when data contracts are not supported (DataHub < 1.4.x)
+		// Return nil when data contracts are not supported
 		c.logger.Debug("GetDataContract graceful fallback", "urn", datasetURN, "error", err.Error())
 		return nil, nil
 	}

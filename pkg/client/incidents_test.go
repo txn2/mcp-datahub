@@ -287,16 +287,19 @@ func TestRaiseIncident(t *testing.T) {
 				t.Errorf("URN = %q, want %q", urn, tt.wantURN)
 			}
 
-			// Verify resourceUrn is sent as a singular string field
+			// Verify resourceUrns is sent as an array
 			if !tt.wantErr && receivedBody != nil {
 				vars, _ := receivedBody["variables"].(map[string]any)
 				input, _ := vars["input"].(map[string]any)
-				resourceUrn, ok := input["resourceUrn"].(string)
+				resourceUrns, ok := input["resourceUrns"].([]any)
 				if !ok {
-					t.Fatal("expected resourceUrn to be a string")
+					t.Fatalf("expected resourceUrns array, got %T", input["resourceUrns"])
 				}
-				if resourceUrn != tt.input.ResourceURNs[0] {
-					t.Errorf("resourceUrn = %q, want %q", resourceUrn, tt.input.ResourceURNs[0])
+				if len(resourceUrns) != len(tt.input.ResourceURNs) {
+					t.Fatalf("resourceUrns length = %d, want %d", len(resourceUrns), len(tt.input.ResourceURNs))
+				}
+				if resourceUrns[0] != tt.input.ResourceURNs[0] {
+					t.Errorf("resourceUrns[0] = %q, want %q", resourceUrns[0], tt.input.ResourceURNs[0])
 				}
 			}
 		})

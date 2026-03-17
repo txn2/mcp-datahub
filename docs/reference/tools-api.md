@@ -206,7 +206,9 @@ func DefaultAnnotations(name ToolName) *mcp.ToolAnnotations
 | Tool Category | ReadOnlyHint | DestructiveHint | IdempotentHint | OpenWorldHint |
 |---------------|:------------:|:---------------:|:--------------:|:-------------:|
 | Read tools (9) | `true` | _(default)_ | `true` | `true` |
-| Write tools (7) | `false` | `false` | `true` | `true` |
+| `datahub_create` | `false` | `false` | `false` | `true` |
+| `datahub_update` | `false` | `false` | `true` | `true` |
+| `datahub_delete` | `false` | `true` | `true` | `true` |
 
 `OpenWorldHint` is `true` for all tools because every tool communicates with an external DataHub instance.
 
@@ -304,14 +306,10 @@ const (
     ToolGetDataProduct  ToolName = "datahub_get_data_product"
     ToolListConnections ToolName = "datahub_list_connections"
 
-    // Write tools (require WriteEnabled: true)
-    ToolUpdateDescription  ToolName = "datahub_update_description"
-    ToolAddTag             ToolName = "datahub_add_tag"
-    ToolRemoveTag          ToolName = "datahub_remove_tag"
-    ToolAddGlossaryTerm    ToolName = "datahub_add_glossary_term"
-    ToolRemoveGlossaryTerm ToolName = "datahub_remove_glossary_term"
-    ToolAddLink            ToolName = "datahub_add_link"
-    ToolRemoveLink         ToolName = "datahub_remove_link"
+    // Write tools (CRUD pattern, require WriteEnabled: true)
+    ToolCreate ToolName = "datahub_create"
+    ToolUpdate ToolName = "datahub_update"
+    ToolDelete ToolName = "datahub_delete"
 
 )
 ```
@@ -396,68 +394,35 @@ func ErrorResult(msg string) *mcp.CallToolResult
 
 ## Write Tool Output Types
 
-Write tools return typed output structs as the second return value from their handler functions. These provide structured access to operation results.
+The 3 CRUD tools return typed output structs as the second return value from their handler functions:
 
-### UpdateDescriptionOutput
+### CreateOutput
 
 ```go
-type UpdateDescriptionOutput struct {
+type CreateOutput struct {
     URN    string `json:"urn"`
-    Aspect string `json:"aspect"`
+    What   string `json:"what"`
     Action string `json:"action"`
 }
 ```
 
-### AddTagOutput / RemoveTagOutput
+### UpdateOutput
 
 ```go
-type AddTagOutput struct {
-    URN    string `json:"urn"`
-    Tag    string `json:"tag"`
-    Aspect string `json:"aspect"`
-    Action string `json:"action"`
-}
-
-type RemoveTagOutput struct {
-    URN    string `json:"urn"`
-    Tag    string `json:"tag"`
-    Aspect string `json:"aspect"`
-    Action string `json:"action"`
+type UpdateOutput struct {
+    URN       string `json:"urn"`
+    What      string `json:"what"`
+    Action    string `json:"action"`
+    TargetURN string `json:"target_urn,omitempty"`
 }
 ```
 
-### AddGlossaryTermOutput / RemoveGlossaryTermOutput
+### DeleteOutput
 
 ```go
-type AddGlossaryTermOutput struct {
+type DeleteOutput struct {
     URN    string `json:"urn"`
-    Term   string `json:"term"`
-    Aspect string `json:"aspect"`
-    Action string `json:"action"`
-}
-
-type RemoveGlossaryTermOutput struct {
-    URN    string `json:"urn"`
-    Term   string `json:"term"`
-    Aspect string `json:"aspect"`
-    Action string `json:"action"`
-}
-```
-
-### AddLinkOutput / RemoveLinkOutput
-
-```go
-type AddLinkOutput struct {
-    URN    string `json:"urn"`
-    URL    string `json:"url"`
-    Aspect string `json:"aspect"`
-    Action string `json:"action"`
-}
-
-type RemoveLinkOutput struct {
-    URN    string `json:"urn"`
-    URL    string `json:"url"`
-    Aspect string `json:"aspect"`
+    What   string `json:"what"`
     Action string `json:"action"`
 }
 ```

@@ -1,7 +1,7 @@
 package types
 
 // StructuredPropertyDefinition describes a structured property type registered in DataHub.
-// Structured properties (DataHub 1.4.x+) provide typed custom metadata with optional
+// Structured properties (DataHub 1.3.x+) provide typed custom metadata with optional
 // value constraints, replacing freeform custom properties for governed use cases.
 type StructuredPropertyDefinition struct {
 	// URN is the unique identifier for this structured property definition.

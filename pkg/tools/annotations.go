@@ -25,14 +25,10 @@ var defaultAnnotations = map[ToolName]*mcp.ToolAnnotations{
 	ToolGetDataProduct:  {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 	ToolListConnections: {ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 
-	// Write tools
-	ToolUpdateDescription:  {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolAddTag:             {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolRemoveTag:          {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolAddGlossaryTerm:    {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolRemoveGlossaryTerm: {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolAddLink:            {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
-	ToolRemoveLink:         {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	// Write tools (CRUD pattern)
+	ToolCreate: {DestructiveHint: boolPtr(false), IdempotentHint: false, OpenWorldHint: boolPtr(true)},
+	ToolUpdate: {DestructiveHint: boolPtr(false), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
+	ToolDelete: {DestructiveHint: boolPtr(true), IdempotentHint: true, OpenWorldHint: boolPtr(true)},
 }
 
 // DefaultAnnotations returns the default annotations for a tool.

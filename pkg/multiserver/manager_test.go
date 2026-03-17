@@ -664,3 +664,63 @@ func TestManager_Client_InheritsFromPrimary(t *testing.T) {
 		t.Errorf("unexpected error: %v - staging should inherit from primary", err)
 	}
 }
+
+func TestManager_IsWriteEnabled(t *testing.T) {
+	writeTrue := true
+	writeFalse := false
+
+	cfg := Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]ConnectionConfig{
+			"staging": {
+				URL:          "https://staging.datahub.example.com",
+				WriteEnabled: &writeFalse,
+			},
+			"dev": {
+				URL:          "https://dev.datahub.example.com",
+				WriteEnabled: &writeTrue,
+			},
+			"qa": {
+				URL: "https://qa.datahub.example.com",
+				// WriteEnabled is nil (inherit)
+			},
+		},
+	}
+	mgr := NewManager(cfg)
+
+	// Primary connection returns nil (no override)
+	if result := mgr.IsWriteEnabled(""); result != nil {
+		t.Errorf("expected nil for empty connection, got %v", *result)
+	}
+	if result := mgr.IsWriteEnabled("prod"); result != nil {
+		t.Errorf("expected nil for default connection, got %v", *result)
+	}
+
+	// Staging has write_enabled=false
+	if result := mgr.IsWriteEnabled("staging"); result == nil {
+		t.Error("expected non-nil for staging")
+	} else if *result {
+		t.Error("expected false for staging")
+	}
+
+	// Dev has write_enabled=true
+	if result := mgr.IsWriteEnabled("dev"); result == nil {
+		t.Error("expected non-nil for dev")
+	} else if !*result {
+		t.Error("expected true for dev")
+	}
+
+	// QA has nil (inherit)
+	if result := mgr.IsWriteEnabled("qa"); result != nil {
+		t.Errorf("expected nil for qa, got %v", *result)
+	}
+
+	// Unknown connection returns nil
+	if result := mgr.IsWriteEnabled("unknown"); result != nil {
+		t.Errorf("expected nil for unknown connection, got %v", *result)
+	}
+}

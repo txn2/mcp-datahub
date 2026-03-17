@@ -41,12 +41,44 @@ type mockClient struct {
 	removeStructuredPropertiesFunc        func(ctx context.Context, urn string, propertyURNs []string) error
 	getIncidentsFunc                      func(ctx context.Context, urn string) (*types.IncidentResult, error)
 	raiseIncidentFunc                     func(ctx context.Context, input types.RaiseIncidentInput) (string, error)
+	updateIncidentStatusFunc              func(ctx context.Context, incidentURN, state, message string) error
 	resolveIncidentFunc                   func(ctx context.Context, incidentURN, message string) error
 	getDataContractFunc                   func(ctx context.Context, datasetURN string) (*types.DataContract, error)
 	semanticSearchFunc                    func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 	// Context documents (DataHub 1.4.x+)
 	getDocumentFunc    func(ctx context.Context, urn string) (*types.Document, error)
 	getRelatedDocsFunc func(ctx context.Context, urn string) ([]types.Document, error)
+
+	// New CRUD methods
+	updateColumnDescriptionFunc  func(ctx context.Context, urn, fieldPath, description string) error
+	createQueryFunc              func(ctx context.Context, input client.CreateQueryInput) (*types.Query, error)
+	updateQueryFunc              func(ctx context.Context, input client.UpdateQueryInput) (*types.Query, error)
+	deleteQueryFunc              func(ctx context.Context, urn string) error
+	createTagFunc                func(ctx context.Context, name, description string) (string, error)
+	createDomainFunc             func(ctx context.Context, name, description string) (string, error)
+	createGlossaryTermFunc       func(ctx context.Context, name, description, parentNode string) (string, error)
+	createDataProductFunc        func(ctx context.Context, name, description, domainURN string) (string, error)
+	createDocumentFunc           func(ctx context.Context, input types.CreateDocumentInput) (string, error)
+	createApplicationFunc        func(ctx context.Context, name, description string) (string, error)
+	createStructuredPropertyFunc func(ctx context.Context, input types.CreateStructuredPropertyInput) (string, error)
+	upsertDataContractFunc       func(ctx context.Context, input types.UpsertDataContractInput) (string, error)
+	addOwnerFunc                 func(ctx context.Context, urn, ownerURN, ownershipType string) error
+	removeOwnerFunc              func(ctx context.Context, urn, ownerURN string) error
+	setDomainFunc                func(ctx context.Context, entityURN, domainURN string) error
+	unsetDomainFunc              func(ctx context.Context, entityURN string) error
+	updateIncidentFunc           func(ctx context.Context, urn string, input types.UpdateIncidentInput) error
+	updateStructuredPropertyFunc func(ctx context.Context, urn string, input types.UpdateStructuredPropertyInput) error
+	updateDocumentContentsFunc   func(ctx context.Context, urn, title, text string) error
+	updateDocumentStatusFunc     func(ctx context.Context, urn, status string) error
+	updateDocRelatedFunc         func(ctx context.Context, urn string, entityURNs []string) error
+	updateDocSubTypeFunc         func(ctx context.Context, urn, subType string) error
+	deleteTagFunc                func(ctx context.Context, urn string) error
+	deleteDomainFunc             func(ctx context.Context, urn string) error
+	deleteGlossaryEntityFunc     func(ctx context.Context, urn string) error
+	deleteDataProductFunc        func(ctx context.Context, urn string) error
+	deleteApplicationFunc        func(ctx context.Context, urn string) error
+	deleteDocumentFunc           func(ctx context.Context, urn string) error
+	deleteStructuredPropertyFunc func(ctx context.Context, urn string) error
 }
 
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
@@ -235,6 +267,13 @@ func (m *mockClient) RaiseIncident(ctx context.Context, input types.RaiseInciden
 	return "", nil
 }
 
+func (m *mockClient) UpdateIncidentStatus(ctx context.Context, incidentURN, state, message string) error {
+	if m.updateIncidentStatusFunc != nil {
+		return m.updateIncidentStatusFunc(ctx, incidentURN, state, message)
+	}
+	return nil
+}
+
 func (m *mockClient) ResolveIncident(ctx context.Context, incidentURN, message string) error {
 	if m.resolveIncidentFunc != nil {
 		return m.resolveIncidentFunc(ctx, incidentURN, message)
@@ -268,6 +307,209 @@ func (m *mockClient) GetRelatedDocuments(ctx context.Context, urn string) ([]typ
 		return m.getRelatedDocsFunc(ctx, urn)
 	}
 	return nil, nil
+}
+
+func (m *mockClient) UpdateColumnDescription(ctx context.Context, urn, fieldPath, description string) error {
+	if m.updateColumnDescriptionFunc != nil {
+		return m.updateColumnDescriptionFunc(ctx, urn, fieldPath, description)
+	}
+	return nil
+}
+
+func (m *mockClient) CreateQuery(ctx context.Context, input client.CreateQueryInput) (*types.Query, error) {
+	if m.createQueryFunc != nil {
+		return m.createQueryFunc(ctx, input)
+	}
+	return &types.Query{URN: "urn:li:query:new"}, nil
+}
+
+func (m *mockClient) UpdateQuery(ctx context.Context, input client.UpdateQueryInput) (*types.Query, error) {
+	if m.updateQueryFunc != nil {
+		return m.updateQueryFunc(ctx, input)
+	}
+	return &types.Query{URN: input.URN}, nil
+}
+
+func (m *mockClient) DeleteQuery(ctx context.Context, urn string) error {
+	if m.deleteQueryFunc != nil {
+		return m.deleteQueryFunc(ctx, urn)
+	}
+	return nil
+}
+
+func (m *mockClient) CreateTag(ctx context.Context, name, description string) (string, error) {
+	if m.createTagFunc != nil {
+		return m.createTagFunc(ctx, name, description)
+	}
+	return "urn:li:tag:" + name, nil
+}
+
+func (m *mockClient) CreateDomain(ctx context.Context, name, description string) (string, error) {
+	if m.createDomainFunc != nil {
+		return m.createDomainFunc(ctx, name, description)
+	}
+	return "urn:li:domain:" + name, nil
+}
+
+func (m *mockClient) CreateGlossaryTerm(ctx context.Context, name, description, parentNode string) (string, error) {
+	if m.createGlossaryTermFunc != nil {
+		return m.createGlossaryTermFunc(ctx, name, description, parentNode)
+	}
+	return "urn:li:glossaryTerm:" + name, nil
+}
+
+func (m *mockClient) CreateDataProduct(ctx context.Context, name, description, domainURN string) (string, error) {
+	if m.createDataProductFunc != nil {
+		return m.createDataProductFunc(ctx, name, description, domainURN)
+	}
+	return "urn:li:dataProduct:" + name, nil
+}
+
+func (m *mockClient) CreateDocument(ctx context.Context, input types.CreateDocumentInput) (string, error) {
+	if m.createDocumentFunc != nil {
+		return m.createDocumentFunc(ctx, input)
+	}
+	return "urn:li:document:new", nil
+}
+
+func (m *mockClient) CreateApplication(ctx context.Context, name, description string) (string, error) {
+	if m.createApplicationFunc != nil {
+		return m.createApplicationFunc(ctx, name, description)
+	}
+	return "urn:li:application:" + name, nil
+}
+
+func (m *mockClient) CreateStructuredProperty(ctx context.Context, input types.CreateStructuredPropertyInput) (string, error) {
+	if m.createStructuredPropertyFunc != nil {
+		return m.createStructuredPropertyFunc(ctx, input)
+	}
+	return "urn:li:structuredProperty:" + input.QualifiedName, nil
+}
+
+func (m *mockClient) UpsertDataContract(ctx context.Context, input types.UpsertDataContractInput) (string, error) {
+	if m.upsertDataContractFunc != nil {
+		return m.upsertDataContractFunc(ctx, input)
+	}
+	return "urn:li:dataContract:new", nil
+}
+
+func (m *mockClient) AddOwner(ctx context.Context, urn, ownerURN, ownershipType string) error {
+	if m.addOwnerFunc != nil {
+		return m.addOwnerFunc(ctx, urn, ownerURN, ownershipType)
+	}
+	return nil
+}
+
+func (m *mockClient) RemoveOwner(ctx context.Context, urn, ownerURN string) error {
+	if m.removeOwnerFunc != nil {
+		return m.removeOwnerFunc(ctx, urn, ownerURN)
+	}
+	return nil
+}
+
+func (m *mockClient) SetDomain(ctx context.Context, entityURN, domainURN string) error {
+	if m.setDomainFunc != nil {
+		return m.setDomainFunc(ctx, entityURN, domainURN)
+	}
+	return nil
+}
+
+func (m *mockClient) UnsetDomain(ctx context.Context, entityURN string) error {
+	if m.unsetDomainFunc != nil {
+		return m.unsetDomainFunc(ctx, entityURN)
+	}
+	return nil
+}
+
+func (m *mockClient) UpdateIncident(ctx context.Context, urn string, input types.UpdateIncidentInput) error {
+	if m.updateIncidentFunc != nil {
+		return m.updateIncidentFunc(ctx, urn, input)
+	}
+	return nil
+}
+
+func (m *mockClient) UpdateStructuredProperty(ctx context.Context, urn string, input types.UpdateStructuredPropertyInput) error {
+	if m.updateStructuredPropertyFunc != nil {
+		return m.updateStructuredPropertyFunc(ctx, urn, input)
+	}
+	return nil
+}
+
+func (m *mockClient) UpdateDocumentContents(ctx context.Context, urn, title, text string) error {
+	if m.updateDocumentContentsFunc != nil {
+		return m.updateDocumentContentsFunc(ctx, urn, title, text)
+	}
+	return nil
+}
+
+func (m *mockClient) UpdateDocumentStatus(ctx context.Context, urn, status string) error {
+	if m.updateDocumentStatusFunc != nil {
+		return m.updateDocumentStatusFunc(ctx, urn, status)
+	}
+	return nil
+}
+
+func (m *mockClient) UpdateDocumentRelatedEntities(ctx context.Context, urn string, entityURNs []string) error {
+	if m.updateDocRelatedFunc != nil {
+		return m.updateDocRelatedFunc(ctx, urn, entityURNs)
+	}
+	return nil
+}
+
+func (m *mockClient) UpdateDocumentSubType(ctx context.Context, urn, subType string) error {
+	if m.updateDocSubTypeFunc != nil {
+		return m.updateDocSubTypeFunc(ctx, urn, subType)
+	}
+	return nil
+}
+
+func (m *mockClient) DeleteTag(ctx context.Context, urn string) error {
+	if m.deleteTagFunc != nil {
+		return m.deleteTagFunc(ctx, urn)
+	}
+	return nil
+}
+
+func (m *mockClient) DeleteDomain(ctx context.Context, urn string) error {
+	if m.deleteDomainFunc != nil {
+		return m.deleteDomainFunc(ctx, urn)
+	}
+	return nil
+}
+
+func (m *mockClient) DeleteGlossaryEntity(ctx context.Context, urn string) error {
+	if m.deleteGlossaryEntityFunc != nil {
+		return m.deleteGlossaryEntityFunc(ctx, urn)
+	}
+	return nil
+}
+
+func (m *mockClient) DeleteDataProduct(ctx context.Context, urn string) error {
+	if m.deleteDataProductFunc != nil {
+		return m.deleteDataProductFunc(ctx, urn)
+	}
+	return nil
+}
+
+func (m *mockClient) DeleteApplication(ctx context.Context, urn string) error {
+	if m.deleteApplicationFunc != nil {
+		return m.deleteApplicationFunc(ctx, urn)
+	}
+	return nil
+}
+
+func (m *mockClient) DeleteDocument(ctx context.Context, urn string) error {
+	if m.deleteDocumentFunc != nil {
+		return m.deleteDocumentFunc(ctx, urn)
+	}
+	return nil
+}
+
+func (m *mockClient) DeleteStructuredProperty(ctx context.Context, urn string) error {
+	if m.deleteStructuredPropertyFunc != nil {
+		return m.deleteStructuredPropertyFunc(ctx, urn)
+	}
+	return nil
 }
 
 func TestNewToolkit(t *testing.T) {
@@ -932,20 +1174,131 @@ func TestToolkitGetWriteClient_Enabled(t *testing.T) {
 	}
 }
 
+func TestToolkitGetWriteClient_PerConnectionDisabled(t *testing.T) {
+	writeDisabled := false
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {
+				URL:          "https://staging.datahub.example.com",
+				Token:        "staging-token",
+				WriteEnabled: &writeDisabled,
+			},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	// Global write enabled, but staging has write_enabled=false
+	toolkit := NewToolkitWithManager(mgr, Config{WriteEnabled: true})
+
+	// Default connection should work
+	_, err := toolkit.getWriteClient("")
+	if err != nil {
+		t.Fatalf("expected write to succeed on default connection: %v", err)
+	}
+
+	// Staging connection should be blocked
+	_, err = toolkit.getWriteClient("staging")
+	if err == nil {
+		t.Fatal("expected error when writing to connection with write_enabled=false")
+	}
+	if !errors.Is(err, client.ErrWriteDisabled) {
+		t.Errorf("expected ErrWriteDisabled, got: %v", err)
+	}
+}
+
+func TestToolkitGetWriteClient_PerConnectionEnabled(t *testing.T) {
+	writeEnabled := true
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {
+				URL:          "https://staging.datahub.example.com",
+				Token:        "staging-token",
+				WriteEnabled: &writeEnabled,
+			},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	// Global write enabled, staging also explicitly enabled
+	toolkit := NewToolkitWithManager(mgr, Config{WriteEnabled: true})
+
+	// Both should work
+	_, err := toolkit.getWriteClient("")
+	if err != nil {
+		t.Fatalf("expected write to succeed on default: %v", err)
+	}
+	_, err = toolkit.getWriteClient("staging")
+	if err != nil {
+		t.Fatalf("expected write to succeed on staging: %v", err)
+	}
+}
+
+func TestToolkitGetWriteClient_PerConnectionOverridesGlobal(t *testing.T) {
+	writeEnabled := true
+	cfg := multiserver.Config{
+		Default: "prod",
+		Primary: client.Config{
+			URL:   "https://prod.datahub.example.com",
+			Token: "prod-token",
+		},
+		Connections: map[string]multiserver.ConnectionConfig{
+			"staging": {
+				URL:          "https://staging.datahub.example.com",
+				Token:        "staging-token",
+				WriteEnabled: &writeEnabled,
+			},
+		},
+	}
+	mgr := multiserver.NewManager(cfg)
+	defer func() {
+		_ = mgr.Close()
+	}()
+
+	// Global write DISABLED, but staging has explicit write_enabled=true
+	toolkit := NewToolkitWithManager(mgr, Config{WriteEnabled: false})
+
+	// Default connection should be blocked (inherits global false)
+	_, err := toolkit.getWriteClient("")
+	if err == nil {
+		t.Fatal("expected error for default connection with global write disabled")
+	}
+	if !errors.Is(err, client.ErrWriteDisabled) {
+		t.Errorf("expected ErrWriteDisabled, got: %v", err)
+	}
+
+	// Staging should work (explicit true overrides global false)
+	_, err = toolkit.getWriteClient("staging")
+	if err != nil {
+		t.Fatalf("expected write to succeed on staging with explicit write_enabled=true: %v", err)
+	}
+}
+
 func TestWriteTools(t *testing.T) {
 	wt := WriteTools()
-	if len(wt) != 7 {
-		t.Errorf("expected 7 write tools, got %d", len(wt))
+	if len(wt) != 3 {
+		t.Errorf("expected 3 write tools, got %d", len(wt))
 	}
 
 	expected := map[ToolName]bool{
-		ToolUpdateDescription:  true,
-		ToolAddTag:             true,
-		ToolRemoveTag:          true,
-		ToolAddGlossaryTerm:    true,
-		ToolRemoveGlossaryTerm: true,
-		ToolAddLink:            true,
-		ToolRemoveLink:         true,
+		ToolCreate: true,
+		ToolUpdate: true,
+		ToolDelete: true,
 	}
 	for _, name := range wt {
 		if !expected[name] {

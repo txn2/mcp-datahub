@@ -1,6 +1,6 @@
 package types
 
-// DataContract represents a data contract on a dataset (DataHub 1.4.x+).
+// DataContract represents a data contract on a dataset (DataHub 1.3.x+).
 // Contracts bundle freshness, schema, and data quality assertions into
 // a single pass/fail quality signal.
 type DataContract struct {
