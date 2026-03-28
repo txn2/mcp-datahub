@@ -129,7 +129,9 @@ func (c *Client) GetContextDocuments(ctx context.Context, urn string) ([]types.C
 
 // UpsertContextDocument creates or updates a context document on an entity.
 // If doc.ID is empty, creates a new document linked to entityURN.
-// If doc.ID is set, updates the existing document.
+// If doc.ID is set, updates the existing document. The entityURN parameter is
+// only used for create (linking the document to an entity); updates modify the
+// document in place without changing entity associations.
 //
 // The update path is non-atomic: it calls UpdateDocumentContents, then
 // optionally UpdateDocumentSubType, then GetDocument. If UpdateDocumentSubType
@@ -225,9 +227,11 @@ func toContextDocument(d *contextDocResponse) types.ContextDocument {
 
 	if len(d.Ownership.Owners) > 0 {
 		owner := d.Ownership.Owners[0].Owner
+		// Extract username from URN for consistency with documentToContextDocument,
+		// which only has the owner URN (not a server-provided username field).
 		doc.Author = &types.ContextDocumentAuthor{
 			URN:      owner.URN,
-			Username: owner.Username,
+			Username: usernameFromOwnerURN(owner.URN),
 		}
 	}
 

@@ -55,6 +55,11 @@ func TestGetContextDocuments(t *testing.T) {
 			wantLen:  0,
 		},
 		{
+			name:     "unsupported entity type returns nil",
+			response: `{"data": {"entity": {}}}`,
+			wantLen:  0,
+		},
+		{
 			name:     "graphql error",
 			response: `{"errors": [{"message": "entity not found"}]}`,
 			wantErr:  true,
@@ -167,6 +172,9 @@ func TestUpsertContextDocument_Create(t *testing.T) {
 			input, _ := req.Variables["input"].(map[string]any)
 			if input["title"] != "My Runbook" {
 				t.Errorf("title = %v, want My Runbook", input["title"])
+			}
+			if input["subType"] != "RUNBOOK" {
+				t.Errorf("subType = %v, want RUNBOOK", input["subType"])
 			}
 			assets, _ := input["relatedAssets"].([]any)
 			if len(assets) != 1 {
@@ -553,6 +561,7 @@ func TestDeleteContextDocument(t *testing.T) {
 				token:      "test-token",
 				httpClient: server.Client(),
 				logger:     NopLogger{},
+				config:     DefaultConfig(),
 			}
 
 			err := c.DeleteContextDocument(context.Background(), tt.documentID)
@@ -657,6 +666,7 @@ func TestUsernameFromOwnerURN(t *testing.T) {
 		{"urn:li:corpuser:alice", "alice"},
 		{"urn:li:corpuser:", ""},
 		{"urn:li:corpGroup:engineering", ""},
+		{"", ""},
 	}
 
 	for _, tt := range tests {
