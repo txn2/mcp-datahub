@@ -46,8 +46,12 @@ type mockClient struct {
 	getDataContractFunc                   func(ctx context.Context, datasetURN string) (*types.DataContract, error)
 	semanticSearchFunc                    func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 	// Context documents (DataHub 1.4.x+)
-	getDocumentFunc    func(ctx context.Context, urn string) (*types.Document, error)
-	getRelatedDocsFunc func(ctx context.Context, urn string) ([]types.Document, error)
+	getDocumentFunc      func(ctx context.Context, urn string) (*types.Document, error)
+	getRelatedDocsFunc   func(ctx context.Context, urn string) ([]types.Document, error)
+	getContextDocsFunc   func(ctx context.Context, urn string) ([]types.ContextDocument, error)
+	upsertContextDocFunc func(ctx context.Context, entityURN string,
+		doc types.ContextDocumentInput) (*types.ContextDocument, error)
+	deleteContextDocFunc func(ctx context.Context, documentID string) error
 
 	// New CRUD methods
 	updateColumnDescriptionFunc  func(ctx context.Context, urn, fieldPath, description string) error
@@ -307,6 +311,29 @@ func (m *mockClient) GetRelatedDocuments(ctx context.Context, urn string) ([]typ
 		return m.getRelatedDocsFunc(ctx, urn)
 	}
 	return nil, nil
+}
+
+func (m *mockClient) GetContextDocuments(ctx context.Context, urn string) ([]types.ContextDocument, error) {
+	if m.getContextDocsFunc != nil {
+		return m.getContextDocsFunc(ctx, urn)
+	}
+	return nil, nil
+}
+
+func (m *mockClient) UpsertContextDocument(
+	ctx context.Context, entityURN string, doc types.ContextDocumentInput,
+) (*types.ContextDocument, error) {
+	if m.upsertContextDocFunc != nil {
+		return m.upsertContextDocFunc(ctx, entityURN, doc)
+	}
+	return &types.ContextDocument{ID: "new", Title: doc.Title}, nil
+}
+
+func (m *mockClient) DeleteContextDocument(ctx context.Context, documentID string) error {
+	if m.deleteContextDocFunc != nil {
+		return m.deleteContextDocFunc(ctx, documentID)
+	}
+	return nil
 }
 
 func (m *mockClient) UpdateColumnDescription(ctx context.Context, urn, fieldPath, description string) error {

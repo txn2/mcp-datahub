@@ -52,6 +52,11 @@ func BuildDomainURN(domainID string) string {
 	return fmt.Sprintf("urn:li:domain:%s", domainID)
 }
 
+// BuildDocumentURN constructs a document URN.
+func BuildDocumentURN(documentID string) string {
+	return fmt.Sprintf("urn:li:document:%s", documentID)
+}
+
 // ParseURN parses a DataHub URN into its components.
 func ParseURN(urn string) (*types.ParsedURN, error) {
 	if !strings.HasPrefix(urn, "urn:li:") {
