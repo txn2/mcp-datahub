@@ -339,8 +339,9 @@ func TestCreateDocument(t *testing.T) {
 				if _, hasAssets := input["relatedAssets"]; hasAssets {
 					t.Error("expected no relatedAssets when empty")
 				}
-				if _, hasSettings := input["settings"]; hasSettings {
-					t.Error("expected no settings when GlobalContext is false")
+				settings, _ := input["settings"].(map[string]any)
+				if settings["showInGlobalContext"] != false {
+					t.Errorf("settings = %v, want showInGlobalContext=false", input["settings"])
 				}
 			},
 		},

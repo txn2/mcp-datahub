@@ -135,6 +135,17 @@ type DataHubClient interface {
 	// GetRelatedDocuments retrieves documents linked to an entity.
 	GetRelatedDocuments(ctx context.Context, urn string) ([]types.Document, error)
 
+	// GetContextDocuments retrieves context documents linked to an entity
+	// as simplified ContextDocument values for downstream consumption.
+	GetContextDocuments(ctx context.Context, urn string) ([]types.ContextDocument, error)
+
+	// UpsertContextDocument creates or updates a context document on an entity.
+	// If doc.ID is empty, creates a new document. If set, updates the existing one.
+	UpsertContextDocument(ctx context.Context, entityURN string, doc types.ContextDocumentInput) (*types.ContextDocument, error)
+
+	// DeleteContextDocument removes a context document by its ID.
+	DeleteContextDocument(ctx context.Context, documentID string) error
+
 	// Entity creation (GraphQL mutations).
 
 	// CreateTag creates a new tag entity.
