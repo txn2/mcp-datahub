@@ -63,7 +63,18 @@ func TestGetContextDocuments(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			const inputURN = "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)"
+			var receivedURN string
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var req graphQLRequest
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					t.Errorf("decode request: %v", err)
+					http.Error(w, "bad request", http.StatusBadRequest)
+					return
+				}
+				receivedURN, _ = req.Variables["urn"].(string)
+
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(tt.response))
 			}))
@@ -77,7 +88,7 @@ func TestGetContextDocuments(t *testing.T) {
 				config:     DefaultConfig(),
 			}
 
-			docs, err := c.GetContextDocuments(context.Background(), "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)")
+			docs, err := c.GetContextDocuments(context.Background(), inputURN)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
@@ -87,6 +98,11 @@ func TestGetContextDocuments(t *testing.T) {
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Verify query variables sent to server (#8)
+			if receivedURN != inputURN {
+				t.Errorf("query urn = %q, want %q", receivedURN, inputURN)
 			}
 
 			if len(docs) != tt.wantLen {
@@ -137,7 +153,9 @@ func TestUpsertContextDocument_Create(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
+			t.Errorf("decode request: %v", err)
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -174,7 +192,8 @@ func TestUpsertContextDocument_Create(t *testing.T) {
 			}}}`))
 
 		default:
-			t.Fatalf("unexpected query: %s", req.Query)
+			t.Errorf("unexpected query: %s", req.Query)
+			http.Error(w, "unexpected query", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -218,7 +237,9 @@ func TestUpsertContextDocument_Update(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
+			t.Errorf("decode request: %v", err)
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -253,7 +274,8 @@ func TestUpsertContextDocument_Update(t *testing.T) {
 			}}}`))
 
 		default:
-			t.Fatalf("unexpected query: %s", req.Query)
+			t.Errorf("unexpected query: %s", req.Query)
+			http.Error(w, "unexpected query", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -295,7 +317,9 @@ func TestUpsertContextDocument_UpdateWithoutCategory(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
+			t.Errorf("decode request: %v", err)
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -318,7 +342,8 @@ func TestUpsertContextDocument_UpdateWithoutCategory(t *testing.T) {
 			}}}`))
 
 		default:
-			t.Fatalf("unexpected query (should not call updateDocumentSubType): %s", req.Query)
+			t.Errorf("unexpected query (should not call updateDocumentSubType): %s", req.Query)
+			http.Error(w, "unexpected query", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -407,7 +432,9 @@ func TestUpsertContextDocument_UpdateSubTypeError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
+			t.Errorf("decode request: %v", err)
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -419,7 +446,8 @@ func TestUpsertContextDocument_UpdateSubTypeError(t *testing.T) {
 		case strings.Contains(req.Query, "updateDocumentSubType"):
 			_, _ = w.Write([]byte(`{"errors": [{"message": "subType update failed"}]}`))
 		default:
-			t.Fatalf("unexpected query: %s", req.Query)
+			t.Errorf("unexpected query: %s", req.Query)
+			http.Error(w, "unexpected query", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -448,7 +476,9 @@ func TestUpsertContextDocument_FetchError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
+			t.Errorf("decode request: %v", err)
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -460,7 +490,8 @@ func TestUpsertContextDocument_FetchError(t *testing.T) {
 		case strings.Contains(req.Query, "getDocument"):
 			_, _ = w.Write([]byte(`{"errors": [{"message": "fetch failed"}]}`))
 		default:
-			t.Fatalf("unexpected query: %s", req.Query)
+			t.Errorf("unexpected query: %s", req.Query)
+			http.Error(w, "unexpected query", http.StatusBadRequest)
 		}
 	}))
 	defer server.Close()
@@ -625,7 +656,7 @@ func TestUsernameFromOwnerURN(t *testing.T) {
 	}{
 		{"urn:li:corpuser:alice", "alice"},
 		{"urn:li:corpuser:", ""},
-		{"urn:li:corpGroup:engineering", "urn:li:corpGroup:engineering"},
+		{"urn:li:corpGroup:engineering", ""},
 	}
 
 	for _, tt := range tests {

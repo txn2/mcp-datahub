@@ -92,6 +92,11 @@ type contextDocResponse struct {
 // GetContextDocuments retrieves context documents linked to an entity.
 // Results are capped at MaxLimit; no pagination is performed. If an entity
 // has more context documents than MaxLimit, excess documents are truncated.
+//
+// Only Dataset, GlossaryTerm, GlossaryNode, and Container entity types are
+// supported. For unsupported entity types the GraphQL query returns an empty
+// entity object and this method returns (nil, nil) — indistinguishable from
+// an entity that simply has no context documents.
 func (c *Client) GetContextDocuments(ctx context.Context, urn string) ([]types.ContextDocument, error) {
 	variables := map[string]any{
 		"urn":   urn,
@@ -125,6 +130,11 @@ func (c *Client) GetContextDocuments(ctx context.Context, urn string) ([]types.C
 // UpsertContextDocument creates or updates a context document on an entity.
 // If doc.ID is empty, creates a new document linked to entityURN.
 // If doc.ID is set, updates the existing document.
+//
+// The update path is non-atomic: it calls UpdateDocumentContents, then
+// optionally UpdateDocumentSubType, then GetDocument. If UpdateDocumentSubType
+// fails after contents were already committed, the document is left with new
+// contents but the old category. The returned error indicates which step failed.
 func (c *Client) UpsertContextDocument(
 	ctx context.Context, entityURN string, doc types.ContextDocumentInput,
 ) (*types.ContextDocument, error) {
@@ -142,6 +152,9 @@ func (c *Client) UpsertContextDocument(
 func (c *Client) createContextDocument(
 	ctx context.Context, entityURN string, doc types.ContextDocumentInput,
 ) (*types.ContextDocument, error) {
+	// GlobalContext defaults to false (zero value), which is intentional:
+	// context documents are entity-scoped and should not appear in global search.
+	// CreateDocument always sends the settings block, so false is explicit on the wire.
 	input := types.CreateDocumentInput{
 		Title:            doc.Title,
 		Content:          doc.Content,
@@ -197,6 +210,9 @@ func (c *Client) DeleteContextDocument(ctx context.Context, documentID string) e
 
 // toContextDocument converts a contextDocResponse to a ContextDocument.
 func toContextDocument(d *contextDocResponse) types.ContextDocument {
+	// ContentType is a convention, not a DataHub-sourced value. DataHub documents
+	// have no content type field; we default to text/markdown because downstream
+	// consumers (mcp-data-platform) expect markdown-formatted context documents.
 	doc := types.ContextDocument{
 		ID:          documentIDFromURN(d.URN),
 		Title:       d.Info.Title,
@@ -241,13 +257,18 @@ func documentToContextDocument(d *types.Document) *types.ContextDocument {
 }
 
 // usernameFromOwnerURN extracts the username from a corpuser URN.
-// Owner.Name is unsuitable because it may contain a display name
-// (e.g., "Alice Smith") rather than the login (e.g., "alice").
+// Returns an empty string for non-corpuser URNs (e.g., corpGroup)
+// because those URNs do not encode a username.
 func usernameFromOwnerURN(urn string) string {
+	if !strings.HasPrefix(urn, "urn:li:corpuser:") {
+		return ""
+	}
 	return strings.TrimPrefix(urn, "urn:li:corpuser:")
 }
 
 // documentIDFromURN extracts the document ID from a document URN.
+// Only called with document URNs from GraphQL responses; does not
+// validate the prefix — non-document URNs pass through unchanged.
 func documentIDFromURN(urn string) string {
 	return strings.TrimPrefix(urn, "urn:li:document:")
 }

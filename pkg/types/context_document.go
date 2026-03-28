@@ -5,7 +5,8 @@ type ContextDocumentAuthor struct {
 	// URN is the author entity URN (e.g., urn:li:corpuser:alice).
 	URN string `json:"urn"`
 
-	// Username is the author's login name.
+	// Username is the author's login name extracted from a corpuser URN.
+	// Empty for non-corpuser owners (e.g., corpGroup).
 	Username string `json:"username,omitempty"`
 }
 
