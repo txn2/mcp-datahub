@@ -139,9 +139,7 @@ func (c *Client) CreateDocument(ctx context.Context, input types.CreateDocumentI
 	if len(input.RelatedAssetURNs) > 0 {
 		gqlInput["relatedAssets"] = input.RelatedAssetURNs
 	}
-	if input.GlobalContext {
-		gqlInput["settings"] = map[string]any{"showInGlobalContext": true}
-	}
+	gqlInput["settings"] = map[string]any{"showInGlobalContext": input.GlobalContext}
 
 	var resp struct {
 		CreateDocument string `json:"createDocument"`

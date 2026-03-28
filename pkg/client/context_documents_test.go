@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/txn2/mcp-datahub/pkg/types"
@@ -132,7 +133,7 @@ func TestGetContextDocuments(t *testing.T) {
 }
 
 func TestUpsertContextDocument_Create(t *testing.T) {
-	callCount := 0
+	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -140,7 +141,7 @@ func TestUpsertContextDocument_Create(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		callCount++
+		callCount.Add(1)
 
 		switch {
 		case strings.Contains(req.Query, "createDocument"):
@@ -207,13 +208,13 @@ func TestUpsertContextDocument_Create(t *testing.T) {
 	if doc.Author == nil || doc.Author.Username != "bot" {
 		t.Errorf("Author = %+v, want bot", doc.Author)
 	}
-	if callCount != 2 {
-		t.Errorf("callCount = %d, want 2 (create + get)", callCount)
+	if callCount.Load() != 2 {
+		t.Errorf("callCount = %d, want 2 (create + get)", callCount.Load())
 	}
 }
 
 func TestUpsertContextDocument_Update(t *testing.T) {
-	callCount := 0
+	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -221,7 +222,7 @@ func TestUpsertContextDocument_Update(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		callCount++
+		callCount.Add(1)
 
 		switch {
 		case strings.Contains(req.Query, "updateDocumentContents"):
@@ -284,13 +285,13 @@ func TestUpsertContextDocument_Update(t *testing.T) {
 	if doc.Category != "FAQ" {
 		t.Errorf("Category = %q, want FAQ", doc.Category)
 	}
-	if callCount != 3 {
-		t.Errorf("callCount = %d, want 3 (update contents + update subType + get)", callCount)
+	if callCount.Load() != 3 {
+		t.Errorf("callCount = %d, want 3 (update contents + update subType + get)", callCount.Load())
 	}
 }
 
 func TestUpsertContextDocument_UpdateWithoutCategory(t *testing.T) {
-	callCount := 0
+	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -298,7 +299,7 @@ func TestUpsertContextDocument_UpdateWithoutCategory(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		callCount++
+		callCount.Add(1)
 
 		switch {
 		case strings.Contains(req.Query, "updateDocumentContents"):
@@ -337,8 +338,8 @@ func TestUpsertContextDocument_UpdateWithoutCategory(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if callCount != 2 {
-		t.Errorf("callCount = %d, want 2 (update contents + get, no subType update)", callCount)
+	if callCount.Load() != 2 {
+		t.Errorf("callCount = %d, want 2 (update contents + get, no subType update)", callCount.Load())
 	}
 }
 
@@ -402,7 +403,7 @@ func TestUpsertContextDocument_UpdateError(t *testing.T) {
 }
 
 func TestUpsertContextDocument_UpdateSubTypeError(t *testing.T) {
-	callCount := 0
+	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -410,7 +411,7 @@ func TestUpsertContextDocument_UpdateSubTypeError(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		callCount++
+		callCount.Add(1)
 
 		switch {
 		case strings.Contains(req.Query, "updateDocumentContents"):
@@ -443,7 +444,7 @@ func TestUpsertContextDocument_UpdateSubTypeError(t *testing.T) {
 }
 
 func TestUpsertContextDocument_FetchError(t *testing.T) {
-	callCount := 0
+	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphQLRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -451,7 +452,7 @@ func TestUpsertContextDocument_FetchError(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		callCount++
+		callCount.Add(1)
 
 		switch {
 		case strings.Contains(req.Query, "createDocument"):
@@ -523,7 +524,7 @@ func TestDeleteContextDocument(t *testing.T) {
 				logger:     NopLogger{},
 			}
 
-			err := c.DeleteContextDocument(context.Background(), "urn:li:dataset:x", tt.documentID)
+			err := c.DeleteContextDocument(context.Background(), tt.documentID)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -566,8 +567,8 @@ func TestDocumentToContextDocument(t *testing.T) {
 		Created:      1700000000000,
 		LastModified: 1700002000000,
 		Owners: []types.Owner{
-			{URN: "urn:li:corpuser:alice", Name: "alice"},
-			{URN: "urn:li:corpuser:bob", Name: "bob"},
+			{URN: "urn:li:corpuser:alice", Name: "Alice Smith"},
+			{URN: "urn:li:corpuser:bob", Name: "Bob Jones"},
 		},
 	}
 
@@ -582,8 +583,9 @@ func TestDocumentToContextDocument(t *testing.T) {
 	if result.Category != "REFERENCE" {
 		t.Errorf("Category = %q, want REFERENCE", result.Category)
 	}
+	// Username is extracted from URN, not from Owner.Name (which may be a display name).
 	if result.Author == nil || result.Author.Username != "alice" {
-		t.Errorf("Author = %+v, want alice (first owner)", result.Author)
+		t.Errorf("Author = %+v, want username alice (from URN)", result.Author)
 	}
 	if result.CreatedAt != 1700000000000 {
 		t.Errorf("CreatedAt = %d, want 1700000000000", result.CreatedAt)
@@ -613,5 +615,23 @@ func TestBuildDocumentURN(t *testing.T) {
 	want := "urn:li:document:my-doc-id"
 	if got != want {
 		t.Errorf("BuildDocumentURN = %q, want %q", got, want)
+	}
+}
+
+func TestUsernameFromOwnerURN(t *testing.T) {
+	tests := []struct {
+		urn  string
+		want string
+	}{
+		{"urn:li:corpuser:alice", "alice"},
+		{"urn:li:corpuser:", ""},
+		{"urn:li:corpGroup:engineering", "urn:li:corpGroup:engineering"},
+	}
+
+	for _, tt := range tests {
+		got := usernameFromOwnerURN(tt.urn)
+		if got != tt.want {
+			t.Errorf("usernameFromOwnerURN(%q) = %q, want %q", tt.urn, got, tt.want)
+		}
 	}
 }

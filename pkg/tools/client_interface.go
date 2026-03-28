@@ -143,8 +143,8 @@ type DataHubClient interface {
 	// If doc.ID is empty, creates a new document. If set, updates the existing one.
 	UpsertContextDocument(ctx context.Context, entityURN string, doc types.ContextDocumentInput) (*types.ContextDocument, error)
 
-	// DeleteContextDocument removes a context document from an entity.
-	DeleteContextDocument(ctx context.Context, entityURN string, documentID string) error
+	// DeleteContextDocument removes a context document by its ID.
+	DeleteContextDocument(ctx context.Context, documentID string) error
 
 	// Entity creation (GraphQL mutations).
 

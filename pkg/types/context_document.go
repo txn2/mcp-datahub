@@ -50,9 +50,6 @@ type ContextDocumentInput struct {
 	// Content is the document body text.
 	Content string `json:"content"`
 
-	// ContentType describes the content format. Defaults to "text/markdown".
-	ContentType string `json:"content_type,omitempty"`
-
 	// Category classifies the document (maps to DataHub subType).
 	Category string `json:"category,omitempty"`
 }

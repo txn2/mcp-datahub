@@ -32,6 +32,10 @@ const contextDocFields = `{
 // GetContextDocumentsQuery retrieves context documents linked to an entity.
 // Uses inline fragments because the relatedDocuments field must be declared
 // per concrete type — there is no shared GraphQL interface.
+//
+// Covers Dataset, GlossaryTerm, GlossaryNode, and Container. Other entity
+// types (Dashboard, Chart, DataFlow, DataJob, DataProduct, etc.) are not
+// included — if they gain relatedDocuments support, add fragments here.
 const GetContextDocumentsQuery = `
 query getContextDocuments($urn: String!, $input: RelatedDocumentsInput!) {
   entity(urn: $urn) {
@@ -86,6 +90,8 @@ type contextDocResponse struct {
 }
 
 // GetContextDocuments retrieves context documents linked to an entity.
+// Results are capped at MaxLimit; no pagination is performed. If an entity
+// has more context documents than MaxLimit, excess documents are truncated.
 func (c *Client) GetContextDocuments(ctx context.Context, urn string) ([]types.ContextDocument, error) {
 	variables := map[string]any{
 		"urn":   urn,
@@ -180,10 +186,8 @@ func (c *Client) fetchContextDocument(ctx context.Context, urn string) (*types.C
 	return documentToContextDocument(full), nil
 }
 
-// DeleteContextDocument removes a context document. The entityURN parameter
-// exists for API symmetry with downstream consumers but is not required by
-// the DataHub delete operation, which addresses documents by URN.
-func (c *Client) DeleteContextDocument(ctx context.Context, _ string, documentID string) error {
+// DeleteContextDocument removes a context document by its ID.
+func (c *Client) DeleteContextDocument(ctx context.Context, documentID string) error {
 	urn := BuildDocumentURN(documentID)
 	if err := c.DeleteDocument(ctx, urn); err != nil {
 		return fmt.Errorf("DeleteContextDocument(%s): %w", documentID, err)
@@ -229,11 +233,18 @@ func documentToContextDocument(d *types.Document) *types.ContextDocument {
 	if len(d.Owners) > 0 {
 		doc.Author = &types.ContextDocumentAuthor{
 			URN:      d.Owners[0].URN,
-			Username: d.Owners[0].Name,
+			Username: usernameFromOwnerURN(d.Owners[0].URN),
 		}
 	}
 
 	return doc
+}
+
+// usernameFromOwnerURN extracts the username from a corpuser URN.
+// Owner.Name is unsuitable because it may contain a display name
+// (e.g., "Alice Smith") rather than the login (e.g., "alice").
+func usernameFromOwnerURN(urn string) string {
+	return strings.TrimPrefix(urn, "urn:li:corpuser:")
 }
 
 // documentIDFromURN extracts the document ID from a document URN.

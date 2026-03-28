@@ -51,7 +51,7 @@ type mockClient struct {
 	getContextDocsFunc   func(ctx context.Context, urn string) ([]types.ContextDocument, error)
 	upsertContextDocFunc func(ctx context.Context, entityURN string,
 		doc types.ContextDocumentInput) (*types.ContextDocument, error)
-	deleteContextDocFunc func(ctx context.Context, entityURN string, documentID string) error
+	deleteContextDocFunc func(ctx context.Context, documentID string) error
 
 	// New CRUD methods
 	updateColumnDescriptionFunc  func(ctx context.Context, urn, fieldPath, description string) error
@@ -329,9 +329,9 @@ func (m *mockClient) UpsertContextDocument(
 	return &types.ContextDocument{ID: "new", Title: doc.Title}, nil
 }
 
-func (m *mockClient) DeleteContextDocument(ctx context.Context, entityURN string, documentID string) error {
+func (m *mockClient) DeleteContextDocument(ctx context.Context, documentID string) error {
 	if m.deleteContextDocFunc != nil {
-		return m.deleteContextDocFunc(ctx, entityURN, documentID)
+		return m.deleteContextDocFunc(ctx, documentID)
 	}
 	return nil
 }
