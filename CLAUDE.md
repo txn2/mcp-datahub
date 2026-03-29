@@ -236,20 +236,37 @@ All tools accept an optional `connection` parameter to target a specific server.
 
 ## DataHub API Compatibility
 
-**Minimum version: DataHub 1.3.x. Full feature set: DataHub 1.4.x.**
+**Schema source: `testdata/datahub-schema/` (synced from [datahub-project/datahub](https://github.com/datahub-project/datahub))**
 
-| DataHub Version | Features Available |
-|---|---|
-| 1.3.x+ (minimum) | All read tools, all write operations except documents (tags, domains, glossary, data products, queries, owners, links, descriptions, incidents, applications, structured properties incl. delete, data contracts) |
-| 1.4.x+ (full) | + Documents (create/update/delete) |
+**Current schema version: v1.5.0.1. Minimum supported: v1.3.x. Full feature set: v1.4.x+.**
+
+### Version Compatibility Matrix
+
+| DataHub Version | Features Available | Schema Validated |
+|---|---|---|
+| 1.3.x+ (minimum) | All read tools, all write operations except documents (tags, domains, glossary, data products, queries, owners, links, descriptions, incidents, applications, structured properties incl. delete, data contracts) | No (pre-dates schema sync) |
+| 1.4.x+ (full) | + Documents (create/update/delete), semantic search | Yes (v1.4.0.3) |
+| 1.5.x+ (current) | + Batch data product operations | Yes (v1.5.0.1) |
+
+### Schema Validation
+
+All GraphQL queries are validated against the upstream DataHub schema files:
+
+```bash
+make schema-sync               # Download schema for pinned version
+make schema-check              # Validate all queries against schema
+DATAHUB_VERSION=v1.5.0.1 make schema-sync  # Target a specific version
+```
+
+Schema files are checked into `testdata/datahub-schema/` and `make schema-check` runs as part of `make verify`. When adding or modifying GraphQL queries, **always check the upstream `.graphql` files first** — never guess field names or type structures.
+
+### Graceful Degradation
 
 The client handles variations across DataHub versions gracefully:
 - Uses search fallback when `listDataProducts` query unavailable
 - Returns empty results (not errors) when usage stats not configured
 - Returns empty results (not errors) when incidents or structured properties are unavailable
 - Parses properties from different response structures
-
-When adding new queries, test against actual DataHub instances as GraphQL schemas vary between versions.
 
 ## Verification (AI-Verified Development)
 
@@ -265,6 +282,7 @@ make test            # go test -race -shuffle=on ./...
 make coverage        # Coverage report (threshold: 80%)
 make patch-coverage  # Coverage of changed lines only (threshold: 80%)
 make security        # gosec + govulncheck
+make schema-check    # Validate GraphQL queries against upstream schema
 make mutation        # gremlins (threshold: 60%)
 make deadcode        # deadcode (unreachable functions)
 make build-check     # go build + go mod verify

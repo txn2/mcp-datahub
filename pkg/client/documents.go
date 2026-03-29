@@ -35,13 +35,19 @@ query getDocument($urn: String!) {
         time
       }
       relatedAssets {
-        urn
+        asset {
+          urn
+        }
       }
       relatedDocuments {
-        urn
+        document {
+          urn
+        }
       }
       parentDocument {
-        urn
+        document {
+          urn
+        }
       }
     }
     settings {
@@ -263,13 +269,19 @@ type documentResponse struct {
 			Time int64 `json:"time"`
 		} `json:"lastModified"`
 		RelatedAssets []struct {
-			URN string `json:"urn"`
+			Asset struct {
+				URN string `json:"urn"`
+			} `json:"asset"`
 		} `json:"relatedAssets"`
 		RelatedDocuments []struct {
-			URN string `json:"urn"`
+			Document struct {
+				URN string `json:"urn"`
+			} `json:"document"`
 		} `json:"relatedDocuments"`
 		ParentDocument *struct {
-			URN string `json:"urn"`
+			Document struct {
+				URN string `json:"urn"`
+			} `json:"document"`
 		} `json:"parentDocument"`
 	} `json:"info"`
 	Settings *struct {
@@ -349,15 +361,15 @@ func parseDocumentResponse(d *documentResponse) *types.Document {
 	}
 
 	for _, a := range d.Info.RelatedAssets {
-		doc.RelatedAssets = append(doc.RelatedAssets, types.DocumentRelatedAsset{URN: a.URN})
+		doc.RelatedAssets = append(doc.RelatedAssets, types.DocumentRelatedAsset{URN: a.Asset.URN})
 	}
 
 	for _, rd := range d.Info.RelatedDocuments {
-		doc.RelatedDocuments = append(doc.RelatedDocuments, types.DocumentRelatedDocument{URN: rd.URN})
+		doc.RelatedDocuments = append(doc.RelatedDocuments, types.DocumentRelatedDocument{URN: rd.Document.URN})
 	}
 
 	if d.Info.ParentDocument != nil {
-		doc.ParentDocument = &types.DocumentParent{URN: d.Info.ParentDocument.URN}
+		doc.ParentDocument = &types.DocumentParent{URN: d.Info.ParentDocument.Document.URN}
 	}
 
 	// Parse ownership

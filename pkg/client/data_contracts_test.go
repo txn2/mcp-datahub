@@ -20,29 +20,18 @@ func TestGetDataContract(t *testing.T) {
 				"data": {
 					"dataset": {
 						"contract": {
-							"result": {
-								"type": "PASSING",
-								"assertionResults": [
-									{
-										"assertion": {"urn": "urn:li:assertion:freshness"},
-										"type": "FRESHNESS",
-										"result": {
-											"type": "SUCCESS",
-											"nativeResults": [
-												{"key": "last_updated", "value": "2024-01-01T00:00:00Z"}
-											]
-										}
-									},
-									{
-										"assertion": {"urn": "urn:li:assertion:schema"},
-										"type": "SCHEMA",
-										"result": {
-											"type": "SUCCESS",
-											"nativeResults": []
-										}
-									}
-								]
-							}
+							"urn": "urn:li:dataContract:test",
+							"properties": {
+								"entityUrn": "urn:li:dataset:test",
+								"freshness": [
+									{"assertion": {"urn": "urn:li:assertion:freshness-1"}}
+								],
+								"schema": [
+									{"assertion": {"urn": "urn:li:assertion:schema-1"}}
+								],
+								"dataQuality": []
+							},
+							"status": {"state": "PASSING"}
 						}
 					}
 				}
@@ -55,22 +44,16 @@ func TestGetDataContract(t *testing.T) {
 				"data": {
 					"dataset": {
 						"contract": {
-							"result": {
-								"type": "FAILING",
-								"assertionResults": [
-									{
-										"assertion": {"urn": "urn:li:assertion:quality"},
-										"type": "DATA_QUALITY",
-										"result": {
-											"type": "FAILURE",
-											"nativeResults": [
-												{"key": "null_count", "value": "150"},
-												{"key": "threshold", "value": "100"}
-											]
-										}
-									}
+							"urn": "urn:li:dataContract:test",
+							"properties": {
+								"entityUrn": "urn:li:dataset:test",
+								"freshness": [],
+								"schema": [],
+								"dataQuality": [
+									{"assertion": {"urn": "urn:li:assertion:quality-1"}}
 								]
-							}
+							},
+							"status": {"state": "FAILING"}
 						}
 					}
 				}
@@ -83,19 +66,6 @@ func TestGetDataContract(t *testing.T) {
 				"data": {
 					"dataset": {
 						"contract": null
-					}
-				}
-			}`,
-			wantNil: true,
-		},
-		{
-			name: "null result",
-			responseJSON: `{
-				"data": {
-					"dataset": {
-						"contract": {
-							"result": null
-						}
 					}
 				}
 			}`,
@@ -145,20 +115,20 @@ func TestGetDataContract_Details(t *testing.T) {
 		"data": {
 			"dataset": {
 				"contract": {
-					"result": {
-						"type": "FAILING",
-						"assertionResults": [{
-							"assertion": {"urn": "urn:li:assertion:quality-1"},
-							"type": "DATA_QUALITY",
-							"result": {
-								"type": "FAILURE",
-								"nativeResults": [
-									{"key": "null_count", "value": "150"},
-									{"key": "threshold", "value": "100"}
-								]
-							}
-						}]
-					}
+					"urn": "urn:li:dataContract:test",
+					"properties": {
+						"entityUrn": "urn:li:dataset:test",
+						"freshness": [
+							{"assertion": {"urn": "urn:li:assertion:freshness-1"}}
+						],
+						"schema": [
+							{"assertion": {"urn": "urn:li:assertion:schema-1"}}
+						],
+						"dataQuality": [
+							{"assertion": {"urn": "urn:li:assertion:quality-1"}}
+						]
+					},
+					"status": {"state": "FAILING"}
 				}
 			}
 		}
@@ -182,25 +152,35 @@ func TestGetDataContract_Details(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(result.AssertionResults) != 1 {
-		t.Fatalf("AssertionResults count = %d, want 1", len(result.AssertionResults))
+	if len(result.AssertionResults) != 3 {
+		t.Fatalf("AssertionResults count = %d, want 3", len(result.AssertionResults))
 	}
 
+	// Freshness assertion
 	ar := result.AssertionResults[0]
+	if ar.AssertionURN != "urn:li:assertion:freshness-1" {
+		t.Errorf("AssertionURN = %q", ar.AssertionURN)
+	}
+	if ar.Type != "FRESHNESS" {
+		t.Errorf("Type = %q", ar.Type)
+	}
+
+	// Schema assertion
+	ar = result.AssertionResults[1]
+	if ar.AssertionURN != "urn:li:assertion:schema-1" {
+		t.Errorf("AssertionURN = %q", ar.AssertionURN)
+	}
+	if ar.Type != "SCHEMA" {
+		t.Errorf("Type = %q", ar.Type)
+	}
+
+	// Data quality assertion
+	ar = result.AssertionResults[2]
 	if ar.AssertionURN != "urn:li:assertion:quality-1" {
 		t.Errorf("AssertionURN = %q", ar.AssertionURN)
 	}
 	if ar.Type != "DATA_QUALITY" {
 		t.Errorf("Type = %q", ar.Type)
-	}
-	if ar.ResultType != "FAILURE" {
-		t.Errorf("ResultType = %q", ar.ResultType)
-	}
-	if ar.NativeResults["null_count"] != "150" {
-		t.Errorf("NativeResults[null_count] = %q", ar.NativeResults["null_count"])
-	}
-	if ar.NativeResults["threshold"] != "100" {
-		t.Errorf("NativeResults[threshold] = %q", ar.NativeResults["threshold"])
 	}
 }
 

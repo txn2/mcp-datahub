@@ -19,7 +19,7 @@ func TestSemanticSearch(t *testing.T) {
 			name: "results found",
 			responseJSON: `{
 				"data": {
-					"semanticSearchAcrossEntities": {
+					"searchAcrossEntities": {
 						"start": 0,
 						"count": 10,
 						"total": 2,
@@ -70,7 +70,7 @@ func TestSemanticSearch(t *testing.T) {
 			name: "empty results",
 			responseJSON: `{
 				"data": {
-					"semanticSearchAcrossEntities": {
+					"searchAcrossEntities": {
 						"start": 0,
 						"count": 10,
 						"total": 0,
@@ -120,7 +120,7 @@ func TestSemanticSearch(t *testing.T) {
 func TestSemanticSearch_EntityDetails(t *testing.T) {
 	responseJSON := `{
 		"data": {
-			"semanticSearchAcrossEntities": {
+			"searchAcrossEntities": {
 				"start": 0,
 				"count": 10,
 				"total": 1,
@@ -216,7 +216,7 @@ func TestSemanticSearch_GraphQLError(t *testing.T) {
 func TestSemanticSearch_DataProductProperties(t *testing.T) {
 	responseJSON := `{
 		"data": {
-			"semanticSearchAcrossEntities": {
+			"searchAcrossEntities": {
 				"start": 0,
 				"count": 10,
 				"total": 1,

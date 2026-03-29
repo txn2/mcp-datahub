@@ -1,5 +1,5 @@
 .PHONY: all build test lint clean coverage security help tidy verify fmt lint-fix test-integration \
-       patch-coverage mutation deadcode bench profile build-check
+       patch-coverage mutation deadcode bench profile build-check schema-sync schema-check
 
 GOCMD=go
 GOBUILD=$(GOCMD) build
@@ -116,6 +116,15 @@ build-check:
 	$(GOCMD) build ./...
 	$(GOCMD) mod verify
 
+## Schema validation against upstream DataHub GraphQL schema
+DATAHUB_VERSION ?= $(shell cat testdata/datahub-schema/VERSION 2>/dev/null || echo "v1.5.0.1")
+
+schema-sync:
+	@./testdata/datahub-schema/sync.sh $(DATAHUB_VERSION)
+
+schema-check:
+	$(GOTEST) -race -run TestGraphQLQueriesMatchSchema ./pkg/client/...
+
 tidy:
 	$(GOCMD) mod tidy
 	$(GOCMD) mod verify
@@ -124,7 +133,7 @@ clean:
 	rm -f $(BINARY_NAME) $(COVERAGE_FILE) coverage.html bench.txt cpu.prof mem.prof
 	$(GOCMD) clean -cache -testcache
 
-verify: tidy lint test coverage patch-coverage security deadcode build-check
+verify: tidy lint test coverage patch-coverage security schema-check deadcode build-check
 	@echo "All verification checks passed."
 
 help:
@@ -147,5 +156,7 @@ help:
 	@echo "  build-check      - Verify build and modules"
 	@echo "  tidy             - Tidy and verify modules"
 	@echo "  clean            - Remove build artifacts"
+	@echo "  schema-sync      - Download DataHub GraphQL schema files"
+	@echo "  schema-check     - Validate queries against schema"
 	@echo "  verify           - Run full verification suite"
 	@echo "  help             - Show this help"

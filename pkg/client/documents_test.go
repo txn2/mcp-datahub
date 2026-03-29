@@ -28,9 +28,9 @@ func TestGetDocument(t *testing.T) {
 					"status": {"state": "PUBLISHED"},
 					"created": {"time": 1700000000000},
 					"lastModified": {"time": 1700001000000},
-					"relatedAssets": [{"urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)"}],
-					"relatedDocuments": [{"urn": "urn:li:document:faq-1"}],
-					"parentDocument": {"urn": "urn:li:document:parent-1"}
+					"relatedAssets": [{"asset": {"urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)"}}],
+					"relatedDocuments": [{"document": {"urn": "urn:li:document:faq-1"}}],
+					"parentDocument": {"document": {"urn": "urn:li:document:parent-1"}}
 				},
 				"settings": {"showInGlobalContext": true},
 				"ownership": {"owners": [{"owner": {"urn": "urn:li:corpuser:alice", "username": "alice"}, "type": "DATAOWNER"}]},

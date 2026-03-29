@@ -13,7 +13,7 @@ const (
 	// GetStructuredPropertiesQuery reads structured property values assigned to an entity.
 	// Uses a named fragment to avoid duplicating the field selection across entity types.
 	GetStructuredPropertiesQuery = `
-fragment StructuredProps on EntityStructuredPropertiesResult {
+fragment StructuredProps on StructuredProperties {
   properties {
     structuredProperty {
       urn

@@ -8,26 +8,34 @@ import (
 
 // GraphQL query for data contracts (DataHub 1.3.x+).
 const (
-	// GetDataContractQuery retrieves the data contract status for a dataset.
+	// GetDataContractQuery retrieves the data contract for a dataset.
+	// DataContract has properties (assertion references by category) and
+	// status (overall state). Each category contains assertions with URNs.
 	GetDataContractQuery = `
 query getDataContract($urn: String!) {
   dataset(urn: $urn) {
     contract {
-      result(refresh: false) {
-        type
-        assertionResults {
+      urn
+      properties {
+        entityUrn
+        freshness {
           assertion {
             urn
           }
-          type
-          result {
-            type
-            nativeResults {
-              key
-              value
-            }
+        }
+        schema {
+          assertion {
+            urn
           }
         }
+        dataQuality {
+          assertion {
+            urn
+          }
+        }
+      }
+      status {
+        state
       }
     }
   }
@@ -44,9 +52,7 @@ func (c *Client) GetDataContract(ctx context.Context, datasetURN string) (*types
 
 	var response struct {
 		Dataset struct {
-			Contract *struct {
-				Result *contractResultEntry `json:"result"`
-			} `json:"contract"`
+			Contract *contractGQLResponse `json:"contract"`
 		} `json:"dataset"`
 	}
 
@@ -56,54 +62,64 @@ func (c *Client) GetDataContract(ctx context.Context, datasetURN string) (*types
 		return nil, nil
 	}
 
-	if response.Dataset.Contract == nil || response.Dataset.Contract.Result == nil {
+	if response.Dataset.Contract == nil {
 		return nil, nil
 	}
 
-	return response.Dataset.Contract.Result.toContract(), nil
+	return response.Dataset.Contract.toContract(), nil
 }
 
-// contractResultEntry maps the GraphQL contract result response.
-type contractResultEntry struct {
-	Type             string                    `json:"type"`
-	AssertionResults []assertionResultGQLEntry `json:"assertionResults"`
+// contractGQLResponse maps the GraphQL DataContract response.
+type contractGQLResponse struct {
+	URN        string `json:"urn"`
+	Properties *struct {
+		EntityURN   string                 `json:"entityUrn"`
+		Freshness   []contractAssertionRef `json:"freshness"`
+		Schema      []contractAssertionRef `json:"schema"`
+		DataQuality []contractAssertionRef `json:"dataQuality"`
+	} `json:"properties"`
+	Status *struct {
+		State string `json:"state"`
+	} `json:"status"`
 }
 
-// assertionResultGQLEntry maps a single assertion result from GraphQL.
-type assertionResultGQLEntry struct {
+// contractAssertionRef maps an assertion reference within a contract category.
+type contractAssertionRef struct {
 	Assertion struct {
 		URN string `json:"urn"`
 	} `json:"assertion"`
-	Type   string `json:"type"`
-	Result struct {
-		Type          string `json:"type"`
-		NativeResults []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		} `json:"nativeResults"`
-	} `json:"result"`
 }
 
-func (r *contractResultEntry) toContract() *types.DataContract {
-	contract := &types.DataContract{
-		Status: r.Type,
+func (r *contractGQLResponse) toContract() *types.DataContract {
+	contract := &types.DataContract{}
+
+	if r.Status != nil {
+		contract.Status = r.Status.State
 	}
 
-	for _, ar := range r.AssertionResults {
-		result := types.AssertionResult{
-			AssertionURN: ar.Assertion.URN,
-			Type:         ar.Type,
-			ResultType:   ar.Result.Type,
-		}
+	if r.Properties == nil {
+		return contract
+	}
 
-		if len(ar.Result.NativeResults) > 0 {
-			result.NativeResults = make(map[string]string, len(ar.Result.NativeResults))
-			for _, nr := range ar.Result.NativeResults {
-				result.NativeResults[nr.Key] = nr.Value
-			}
-		}
+	for _, a := range r.Properties.Freshness {
+		contract.AssertionResults = append(contract.AssertionResults, types.AssertionResult{
+			AssertionURN: a.Assertion.URN,
+			Type:         "FRESHNESS",
+		})
+	}
 
-		contract.AssertionResults = append(contract.AssertionResults, result)
+	for _, a := range r.Properties.Schema {
+		contract.AssertionResults = append(contract.AssertionResults, types.AssertionResult{
+			AssertionURN: a.Assertion.URN,
+			Type:         "SCHEMA",
+		})
+	}
+
+	for _, a := range r.Properties.DataQuality {
+		contract.AssertionResults = append(contract.AssertionResults, types.AssertionResult{
+			AssertionURN: a.Assertion.URN,
+			Type:         "DATA_QUALITY",
+		})
 	}
 
 	return contract
