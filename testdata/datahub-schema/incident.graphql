@@ -1,0 +1,620 @@
+extend type Mutation {
+  """
+  Create a new incident for a resource (asset)
+  """
+  raiseIncident(
+    """
+    Input required to create a new incident
+    """
+    input: RaiseIncidentInput!
+  ): String
+
+  """
+  Update the status of an existing incident for a resource (asset)
+  """
+  updateIncidentStatus(
+    """
+    The urn for an existing incident
+    """
+    urn: String!
+
+    """
+    Input required to update the state of an existing incident
+    """
+    input: IncidentStatusInput!
+  ): Boolean
+
+  """
+  Update an existing data incident. Any fields that are omitted will simply not be updated.
+  """
+  updateIncident(
+    """
+    The urn for an existing incident
+    """
+    urn: String!
+
+    """
+    Input required to update an existing incident
+    """
+    input: UpdateIncidentInput!
+  ): Boolean
+}
+
+"""
+A list of Incidents Associated with an Entity
+"""
+type EntityIncidentsResult {
+  """
+  The starting offset of the result set returned
+  """
+  start: Int!
+
+  """
+  The number of assertions in the returned result set
+  """
+  count: Int!
+
+  """
+  The total number of assertions in the result set
+  """
+  total: Int!
+
+  """
+  The incidents themselves
+  """
+  incidents: [Incident!]!
+}
+
+"""
+An incident represents an active issue on a data asset.
+"""
+type Incident implements Entity {
+  """
+  The primary key of the Incident
+  """
+  urn: String!
+
+  """
+  The standard Entity Type
+  """
+  type: EntityType!
+
+  """
+  The type of incident
+  """
+  incidentType: IncidentType!
+
+  """
+  A custom type of incident. Present only if type is 'CUSTOM'
+  """
+  customType: String
+
+  """
+  An optional title associated with the incident
+  """
+  title: String
+
+  """
+  An optional description associated with the incident
+  """
+  description: String
+
+  """
+  The status of an incident
+  """
+  incidentStatus: IncidentStatus!
+
+  """
+  The status of an incident
+  @deprecated, use incidentStatus instead
+  """
+  status: IncidentStatus!
+
+  """
+  Optional priority of the incident.
+  """
+  priority: IncidentPriority
+
+  """
+  The users or groups are assigned to resolve the incident
+  """
+  assignees: [OwnerType!]
+
+  """
+  The entity that the incident is associated with.
+  """
+  entity: Entity!
+
+  """
+  The source of the incident, i.e. how it was generated
+  """
+  source: IncidentSource
+
+  """
+  An optional time at which the incident actually started (may be before the date it was raised).
+  """
+  startedAt: Long
+
+  """
+  The time at which the incident was initially created
+  """
+  created: AuditStamp!
+
+  """
+  The standard tags for the Incident
+  """
+  tags: GlobalTags
+
+  """
+  List of relationships between the source Entity and some destination entities with a given types
+  """
+  relationships(input: RelationshipsInput!): EntityRelationshipsResult
+}
+
+"""
+The state of an incident.
+"""
+enum IncidentState {
+  """
+  The incident is ongoing, or active.
+  """
+  ACTIVE
+  """
+  The incident is resolved.
+  """
+  RESOLVED
+}
+
+"""
+The lifecycle stage of the incident.
+"""
+enum IncidentStage {
+  """
+  The impact and priority of the incident is being actively assessed.
+  """
+  TRIAGE
+
+  """
+  The incident root cause is being investigated.
+  """
+  INVESTIGATION
+
+  """
+  The incident is in the remediation stage.
+  """
+  WORK_IN_PROGRESS
+
+  """
+  The incident is in the resolved as completed stage.
+  """
+  FIXED
+
+  """
+  The incident is in the resolved with no action required state, e.g., the
+  incident was a false positive, or was expected.
+  """
+  NO_ACTION_REQUIRED
+}
+
+"""
+The priority of the incident
+"""
+enum IncidentPriority {
+  """
+  A low priority incident (P3)
+  """
+  LOW
+
+  """
+  A medium priority incident (P2)
+  """
+  MEDIUM
+
+  """
+  A high priority incident (P1)
+  """
+  HIGH
+
+  """
+  A critical priority incident (P0)
+  """
+  CRITICAL
+}
+
+"""
+A specific type of incident
+"""
+enum IncidentType {
+  """
+  A Freshness Assertion has failed, triggering the incident.
+  Raised on assets where assertions are configured to generate incidents.
+  """
+  FRESHNESS
+
+  """
+  A Volume Assertion has failed, triggering the incident.
+  Raised on assets where assertions are configured to generate incidents.
+  """
+  VOLUME
+
+  """
+  A Field Assertion has failed, triggering the incident.
+  Raised on assets where assertions are configured to generate incidents.
+  """
+  FIELD
+
+  """
+  A SQL Assertion has failed, triggering the incident.
+  Raised on assets where assertions are configured to generate incidents.
+  """
+  SQL
+
+  """
+  A Schema has failed, triggering the incident.
+  Raised on assets where assertions are configured to generate incidents.
+  """
+  DATA_SCHEMA
+
+  """
+  An operational incident, e.g. failure to materialize a dataset, or failure to execute a task / pipeline.
+  """
+  OPERATIONAL
+
+  """
+  A custom type of incident
+  """
+  CUSTOM
+}
+
+"""
+Details about the status of an asset incident
+"""
+type IncidentStatus {
+  """
+  The state of the incident
+  """
+  state: IncidentState!
+  """
+  The lifecycle stage of the incident. Null means that no stage has been assigned.
+  """
+  stage: IncidentStage
+  """
+  An optional message associated with the status
+  """
+  message: String
+  """
+  The time that the status last changed
+  """
+  lastUpdated: AuditStamp!
+}
+
+"""
+The source type of an incident, implying how it was created.
+"""
+enum IncidentSourceType {
+  """
+  The incident was created manually, from either the API or the UI.
+  """
+  MANUAL
+
+  """
+  An assertion has failed, triggering the incident.
+  """
+  ASSERTION_FAILURE
+}
+
+"""
+Details about the source of an incident, e.g. how it was created.
+"""
+type IncidentSource {
+  """
+  The type of the incident source
+  """
+  type: IncidentSourceType!
+
+  """
+  The source of the incident. If the source type is ASSERTION_FAILURE, this will have the assertion that generated the incident.
+  """
+  source: Entity
+}
+
+"""
+Input required to create a new incident in the 'Active' state.
+"""
+input RaiseIncidentInput {
+  """
+  The type of incident
+  """
+  type: IncidentType!
+  """
+  A custom type of incident. Present only if type is 'CUSTOM'
+  """
+  customType: String
+  """
+  An optional title associated with the incident
+  """
+  title: String
+  """
+  An optional description associated with the incident
+  """
+  description: String
+  """
+  The resource (dataset, dashboard, chart, dataFlow, etc) that the incident is associated with.
+  This must be present if resourceUrns are not defined.
+  """
+  resourceUrn: String
+  """
+  The resources (dataset, dashboard, chart, dataFlow, etc) that the incident is associated with.
+  This must be present and not empty if resourceUrn is not defined.
+  """
+  resourceUrns: [String!]
+  """
+  The time at which the incident actually started (may be before the date it was raised).
+  """
+  startedAt: Long
+  """
+  The source of the incident, i.e. how it was generated
+  """
+  source: IncidentSourceInput
+  """
+  The status of the incident
+  """
+  status: IncidentStatusInput
+  """
+  An optional priority for the incident.
+  """
+  priority: IncidentPriority
+  """
+  An optional set of user or group assignee urns
+  """
+  assigneeUrns: [String!]
+}
+
+"""
+Input required to update an existing incident.
+"""
+input UpdateIncidentInput {
+  """
+  An optional title associated with the incident
+  """
+  title: String
+
+  """
+  An optional description associated with the incident
+  """
+  description: String
+
+  """
+  An optional time at which the incident actually started (may be before the date it was raised).
+  """
+  startedAt: Long
+
+  """
+  The status of the incident
+  """
+  status: IncidentStatusInput
+
+  """
+  An optional priority for the incident.
+  """
+  priority: IncidentPriority
+
+  """
+  An optional set of resources that the incident is assigned to.
+  If defined, there must be at least one in the list.
+  """
+  resourceUrns: [String!]
+
+  """
+  An optional set of user or group assignee urns
+  """
+  assigneeUrns: [String!]
+}
+
+"""
+Input required to create an incident source
+"""
+input IncidentSourceInput {
+  """
+  The type of the incident source
+  """
+  type: IncidentSourceType!
+}
+
+"""
+Input required to create an incident status
+"""
+input IncidentStatusInput {
+  """
+  The state of the incident
+  """
+  state: IncidentState!
+
+  """
+  The lifecycle stage ofthe incident
+  """
+  stage: IncidentStage
+
+  """
+  An optional message associated with the status
+  """
+  message: String
+}
+
+"""
+Input required to update status of an existing incident
+"""
+input UpdateIncidentStatusInput {
+  """
+  The new state of the incident
+  """
+  state: IncidentState!
+  """
+  Optional - The new lifecycle stage of the incident
+  """
+  stage: IncidentStage
+  """
+  An optional message associated with the new state
+  """
+  message: String
+}
+
+extend type Dataset {
+  """
+  Incidents associated with the Dataset
+  """
+  incidents(
+    """
+    Optional incident state to filter by, defaults to any state.
+    """
+    state: IncidentState
+    """
+    Optional incident stage to filter by, defaults to any state.
+    """
+    stage: IncidentStage
+    """
+    Optional incident priority to filter by, defaults to any state.
+    """
+    priority: IncidentPriority
+    """
+    Optional assignee urns for an incident.
+    """
+    assigneeUrns: [String!]
+    """
+    Optional start offset, defaults to 0.
+    """
+    start: Int
+    """
+    Optional start offset, defaults to 20.
+    """
+    count: Int
+  ): EntityIncidentsResult
+}
+
+extend type DataJob {
+  """
+  Incidents associated with the DataJob
+  """
+  incidents(
+    """
+    Optional incident state to filter by, defaults to any state.
+    """
+    state: IncidentState
+    """
+    Optional incident stage to filter by, defaults to any state.
+    """
+    stage: IncidentStage
+    """
+    Optional incident priority to filter by, defaults to any state.
+    """
+    priority: IncidentPriority
+    """
+    Optional assignee urns for an incident.
+    """
+    assigneeUrns: [String!]
+    """
+    Optional start offset, defaults to 0.
+    """
+    start: Int
+    """
+    Optional start offset, defaults to 20.
+    """
+    count: Int
+  ): EntityIncidentsResult
+}
+
+extend type DataFlow {
+  """
+  Incidents associated with the DataFlow
+  """
+  incidents(
+    """
+    Optional incident state to filter by, defaults to any state.
+    """
+    state: IncidentState
+    """
+    Optional incident stage to filter by, defaults to any state.
+    """
+    stage: IncidentStage
+    """
+    Optional incident priority to filter by, defaults to any state.
+    """
+    priority: IncidentPriority
+    """
+    Optional assignee urns for an incident.
+    """
+    assigneeUrns: [String!]
+    """
+    Optional start offset, defaults to 0.
+    """
+    start: Int
+    """
+    Optional start offset, defaults to 20.
+    """
+    count: Int
+  ): EntityIncidentsResult
+}
+
+extend type Dashboard {
+  """
+  Incidents associated with the Dashboard
+  """
+  incidents(
+    """
+    Optional incident state to filter by, defaults to any state.
+    """
+    state: IncidentState
+    """
+    Optional incident stage to filter by, defaults to any state.
+    """
+    stage: IncidentStage
+    """
+    Optional incident priority to filter by, defaults to any state.
+    """
+    priority: IncidentPriority
+    """
+    Optional assignee urns for an incident.
+    """
+    assigneeUrns: [String!]
+    """
+    Optional start offset, defaults to 0.
+    """
+    start: Int
+    """
+    Optional start offset, defaults to 20.
+    """
+    count: Int
+  ): EntityIncidentsResult
+}
+
+extend type Chart {
+  """
+  Incidents associated with the Chart
+  """
+  incidents(
+    """
+    Optional incident state to filter by, defaults to any state.
+    """
+    state: IncidentState
+    """
+    Optional incident stage to filter by, defaults to any state.
+    """
+    stage: IncidentStage
+    """
+    Optional incident priority to filter by, defaults to any state.
+    """
+    priority: IncidentPriority
+    """
+    Optional assignee urns for an incident.
+    """
+    assigneeUrns: [String!]
+    """
+    Optional start offset, defaults to 0.
+    """
+    start: Int
+    """
+    Optional start offset, defaults to 20.
+    """
+    count: Int
+  ): EntityIncidentsResult
+}
