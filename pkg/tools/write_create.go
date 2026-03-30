@@ -38,7 +38,7 @@ type CreateInput struct {
 	Status        string   `json:"status,omitempty" jsonschema_description:"Publication status: PUBLISHED or UNPUBLISHED (document only)"`
 	SubType       string   `json:"sub_type,omitempty" jsonschema_description:"Document sub-type (document only)"`
 	RelatedAssets []string `json:"related_assets,omitempty" jsonschema_description:"Related asset URNs (document only)"`
-	GlobalContext bool     `json:"global_context,omitempty" jsonschema_description:"Show in global search (document only)"`
+	GlobalContext *bool    `json:"global_context,omitempty" jsonschema_description:"Show in global search (document only, default: true)"`
 
 	// Structured property fields
 	QualifiedName string   `json:"qualified_name,omitempty" jsonschema_description:"Fully qualified name (structured_property)"`
@@ -167,13 +167,24 @@ func (t *Toolkit) handleCreateDocument(ctx context.Context, c DataHubClient, inp
 	if input.Name == "" {
 		return "", errRequired("name")
 	}
+
+	status := input.Status
+	if status == "" {
+		status = "PUBLISHED"
+	}
+
+	globalContext := true
+	if input.GlobalContext != nil {
+		globalContext = *input.GlobalContext
+	}
+
 	return c.CreateDocument(ctx, types.CreateDocumentInput{
 		Title:            input.Name,
 		Content:          input.Description,
-		Status:           input.Status,
+		Status:           status,
 		SubType:          input.SubType,
 		RelatedAssetURNs: input.RelatedAssets,
-		GlobalContext:    input.GlobalContext,
+		GlobalContext:    globalContext,
 	})
 }
 

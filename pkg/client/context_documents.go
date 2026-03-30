@@ -154,15 +154,13 @@ func (c *Client) UpsertContextDocument(
 func (c *Client) createContextDocument(
 	ctx context.Context, entityURN string, doc types.ContextDocumentInput,
 ) (*types.ContextDocument, error) {
-	// GlobalContext defaults to false (zero value), which is intentional:
-	// context documents are entity-scoped and should not appear in global search.
-	// CreateDocument always sends the settings block, so false is explicit on the wire.
 	input := types.CreateDocumentInput{
 		Title:            doc.Title,
 		Content:          doc.Content,
 		SubType:          doc.Category,
 		RelatedAssetURNs: []string{entityURN},
 		Status:           "PUBLISHED",
+		GlobalContext:    true,
 	}
 
 	urn, err := c.CreateDocument(ctx, input)

@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 	"testing"
+
+	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
 func TestHandleCreate_RequiresWhat(t *testing.T) {
@@ -64,6 +66,53 @@ func TestHandleCreate_AllTypes(t *testing.T) {
 				t.Errorf("action = %q, want created", typed.Action)
 			}
 		})
+	}
+}
+
+func TestHandleCreateDocument_Defaults(t *testing.T) {
+	mock := &mockClient{}
+	mock.createDocumentFunc = func(_ context.Context, input types.CreateDocumentInput) (string, error) {
+		if input.Status != "PUBLISHED" {
+			t.Errorf("Status = %q, want PUBLISHED", input.Status)
+		}
+		if !input.GlobalContext {
+			t.Error("GlobalContext = false, want true")
+		}
+		return "urn:li:document:test", nil
+	}
+
+	toolkit := NewToolkit(mock, Config{WriteEnabled: true})
+	result, _, _ := toolkit.handleCreate(context.Background(), nil, CreateInput{
+		What: "document",
+		Name: "Test Doc",
+	})
+	if result.IsError {
+		t.Errorf("unexpected error: %v", result)
+	}
+}
+
+func TestHandleCreateDocument_ExplicitOverrides(t *testing.T) {
+	mock := &mockClient{}
+	mock.createDocumentFunc = func(_ context.Context, input types.CreateDocumentInput) (string, error) {
+		if input.Status != "UNPUBLISHED" {
+			t.Errorf("Status = %q, want UNPUBLISHED", input.Status)
+		}
+		if input.GlobalContext {
+			t.Error("GlobalContext = true, want false")
+		}
+		return "urn:li:document:test", nil
+	}
+
+	toolkit := NewToolkit(mock, Config{WriteEnabled: true})
+	gcFalse := false
+	result, _, _ := toolkit.handleCreate(context.Background(), nil, CreateInput{
+		What:          "document",
+		Name:          "Draft Doc",
+		Status:        "UNPUBLISHED",
+		GlobalContext: &gcFalse,
+	})
+	if result.IsError {
+		t.Errorf("unexpected error: %v", result)
 	}
 }
 
