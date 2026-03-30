@@ -180,6 +180,10 @@ func TestUpsertContextDocument_Create(t *testing.T) {
 			if len(assets) != 1 {
 				t.Errorf("relatedAssets len = %d, want 1", len(assets))
 			}
+			settings, _ := input["settings"].(map[string]any)
+			if settings["showInGlobalContext"] != true {
+				t.Errorf("showInGlobalContext = %v, want true", settings["showInGlobalContext"])
+			}
 			_, _ = w.Write([]byte(`{"data": {"createDocument": "urn:li:document:new-1"}}`))
 
 		case strings.Contains(req.Query, "getDocument"):
