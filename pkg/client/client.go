@@ -397,9 +397,10 @@ func (c *Client) Search(ctx context.Context, query string, opts ...SearchOption)
 	}
 
 	result := &types.SearchResult{
-		Total:  response.Search.Total,
-		Offset: response.Search.Start,
-		Limit:  response.Search.Count,
+		Entities: make([]types.SearchEntity, 0, len(response.Search.SearchResults)),
+		Total:    response.Search.Total,
+		Offset:   response.Search.Start,
+		Limit:    response.Search.Count,
 	}
 
 	for _, sr := range response.Search.SearchResults {

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -202,6 +203,40 @@ func TestHandleSearch_KeywordUsesSearchAcrossEntities(t *testing.T) {
 	}
 	if !acrossCalled {
 		t.Error("SearchAcrossEntities should have been called")
+	}
+}
+
+func TestHandleSearch_ZeroResults_EntitiesIsEmptyArray(t *testing.T) {
+	mock := &mockClient{
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+			return &types.SearchResult{
+				Entities: []types.SearchEntity{},
+				Total:    0,
+			}, nil
+		},
+	}
+
+	toolkit := NewToolkit(mock, DefaultConfig())
+	result, _, _ := toolkit.handleSearch(context.Background(), nil, SearchInput{Query: "nonexistent"})
+
+	if result.IsError {
+		t.Fatal("handleSearch() should not return error result")
+	}
+
+	// Extract JSON text and verify entities is [] not null
+	if len(result.Content) == 0 {
+		t.Fatal("no content in result")
+	}
+	tc, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatalf("expected TextContent, got %T", result.Content[0])
+	}
+
+	if strings.Contains(tc.Text, `"entities": null`) {
+		t.Error("entities should be [] not null in JSON output")
+	}
+	if !strings.Contains(tc.Text, `"entities": []`) {
+		t.Error("expected empty entities array in JSON output")
 	}
 }
 
