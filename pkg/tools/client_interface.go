@@ -122,6 +122,11 @@ type DataHubClient interface {
 	// GetDataContract retrieves the data contract status for a dataset.
 	GetDataContract(ctx context.Context, datasetURN string) (*types.DataContract, error)
 
+	// Advanced search (DataHub 1.3.x+).
+
+	// SearchAcrossEntities searches across entity types with optional advanced filtering.
+	SearchAcrossEntities(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
+
 	// Semantic search (DataHub 1.4.x + OpenSearch 2.19.3+).
 
 	// SemanticSearch performs natural language semantic search across entities.

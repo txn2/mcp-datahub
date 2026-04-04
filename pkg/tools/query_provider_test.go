@@ -85,7 +85,7 @@ func extractResultText(t *testing.T, result *mcp.CallToolResult) string {
 
 func TestHandleSearch_WithQueryProvider(t *testing.T) {
 	mock := &mockClient{
-		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{
 				Entities: []types.SearchEntity{
 					{URN: "urn:li:dataset:1", Name: "Table1"},
@@ -130,7 +130,7 @@ func TestHandleSearch_WithQueryProvider(t *testing.T) {
 
 func TestHandleSearch_WithQueryProvider_NoResults(t *testing.T) {
 	mock := &mockClient{
-		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{Entities: []types.SearchEntity{}, Total: 0}, nil
 		},
 	}
@@ -157,7 +157,7 @@ func TestHandleSearch_WithQueryProvider_NoResults(t *testing.T) {
 
 func TestHandleSearch_WithQueryProvider_Error(t *testing.T) {
 	mock := &mockClient{
-		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{
 				Entities: []types.SearchEntity{{URN: "urn:li:dataset:1"}},
 				Total:    1,
@@ -186,7 +186,7 @@ func TestHandleSearch_WithQueryProvider_Error(t *testing.T) {
 
 func TestHandleSearch_WithoutQueryProvider(t *testing.T) {
 	mock := &mockClient{
-		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{
 				Entities: []types.SearchEntity{{URN: "urn:li:dataset:1"}},
 				Total:    1,

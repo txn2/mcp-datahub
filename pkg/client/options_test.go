@@ -90,6 +90,53 @@ func TestWithFilters(t *testing.T) {
 	}
 }
 
+func TestWithTypes(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []string
+		want  []string
+	}{
+		{"already uppercase", []string{"DATASET", "DASHBOARD"}, []string{"DATASET", "DASHBOARD"}},
+		{"camelCase normalized", []string{"glossaryTerm", "dataProduct"}, []string{"GLOSSARY_TERM", "DATA_PRODUCT"}},
+		{"mixed case", []string{"DATASET", "glossaryTerm"}, []string{"DATASET", "GLOSSARY_TERM"}},
+		{"empty", []string{}, []string{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := &searchOptions{}
+			WithTypes(tt.input)(opts)
+			if len(opts.types) != len(tt.want) {
+				t.Fatalf("WithTypes() count = %d, want %d", len(opts.types), len(tt.want))
+			}
+			for i, v := range opts.types {
+				if v != tt.want[i] {
+					t.Errorf("WithTypes()[%d] = %q, want %q", i, v, tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestWithOrFilters(t *testing.T) {
+	opts := &searchOptions{}
+	filters := []SearchFilter{
+		{Field: "fieldPaths", Values: []string{"email"}, Condition: "CONTAIN"},
+		{Field: "platform", Values: []string{"urn:li:dataPlatform:trino"}, Negated: true},
+	}
+	WithOrFilters(filters)(opts)
+
+	if len(opts.orFilters) != 2 {
+		t.Fatalf("WithOrFilters() count = %d, want 2", len(opts.orFilters))
+	}
+	if opts.orFilters[0].Field != "fieldPaths" {
+		t.Errorf("filter[0].Field = %q, want fieldPaths", opts.orFilters[0].Field)
+	}
+	if opts.orFilters[1].Negated != true {
+		t.Error("filter[1].Negated should be true")
+	}
+}
+
 func TestLineageOptions(t *testing.T) {
 	tests := []struct {
 		name      string

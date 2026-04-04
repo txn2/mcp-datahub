@@ -293,7 +293,7 @@ func TestStructuredOutput_GetLineage_WithQueryProvider(t *testing.T) {
 
 func TestStructuredOutput_Search_NoQueryProvider(t *testing.T) {
 	mock := &mockClient{
-		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{
 				Total:    1,
 				Entities: []types.SearchEntity{{URN: "urn:li:dataset:test"}},
@@ -313,7 +313,7 @@ func TestStructuredOutput_Search_NoQueryProvider(t *testing.T) {
 
 func TestStructuredOutput_Search_WithQueryProvider(t *testing.T) {
 	mock := &mockClient{
-		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{
 				Total:    1,
 				Entities: []types.SearchEntity{{URN: "urn:li:dataset:test"}},
@@ -489,7 +489,7 @@ func TestResponseShape_GetLineage_WithQueryProvider(t *testing.T) {
 // provider returns search fields at the TOP LEVEL — not nested under a "result" wrapper key.
 func TestResponseShape_Search_WithQueryProvider(t *testing.T) {
 	mock := &mockClient{
-		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{
 				Total:    1,
 				Entities: []types.SearchEntity{{URN: "urn:li:dataset:test", Name: "Test"}},

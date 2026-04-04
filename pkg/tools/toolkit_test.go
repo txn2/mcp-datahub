@@ -16,6 +16,7 @@ import (
 // mockClient implements DataHubClient for testing.
 type mockClient struct {
 	searchFunc                            func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
+	searchAcrossEntitiesFunc              func(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error)
 	getEntityFunc                         func(ctx context.Context, urn string) (*types.Entity, error)
 	getSchemaFunc                         func(ctx context.Context, urn string) (*types.SchemaMetadata, error)
 	getSchemasFunc                        func(ctx context.Context, urns []string) (map[string]*types.SchemaMetadata, error)
@@ -88,6 +89,13 @@ type mockClient struct {
 func (m *mockClient) Search(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
 	if m.searchFunc != nil {
 		return m.searchFunc(ctx, query, opts...)
+	}
+	return &types.SearchResult{}, nil
+}
+
+func (m *mockClient) SearchAcrossEntities(ctx context.Context, query string, opts ...client.SearchOption) (*types.SearchResult, error) {
+	if m.searchAcrossEntitiesFunc != nil {
+		return m.searchAcrossEntitiesFunc(ctx, query, opts...)
 	}
 	return &types.SearchResult{}, nil
 }
@@ -1466,7 +1474,7 @@ func TestSearchModeRouting(t *testing.T) {
 			semanticCalled := false
 
 			mock := &mockClient{}
-			mock.searchFunc = func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+			mock.searchAcrossEntitiesFunc = func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 				keywordCalled = true
 				return &types.SearchResult{}, nil
 			}
