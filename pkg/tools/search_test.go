@@ -207,6 +207,9 @@ func TestHandleSearch_KeywordUsesSearchAcrossEntities(t *testing.T) {
 }
 
 func TestHandleSearch_ZeroResults_EntitiesIsEmptyArray(t *testing.T) {
+	// Mock returns initialized empty slice (as the fixed client now does).
+	// The real nil→[] fix is tested at the client level in
+	// TestSearchAcrossEntities_ZeroResults_EntitiesNotNil.
 	mock := &mockClient{
 		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{
