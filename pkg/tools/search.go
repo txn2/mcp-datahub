@@ -87,7 +87,7 @@ func resolveSearchTypes(input SearchInput) []string {
 	if input.EntityType != "" {
 		return []string{input.EntityType}
 	}
-	return []string{"DATASET"}
+	return []string{client.DefaultEntityType}
 }
 
 // validateFilters checks that all filter inputs have a non-empty field and at least one value.
@@ -104,11 +104,12 @@ func validateFilters(filters []SearchFilterInput) error {
 }
 
 // convertFilters converts tool-layer filter inputs to client-layer SearchFilter values.
+// When both Value and Values are set, Value is prepended unless already present in Values.
 func convertFilters(inputs []SearchFilterInput) []client.SearchFilter {
 	filters := make([]client.SearchFilter, 0, len(inputs))
 	for _, f := range inputs {
 		values := f.Values
-		if f.Value != "" {
+		if f.Value != "" && !containsString(values, f.Value) {
 			values = append([]string{f.Value}, values...)
 		}
 		filters = append(filters, client.SearchFilter{
@@ -119,6 +120,15 @@ func convertFilters(inputs []SearchFilterInput) []client.SearchFilter {
 		})
 	}
 	return filters
+}
+
+func containsString(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, input SearchInput) (*mcp.CallToolResult, any, error) {

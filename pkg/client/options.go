@@ -130,6 +130,9 @@ func WithDepth(depth int) LineageOption {
 	}
 }
 
+// DefaultEntityType is the entity type used when none is specified.
+const DefaultEntityType = "DATASET"
+
 // Constants for lineage directions.
 const (
 	LineageDirectionUpstream   = "UPSTREAM"

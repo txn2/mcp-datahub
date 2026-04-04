@@ -104,6 +104,47 @@ func TestSearchAcrossEntities(t *testing.T) {
 	}
 }
 
+func TestSearchAcrossEntities_NoTypesSearchesAll(t *testing.T) {
+	var capturedInput map[string]any
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req map[string]any
+		_ = json.Unmarshal(body, &req)
+		if variables, ok := req["variables"].(map[string]any); ok {
+			capturedInput, _ = variables["input"].(map[string]any)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"searchAcrossEntities": {
+					"start": 0, "count": 10, "total": 0, "searchResults": []
+				}
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL,
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     DefaultConfig(),
+		logger:     NopLogger{},
+	}
+
+	// No WithTypes, no WithEntityType — should search all types
+	_, err := c.SearchAcrossEntities(context.Background(), "test")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, hasTypes := capturedInput["types"]; hasTypes {
+		t.Errorf("types should not be sent when unset, got %v", capturedInput["types"])
+	}
+}
+
 func TestSearchAcrossEntities_WithEntityTypeFallback(t *testing.T) {
 	var capturedInput map[string]any
 

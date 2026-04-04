@@ -9,6 +9,7 @@ import (
 
 // SearchAcrossEntitiesQuery searches across multiple entity types with advanced filtering.
 // Uses the searchAcrossEntities GraphQL endpoint which supports orFilters and multi-type search.
+// Shared by both SearchAcrossEntities (keyword) and SemanticSearch (fulltext) methods.
 const SearchAcrossEntitiesQuery = `
 query searchAcrossEntities($input: SearchAcrossEntitiesInput!) {
   searchAcrossEntities(input: $input) {
@@ -123,6 +124,18 @@ query searchAcrossEntities($input: SearchAcrossEntitiesInput!) {
 // Supports multi-type search and field-level filters (e.g., fieldPaths, fieldTags, platform).
 // Available in DataHub 1.3.x+.
 func (c *Client) SearchAcrossEntities(ctx context.Context, query string, opts ...SearchOption) (*types.SearchResult, error) {
+	return c.doSearchAcrossEntities(ctx, "SearchAcrossEntities", query, nil, opts)
+}
+
+// doSearchAcrossEntities is the shared implementation for SearchAcrossEntities and SemanticSearch.
+// extraFlags are merged into the GraphQL input (e.g., searchFlags for fulltext mode).
+func (c *Client) doSearchAcrossEntities(
+	ctx context.Context,
+	caller string,
+	query string,
+	extraFlags map[string]any,
+	opts []SearchOption,
+) (*types.SearchResult, error) {
 	options := &searchOptions{
 		limit:  c.config.DefaultLimit,
 		offset: 0,
@@ -151,6 +164,10 @@ func (c *Client) SearchAcrossEntities(ctx context.Context, query string, opts ..
 		input["orFilters"] = buildOrFilters(options.orFilters)
 	}
 
+	for k, v := range extraFlags {
+		input[k] = v
+	}
+
 	variables := map[string]any{
 		"input": input,
 	}
@@ -165,7 +182,7 @@ func (c *Client) SearchAcrossEntities(ctx context.Context, query string, opts ..
 	}
 
 	if err := c.Execute(ctx, SearchAcrossEntitiesQuery, variables, &response); err != nil {
-		return nil, fmt.Errorf("SearchAcrossEntities(%q): %w", query, err)
+		return nil, fmt.Errorf("%s(%q): %w", caller, query, err)
 	}
 
 	result := &types.SearchResult{

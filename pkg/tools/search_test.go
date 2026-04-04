@@ -307,6 +307,13 @@ func TestConvertFilters(t *testing.T) {
 			},
 			wantLen: 1,
 		},
+		{
+			name: "value already in values is not duplicated",
+			inputs: []SearchFilterInput{
+				{Field: "fieldPaths", Value: "email", Values: []string{"email", "phone"}},
+			},
+			wantLen: 1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -338,6 +345,19 @@ func TestConvertFilters(t *testing.T) {
 				want := []string{"email", "phone", "address"}
 				if len(got[0].Values) != 3 {
 					t.Fatalf("expected 3 values, got %d: %v", len(got[0].Values), got[0].Values)
+				}
+				for i, v := range got[0].Values {
+					if v != want[i] {
+						t.Errorf("values[%d] = %q, want %q", i, v, want[i])
+					}
+				}
+			}
+
+			// Verify duplicate is not added
+			if tt.name == "value already in values is not duplicated" {
+				want := []string{"email", "phone"}
+				if len(got[0].Values) != 2 {
+					t.Fatalf("expected 2 values, got %d: %v", len(got[0].Values), got[0].Values)
 				}
 				for i, v := range got[0].Values {
 					if v != want[i] {

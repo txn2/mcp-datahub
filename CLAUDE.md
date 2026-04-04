@@ -108,7 +108,7 @@ All are customizable via the three-tier priority pattern.
 
 | Tool | Title | Description |
 |------|-------|-------------|
-| `datahub_search` | Search Catalog | Search entities by query and type |
+| `datahub_search` | Search Catalog | Search entities with keyword or semantic mode; supports `types` for multi-type search and `filters` for advanced field-level filtering (fieldPaths, fieldTags, platform, etc.) via `searchAcrossEntities` |
 | `datahub_get_entity` | Get Entity | Get entity metadata by URN |
 | `datahub_get_schema` | Get Schema | Get dataset schema |
 | `datahub_get_lineage` | Get Lineage | Get upstream/downstream lineage; set `level=column` for column-level lineage |
