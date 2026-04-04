@@ -104,6 +104,97 @@ func TestSearchAcrossEntities(t *testing.T) {
 	}
 }
 
+func TestSearchAcrossEntities_WithEntityTypeFallback(t *testing.T) {
+	var capturedInput map[string]any
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req map[string]any
+		_ = json.Unmarshal(body, &req)
+		if variables, ok := req["variables"].(map[string]any); ok {
+			capturedInput, _ = variables["input"].(map[string]any)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"searchAcrossEntities": {
+					"start": 0, "count": 10, "total": 0, "searchResults": []
+				}
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL,
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     DefaultConfig(),
+		logger:     NopLogger{},
+	}
+
+	_, err := c.SearchAcrossEntities(context.Background(), "test",
+		WithEntityType("DASHBOARD"),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	types, ok := capturedInput["types"].([]any)
+	if !ok || len(types) != 1 || types[0] != "DASHBOARD" {
+		t.Errorf("types = %v, want [DASHBOARD]", capturedInput["types"])
+	}
+}
+
+func TestSearchAcrossEntities_TypesOverridesEntityType(t *testing.T) {
+	var capturedInput map[string]any
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req map[string]any
+		_ = json.Unmarshal(body, &req)
+		if variables, ok := req["variables"].(map[string]any); ok {
+			capturedInput, _ = variables["input"].(map[string]any)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"searchAcrossEntities": {
+					"start": 0, "count": 10, "total": 0, "searchResults": []
+				}
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL,
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     DefaultConfig(),
+		logger:     NopLogger{},
+	}
+
+	// WithTypes should win over WithEntityType
+	_, err := c.SearchAcrossEntities(context.Background(), "test",
+		WithEntityType("TAG"),
+		WithTypes([]string{"DATASET", "DASHBOARD"}),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	types, ok := capturedInput["types"].([]any)
+	if !ok || len(types) != 2 {
+		t.Fatalf("types = %v, want [DATASET, DASHBOARD]", capturedInput["types"])
+	}
+	if types[0] != "DATASET" || types[1] != "DASHBOARD" {
+		t.Errorf("types = %v, want [DATASET, DASHBOARD]", types)
+	}
+}
+
 func TestSearchAcrossEntities_WithFilters(t *testing.T) {
 	var capturedInput map[string]any
 
@@ -144,7 +235,7 @@ func TestSearchAcrossEntities_WithFilters(t *testing.T) {
 
 	_, err := c.SearchAcrossEntities(context.Background(), "*",
 		WithTypes([]string{"DATASET"}),
-		WithOrFilters([]SearchFilter{
+		WithSearchFilters([]SearchFilter{
 			{Field: "fieldPaths", Values: []string{"email"}, Condition: "CONTAIN"},
 			{Field: "platform", Values: []string{"urn:li:dataPlatform:trino"}},
 		}),
@@ -215,7 +306,7 @@ func TestSearchAcrossEntities_WithNegatedFilter(t *testing.T) {
 	}
 
 	_, err := c.SearchAcrossEntities(context.Background(), "*",
-		WithOrFilters([]SearchFilter{
+		WithSearchFilters([]SearchFilter{
 			{Field: "tags", Values: []string{"urn:li:tag:deprecated"}, Negated: true},
 		}),
 	)
@@ -354,7 +445,7 @@ func TestSearchAcrossEntities_EntityDetails(t *testing.T) {
 	}
 
 	result, err := c.SearchAcrossEntities(context.Background(), "*",
-		WithOrFilters([]SearchFilter{
+		WithSearchFilters([]SearchFilter{
 			{Field: "fieldPaths", Values: []string{"email"}, Condition: "CONTAIN"},
 		}),
 	)

@@ -102,6 +102,22 @@ func TestHandleSearch(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "filter with empty field",
+			input: SearchInput{
+				Query:   "*",
+				Filters: []SearchFilterInput{{Field: "", Value: "trino"}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "filter with no values",
+			input: SearchInput{
+				Query:   "*",
+				Filters: []SearchFilterInput{{Field: "platform"}},
+			},
+			wantErr: true,
+		},
+		{
 			name: "invalid mode",
 			input: SearchInput{
 				Query: "test",
@@ -284,6 +300,13 @@ func TestConvertFilters(t *testing.T) {
 			},
 			wantLen: 1,
 		},
+		{
+			name: "both value and values merges all",
+			inputs: []SearchFilterInput{
+				{Field: "fieldPaths", Value: "email", Values: []string{"phone", "address"}},
+			},
+			wantLen: 1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -308,6 +331,70 @@ func TestConvertFilters(t *testing.T) {
 				if !got[0].Negated {
 					t.Error("negated should be true")
 				}
+			}
+
+			// Verify both value+values are merged
+			if tt.name == "both value and values merges all" {
+				want := []string{"email", "phone", "address"}
+				if len(got[0].Values) != 3 {
+					t.Fatalf("expected 3 values, got %d: %v", len(got[0].Values), got[0].Values)
+				}
+				for i, v := range got[0].Values {
+					if v != want[i] {
+						t.Errorf("values[%d] = %q, want %q", i, v, want[i])
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestValidateFilters(t *testing.T) {
+	tests := []struct {
+		name    string
+		filters []SearchFilterInput
+		wantErr bool
+	}{
+		{
+			name:    "nil filters",
+			filters: nil,
+			wantErr: false,
+		},
+		{
+			name:    "valid filter with value",
+			filters: []SearchFilterInput{{Field: "platform", Value: "trino"}},
+			wantErr: false,
+		},
+		{
+			name:    "valid filter with values",
+			filters: []SearchFilterInput{{Field: "fieldPaths", Values: []string{"email"}}},
+			wantErr: false,
+		},
+		{
+			name:    "empty field",
+			filters: []SearchFilterInput{{Field: "", Value: "trino"}},
+			wantErr: true,
+		},
+		{
+			name:    "empty value and values",
+			filters: []SearchFilterInput{{Field: "platform"}},
+			wantErr: true,
+		},
+		{
+			name: "second filter invalid",
+			filters: []SearchFilterInput{
+				{Field: "platform", Value: "trino"},
+				{Field: ""},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateFilters(tt.filters)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateFilters() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

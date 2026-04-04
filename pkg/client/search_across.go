@@ -143,6 +143,8 @@ func (c *Client) SearchAcrossEntities(ctx context.Context, query string, opts ..
 
 	if len(options.types) > 0 {
 		input["types"] = options.types
+	} else if options.entityType != "" {
+		input["types"] = []string{options.entityType}
 	}
 
 	if len(options.orFilters) > 0 {

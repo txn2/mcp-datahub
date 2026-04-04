@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -89,13 +90,26 @@ func resolveSearchTypes(input SearchInput) []string {
 	return []string{"DATASET"}
 }
 
+// validateFilters checks that all filter inputs have a non-empty field and at least one value.
+func validateFilters(filters []SearchFilterInput) error {
+	for i, f := range filters {
+		if f.Field == "" {
+			return fmt.Errorf("filter[%d]: field is required", i)
+		}
+		if f.Value == "" && len(f.Values) == 0 {
+			return fmt.Errorf("filter[%d] (%s): value or values is required", i, f.Field)
+		}
+	}
+	return nil
+}
+
 // convertFilters converts tool-layer filter inputs to client-layer SearchFilter values.
 func convertFilters(inputs []SearchFilterInput) []client.SearchFilter {
 	filters := make([]client.SearchFilter, 0, len(inputs))
 	for _, f := range inputs {
 		values := f.Values
-		if f.Value != "" && len(values) == 0 {
-			values = []string{f.Value}
+		if f.Value != "" {
+			values = append([]string{f.Value}, values...)
 		}
 		filters = append(filters, client.SearchFilter{
 			Field:     f.Field,
@@ -116,6 +130,10 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 		return ErrorResult("invalid mode: must be 'keyword' or 'semantic'"), nil, nil
 	}
 
+	if err := validateFilters(input.Filters); err != nil {
+		return ErrorResult(err.Error()), nil, nil
+	}
+
 	datahubClient, err := t.getClient(input.Connection)
 	if err != nil {
 		return ErrorResult("Connection error: " + err.Error()), nil, nil
@@ -126,7 +144,7 @@ func (t *Toolkit) handleSearch(ctx context.Context, _ *mcp.CallToolRequest, inpu
 	opts = append(opts, client.WithTypes(searchTypes))
 
 	if len(input.Filters) > 0 {
-		opts = append(opts, client.WithOrFilters(convertFilters(input.Filters)))
+		opts = append(opts, client.WithSearchFilters(convertFilters(input.Filters)))
 	}
 
 	var result *types.SearchResult

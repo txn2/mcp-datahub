@@ -78,7 +78,7 @@ func WithOffset(offset int) SearchOption {
 
 // WithFilters adds search filters.
 //
-// Deprecated: Use WithOrFilters for advanced filtering with searchAcrossEntities.
+// Deprecated: Use WithSearchFilters for advanced filtering with searchAcrossEntities.
 func WithFilters(filters map[string][]string) SearchOption {
 	return func(o *searchOptions) {
 		o.filters = filters
@@ -99,9 +99,9 @@ func WithTypes(types []string) SearchOption {
 	}
 }
 
-// WithOrFilters sets advanced search filters.
-// Filters are AND'd together in a single filter group.
-func WithOrFilters(filters []SearchFilter) SearchOption {
+// WithSearchFilters sets advanced search filters for searchAcrossEntities.
+// All filters are AND'd together (all conditions must match).
+func WithSearchFilters(filters []SearchFilter) SearchOption {
 	return func(o *searchOptions) {
 		o.orFilters = filters
 	}

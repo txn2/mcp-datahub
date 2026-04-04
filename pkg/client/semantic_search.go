@@ -72,6 +72,16 @@ query semanticSearch($input: SearchAcrossEntitiesInput!) {
             name
           }
         }
+        ... on DataFlow {
+          flowId
+          info {
+            name
+            description
+          }
+          platform {
+            name
+          }
+        }
         ... on DataProduct {
           properties {
             name
@@ -82,6 +92,24 @@ query semanticSearch($input: SearchAcrossEntitiesInput!) {
           properties {
             name
             description
+          }
+        }
+        ... on Tag {
+          properties {
+            name
+            description
+          }
+        }
+        ... on Document {
+          subType
+          info {
+            title
+            contents {
+              text
+            }
+            status {
+              state
+            }
           }
         }
       }
@@ -119,8 +147,14 @@ func (c *Client) SemanticSearch(ctx context.Context, query string, opts ...Searc
 		"searchFlags": map[string]any{"fulltext": true},
 	}
 
-	if options.entityType != "" {
+	if len(options.types) > 0 {
+		input["types"] = options.types
+	} else if options.entityType != "" {
 		input["types"] = []string{options.entityType}
+	}
+
+	if len(options.orFilters) > 0 {
+		input["orFilters"] = buildOrFilters(options.orFilters)
 	}
 
 	variables := map[string]any{

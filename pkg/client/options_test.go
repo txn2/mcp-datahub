@@ -118,16 +118,16 @@ func TestWithTypes(t *testing.T) {
 	}
 }
 
-func TestWithOrFilters(t *testing.T) {
+func TestWithSearchFilters(t *testing.T) {
 	opts := &searchOptions{}
 	filters := []SearchFilter{
 		{Field: "fieldPaths", Values: []string{"email"}, Condition: "CONTAIN"},
 		{Field: "platform", Values: []string{"urn:li:dataPlatform:trino"}, Negated: true},
 	}
-	WithOrFilters(filters)(opts)
+	WithSearchFilters(filters)(opts)
 
 	if len(opts.orFilters) != 2 {
-		t.Fatalf("WithOrFilters() count = %d, want 2", len(opts.orFilters))
+		t.Fatalf("WithSearchFilters() count = %d, want 2", len(opts.orFilters))
 	}
 	if opts.orFilters[0].Field != "fieldPaths" {
 		t.Errorf("filter[0].Field = %q, want fieldPaths", opts.orFilters[0].Field)
