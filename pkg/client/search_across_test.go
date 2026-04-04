@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -101,6 +102,49 @@ func TestSearchAcrossEntities(t *testing.T) {
 				t.Errorf("Entities count = %d, want %d", len(result.Entities), tt.wantCount)
 			}
 		})
+	}
+}
+
+func TestSearchAcrossEntities_ZeroResults_EntitiesNotNil(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"searchAcrossEntities": {
+					"start": 0, "count": 10, "total": 0, "searchResults": []
+				}
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL,
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     DefaultConfig(),
+		logger:     NopLogger{},
+	}
+
+	result, err := c.SearchAcrossEntities(context.Background(), "nonexistent")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.Entities == nil {
+		t.Fatal("Entities should be empty slice, not nil")
+	}
+	if len(result.Entities) != 0 {
+		t.Errorf("Entities count = %d, want 0", len(result.Entities))
+	}
+
+	// Verify JSON marshal produces [] not null
+	data, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if strings.Contains(string(data), `"entities":null`) {
+		t.Error("JSON should contain empty array, not null")
 	}
 }
 

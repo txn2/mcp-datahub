@@ -186,9 +186,10 @@ func (c *Client) doSearchAcrossEntities(
 	}
 
 	result := &types.SearchResult{
-		Total:  response.SearchAcrossEntities.Total,
-		Offset: response.SearchAcrossEntities.Start,
-		Limit:  response.SearchAcrossEntities.Count,
+		Entities: make([]types.SearchEntity, 0, len(response.SearchAcrossEntities.SearchResults)),
+		Total:    response.SearchAcrossEntities.Total,
+		Offset:   response.SearchAcrossEntities.Start,
+		Limit:    response.SearchAcrossEntities.Count,
 	}
 
 	for _, sr := range response.SearchAcrossEntities.SearchResults {
