@@ -7,8 +7,10 @@ var defaultDescriptions = map[ToolName]string{
 		"This should be your FIRST tool when answering data questions — use it to discover " +
 		"relevant datasets before querying. Results include query_context showing which datasets " +
 		"are queryable in Trino and their resolved table paths. Search by topic keywords, " +
-		"table names, tags, or domain concepts. Follow up with datahub_get_schema or " +
-		"trino_describe_table for column details.",
+		"table names, tags, or domain concepts. Supports advanced filtering via 'filters' parameter " +
+		"to search by column names (fieldPaths), column tags (fieldTags), column glossary terms " +
+		"(fieldGlossaryTerms), platform, domain, owner, and more. Use 'types' to search across " +
+		"multiple entity types. Follow up with datahub_get_schema or trino_describe_table for column details.",
 
 	ToolGetEntity: "Get comprehensive metadata for a DataHub entity including description, owners, tags, " +
 		"glossary terms, domain, deprecation status, quality score, and custom properties. " +

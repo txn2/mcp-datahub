@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -257,5 +259,64 @@ func TestSemanticSearch_DataProductProperties(t *testing.T) {
 	}
 	if e.Description != "Product description" {
 		t.Errorf("Description = %q", e.Description)
+	}
+}
+
+func TestSemanticSearch_WithTypesAndFilters(t *testing.T) {
+	var capturedInput map[string]any
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req map[string]any
+		_ = json.Unmarshal(body, &req)
+		if variables, ok := req["variables"].(map[string]any); ok {
+			capturedInput, _ = variables["input"].(map[string]any)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"searchAcrossEntities": {
+					"start": 0, "count": 10, "total": 0, "searchResults": []
+				}
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL,
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     DefaultConfig(),
+		logger:     NopLogger{},
+	}
+
+	_, err := c.SemanticSearch(context.Background(), "user data",
+		WithTypes([]string{"DATASET", "DASHBOARD"}),
+		WithSearchFilters([]SearchFilter{
+			{Field: "platform", Values: []string{"urn:li:dataPlatform:trino"}},
+		}),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify types were sent
+	types, ok := capturedInput["types"].([]any)
+	if !ok || len(types) != 2 {
+		t.Fatalf("types = %v, want [DATASET, DASHBOARD]", capturedInput["types"])
+	}
+
+	// Verify orFilters were sent
+	orFilters, ok := capturedInput["orFilters"].([]any)
+	if !ok || len(orFilters) != 1 {
+		t.Fatalf("orFilters = %v, want 1 group", capturedInput["orFilters"])
+	}
+
+	// Verify fulltext flag is still set
+	flags, ok := capturedInput["searchFlags"].(map[string]any)
+	if !ok || flags["fulltext"] != true {
+		t.Errorf("searchFlags = %v, want fulltext: true", capturedInput["searchFlags"])
 	}
 }

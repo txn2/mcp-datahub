@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -13,7 +14,7 @@ func TestNewToolContext(t *testing.T) {
 		t.Errorf("NewToolContext() ToolName = %v, want %v", tc.ToolName, ToolSearch)
 	}
 
-	if tc.Input != input {
+	if !reflect.DeepEqual(tc.Input, input) {
 		t.Errorf("NewToolContext() Input mismatch")
 	}
 

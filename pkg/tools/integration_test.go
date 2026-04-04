@@ -14,7 +14,7 @@ import (
 // createTestMockClient returns a mock client with all methods stubbed.
 func createTestMockClient() *mockClient {
 	return &mockClient{
-		searchFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
+		searchAcrossEntitiesFunc: func(_ context.Context, _ string, _ ...client.SearchOption) (*types.SearchResult, error) {
 			return &types.SearchResult{Total: 1, Entities: []types.SearchEntity{{URN: "urn:li:dataset:test"}}}, nil
 		},
 		getEntityFunc: func(_ context.Context, urn string) (*types.Entity, error) {

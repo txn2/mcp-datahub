@@ -369,7 +369,7 @@ func (c *Client) Search(ctx context.Context, query string, opts ...SearchOption)
 	// Default to DATASET if no entity type specified
 	entityType := options.entityType
 	if entityType == "" {
-		entityType = "DATASET"
+		entityType = DefaultEntityType
 	}
 
 	input := map[string]any{

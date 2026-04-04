@@ -13,6 +13,24 @@ type searchOptions struct {
 	limit      int
 	offset     int
 	filters    map[string][]string
+	types      []string
+	orFilters  []SearchFilter
+}
+
+// SearchFilter represents a single filter criterion for advanced search.
+// Filters are AND'd together within a single search request.
+type SearchFilter struct {
+	// Field is the filter field name (e.g., "fieldPaths", "fieldTags", "platform", "owners").
+	Field string
+
+	// Values are the values to match against.
+	Values []string
+
+	// Condition is the filter operator: CONTAIN, EQUAL (default), IN, EXISTS, etc.
+	Condition string
+
+	// Negated inverts the filter (exclude matching entities).
+	Negated bool
 }
 
 // toEnumCase converts camelCase or PascalCase strings to SCREAMING_SNAKE_CASE.
@@ -59,9 +77,33 @@ func WithOffset(offset int) SearchOption {
 }
 
 // WithFilters adds search filters.
+//
+// Deprecated: Use WithSearchFilters for advanced filtering with searchAcrossEntities.
 func WithFilters(filters map[string][]string) SearchOption {
 	return func(o *searchOptions) {
 		o.filters = filters
+	}
+}
+
+// WithTypes sets the entity types to search across.
+// Valid types: DATASET, DASHBOARD, DATA_FLOW, DATA_JOB, CONTAINER, DOMAIN,
+// TAG, GLOSSARY_TERM, CORP_USER, CORP_GROUP, DATA_PRODUCT, etc.
+// Each type is normalized to SCREAMING_SNAKE_CASE.
+func WithTypes(types []string) SearchOption {
+	return func(o *searchOptions) {
+		normalized := make([]string, len(types))
+		for i, t := range types {
+			normalized[i] = toEnumCase(t)
+		}
+		o.types = normalized
+	}
+}
+
+// WithSearchFilters sets advanced search filters for searchAcrossEntities.
+// All filters are AND'd together (all conditions must match).
+func WithSearchFilters(filters []SearchFilter) SearchOption {
+	return func(o *searchOptions) {
+		o.orFilters = filters
 	}
 }
 
@@ -87,6 +129,9 @@ func WithDepth(depth int) LineageOption {
 		o.depth = depth
 	}
 }
+
+// DefaultEntityType is the entity type used when none is specified.
+const DefaultEntityType = "DATASET"
 
 // Constants for lineage directions.
 const (
