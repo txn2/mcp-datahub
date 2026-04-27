@@ -1,0 +1,396 @@
+{% extends "main.html" %}
+
+{# Mark the body so CSS can target the homepage layout. #}
+{% block htmltitle %}
+  {{ super() }}
+{% endblock %}
+
+{% block site_meta %}
+  {{ super() }}
+  <meta name="page-template" content="home">
+{% endblock %}
+
+{# Replace Material's header with the txn2 rail. #}
+{% block header %}
+<header class="rail" data-md-component="header">
+  <a class="skiplink" href="#main">skip to content</a>
+  <a href="./" class="rail__brand" aria-label="mcp-datahub home">
+    <span class="rail__mark" aria-hidden="true">◐</span>
+    <span class="rail__name">mcp-datahub</span>
+    <span class="rail__sep" aria-hidden="true">·</span>
+    <span class="rail__sub">mcp server for datahub</span>
+  </a>
+  <div class="rail__meta">
+    <span class="rail__rel">v1.x</span>
+    <span class="rail__dot" aria-hidden="true">●</span>
+    <span data-clock>·· UTC</span>
+    <span class="rail__dot" aria-hidden="true">●</span>
+    <a href="https://txn2.com" class="rail__org">part of <em class="serif">txn2</em>&nbsp;↗</a>
+  </div>
+  <nav class="rail__nav" aria-label="primary">
+    <a href="./" aria-current="page">home</a>
+    <a href="server/installation/">install</a>
+    <a href="server/">server</a>
+    <a href="library/">library</a>
+    <a href="reference/tools-api/">reference</a>
+    <a href="https://github.com/txn2/mcp-datahub" class="rail__cta">github&nbsp;↗</a>
+  </nav>
+</header>
+{% endblock %}
+
+{# No nav tabs on the homepage. #}
+{% block tabs %}{% endblock %}
+
+{# No announce. #}
+{% block announce %}{% endblock %}
+
+{# Replace the entire content area with the full-bleed homepage. #}
+{% block container %}
+<main id="main" class="page page--home" data-md-component="main">
+
+  {# BLUEPRINT GRID OVERLAY #}
+  <div class="blueprint" aria-hidden="true">
+    <div class="blueprint__grid"></div>
+    <div class="blueprint__crosshair blueprint__crosshair--tl"><span></span><span></span></div>
+    <div class="blueprint__crosshair blueprint__crosshair--tr"><span></span><span></span></div>
+    <div class="blueprint__crosshair blueprint__crosshair--bl"><span></span><span></span></div>
+    <div class="blueprint__crosshair blueprint__crosshair--br"><span></span><span></span></div>
+  </div>
+
+  {# HERO #}
+  <section class="hero">
+    <div class="hero__stamp">
+      <p class="hero__stamp__line">project / mcp-datahub</p>
+      <p class="hero__stamp__line">org / txn2</p>
+      <p class="hero__stamp__line">est. 2025</p>
+      <p class="hero__stamp__line"><a href="https://pkg.go.dev/github.com/txn2/mcp-datahub">pkg.go.dev&nbsp;↗</a></p>
+      <p class="hero__stamp__line hero__stamp__line--ok">apache 2.0 · read-only by default</p>
+    </div>
+
+    <div class="hero__main">
+      <a class="hero__mark" href="https://github.com/txn2/mcp-datahub" aria-label="mcp-datahub on GitHub">
+        <svg class="hero__mark__svg" viewBox="10 10 80 80" role="img" aria-label="mcp-datahub symbol">
+          <path class="hero__mark__path hero__mark__path--base" d="M16.667,43.33C16.667,69.104 37.559,90 63.333,90L63.333,83.333C41.24,83.333 23.333,65.423 23.333,43.33L16.667,43.33Z M63.333,43.333L63.333,63.333C52.285,63.333 43.333,54.378 43.333,43.33C43.333,32.285 52.285,23.333 63.333,23.333C74.382,23.333 83.333,32.285 83.333,43.33L63.333,43.333Z"/>
+          <path class="hero__mark__path hero__mark__path--accent" d="M63.333,16.667C48.604,16.667 36.667,28.607 36.667,43.331C36.667,58.06 48.604,70 63.333,70L63.333,76.667C44.922,76.667 30,61.741 30,43.33C30,24.922 44.922,10 63.333,10L63.333,16.667Z"/>
+        </svg>
+      </a>
+
+      <h1 class="hero__display">
+        <span class="hero__row hero__row--1">
+          <em class="serif">mcp-datahub</em>
+          <span class="hero__chip">mcp · go</span>
+        </span>
+        <span class="hero__row hero__row--2">
+          <span class="outline">metadata catalog</span>
+        </span>
+        <span class="hero__row hero__row--3">
+          <em class="serif">for ai.</em>
+        </span>
+      </h1>
+    </div>
+
+    <div class="hero__intro">
+      <p class="hero__lede">
+        <span class="dropcap">m</span>cp-datahub is an MCP server that gives AI assistants safe, structured access to <a href="https://datahub.com">DataHub</a> metadata catalogs. Search across datasets, dashboards, pipelines, and queries. Read schemas, walk upstream and downstream lineage at table or column grain, fetch glossary terms, and resolve domains and data products. <strong>Read-only by default</strong>; write operations like tagging, linking, and incident updates are opt-in. Speaks to any DataHub instance, v1.3 or later.
+      </p>
+      <p class="hero__lede hero__lede--muted">
+        Run it standalone, or import it as a Go library and compose your own MCP server with custom auth, tenant isolation, and audit logging through middleware and interceptors. Multi-server out of the box. Apache 2.0, part of the <a href="https://mcp-data-platform.txn2.com">txn2 mcp data platform</a> alongside <a href="https://mcp-trino.txn2.com">mcp-trino</a> and <a href="https://mcp-s3.txn2.com">mcp-s3</a>.
+      </p>
+    </div>
+
+    <aside class="hero__ticker" aria-hidden="true">
+      <div class="ticker">
+        <div class="ticker__track">
+          <span>search the catalog</span><span>·</span>
+          <span>schemas &amp; lineage</span><span>·</span>
+          <span>column-level lineage</span><span>·</span>
+          <span>glossary &amp; domains</span><span>·</span>
+          <span>data products</span><span>·</span>
+          <span>read-only by default</span><span>·</span>
+          <span>write opt-in</span><span>·</span>
+          <span>multi-server</span><span>·</span>
+          <span>datahub v1.3+</span><span>·</span>
+          <span>middleware &amp; interceptors</span><span>·</span>
+          <span>composable go library</span><span>·</span>
+          <span>stdio transport</span><span>·</span>
+          <span>apache 2.0</span><span>·</span>
+          <span>search the catalog</span><span>·</span>
+          <span>schemas &amp; lineage</span><span>·</span>
+          <span>column-level lineage</span><span>·</span>
+          <span>glossary &amp; domains</span><span>·</span>
+          <span>data products</span><span>·</span>
+          <span>read-only by default</span><span>·</span>
+          <span>write opt-in</span><span>·</span>
+          <span>multi-server</span><span>·</span>
+          <span>datahub v1.3+</span><span>·</span>
+          <span>middleware &amp; interceptors</span><span>·</span>
+          <span>composable go library</span><span>·</span>
+          <span>stdio transport</span><span>·</span>
+          <span>apache 2.0</span><span>·</span>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  {# FLAGSHIP / PRIMARY DEMO #}
+  <section class="section section--flagship" id="install">
+    <header class="section__head">
+      <p class="section__index">§ 01 / install · run</p>
+      <h2 class="section__title">
+        Two ways to <em class="serif">use it.</em>
+      </h2>
+      <p class="section__lede">
+        Run mcp-datahub as a standalone server and wire it to Claude, Cursor, or any MCP client. Or import the Go packages and compose a custom MCP server with your own auth, tenancy, and audit logic. Same toolkit, two surfaces.
+      </p>
+    </header>
+
+    <div class="flagship">
+      <article class="flagship__card flagship__card--server">
+        <header class="flagship__head">
+          <p class="flagship__id">SRV-001 · go · <a class="flagship__url" href="server/">server docs ↗</a></p>
+          <h3 class="flagship__name">standalone server</h3>
+          <p class="flagship__tag">One binary. Wire to any MCP client over stdio.</p>
+        </header>
+        <div class="flagship__body">
+          <p>Install with <code>go install</code>, Docker, or grab a release. Point it at a DataHub GraphQL endpoint via environment variables. Read-only mode is the default; flip <code>DATAHUB_WRITE_ENABLED=true</code> when you mean it. Add multiple instances through <code>DATAHUB_ADDITIONAL_SERVERS</code> and let the AI pick.</p>
+        </div>
+        <div class="flagship__demo">
+          <div class="terminal">
+            <div class="terminal__bar">
+              <span></span><span></span><span></span>
+              <em>~ / mcp-datahub</em>
+            </div>
+<pre class="terminal__body"><span class="t-prompt">$</span> go install github.com/txn2/mcp-datahub/cmd/mcp-datahub@latest
+
+<span class="t-prompt">$</span> claude mcp add datahub \
+    -e DATAHUB_URL=https://datahub.example.com/api/graphql \
+    -e DATAHUB_TOKEN=<span class="t-ok">$TOKEN</span> \
+    -- mcp-datahub
+<span class="t-mute">  added: datahub (read-only, 9 read tools)</span>
+
+<span class="t-prompt">$</span> claude
+<span class="t-mute"># ask: which tables feed the orders dashboard?</span></pre>
+          </div>
+        </div>
+        <footer class="flagship__foot">
+          <a class="btn btn--accent" href="server/installation/">install &amp; run →</a>
+          <a class="btn" href="server/configuration/">configuration ↗</a>
+          <a class="btn" href="https://github.com/txn2/mcp-datahub" aria-label="mcp-datahub source on GitHub">source ↗</a>
+        </footer>
+      </article>
+
+      <article class="flagship__card flagship__card--lib">
+        <header class="flagship__head">
+          <p class="flagship__id">LIB-002 · go · <a class="flagship__url" href="library/">library docs ↗</a></p>
+          <h3 class="flagship__name">go library</h3>
+          <p class="flagship__tag">Compose a custom MCP server. Bring your own auth.</p>
+        </header>
+        <div class="flagship__body">
+          <p><code>client.New</code> returns a configured DataHub handle. <code>tools.NewToolkit</code> packages the catalog operations as MCP tools. Register them on your own <em class="serif">MCPServer</em>, then attach <code>Use</code> middleware, interceptors, and transformers for redaction or audit logging. No forking required.</p>
+        </div>
+        <div class="flagship__demo">
+          <div class="terminal">
+            <div class="terminal__bar">
+              <span></span><span></span><span></span>
+              <em>~ / library</em>
+            </div>
+<pre class="terminal__body"><span class="t-prompt">$</span> go get github.com/txn2/mcp-datahub
+
+<span class="t-mute">// main.go</span>
+cfg := multiserver.FromEnv()
+dh, _ := client.New(ctx, cfg.Primary())
+
+kit := tools.NewToolkit(dh, tools.Config{
+    WriteEnabled: <span class="t-ok">false</span>,
+    DefaultLimit: 20,
+})
+kit.RegisterAll(srv)</pre>
+          </div>
+        </div>
+        <footer class="flagship__foot">
+          <a class="btn btn--accent" href="library/quickstart/">library quickstart →</a>
+          <a class="btn" href="library/composability/">composability ↗</a>
+          <a class="btn" href="https://pkg.go.dev/github.com/txn2/mcp-datahub" aria-label="mcp-datahub on pkg.go.dev">pkg.go.dev ↗</a>
+        </footer>
+      </article>
+    </div>
+  </section>
+
+  {# WHAT MCP-DATAHUB DOES / STACK LIST #}
+  <section class="section section--stack" id="features">
+    <header class="section__head">
+      <p class="section__index">§ 02 / what it does</p>
+      <h2 class="section__title">
+        DataHub as <em class="serif">tools</em>. Not a black box.
+      </h2>
+      <p class="section__lede">
+        mcp-datahub exposes DataHub as a small, deliberate set of MCP tools. Each tool maps to one catalog operation, with strict input validation, sane limits, and clear error contracts. Twelve tools cover thirty-five operations through a discriminator-pattern surface.
+      </p>
+    </header>
+
+    <ol class="stack">
+      <li class="stack__row">
+        <span class="stack__num">001</span>
+        <div class="stack__main">
+          <a class="stack__name" href="server/tools/">search, get, browse</a>
+          <p class="stack__desc"><code>datahub_search</code> with keyword or semantic mode, <code>datahub_get_entity</code> by URN, <code>datahub_get_schema</code> for fields, <code>datahub_browse</code> for tags, domains, and data products. Nine read tools that are always safe to expose.</p>
+        </div>
+        <span class="stack__tag">tools</span>
+        <span class="stack__year" aria-hidden="true">↗</span>
+      </li>
+      <li class="stack__row">
+        <span class="stack__num">002</span>
+        <div class="stack__main">
+          <a class="stack__name" href="reference/security/">read-only by default</a>
+          <p class="stack__desc"><code>DATAHUB_WRITE_ENABLED=false</code> is the default. The three write tools (<code>datahub_create</code>, <code>datahub_update</code>, <code>datahub_delete</code>) are blocked unless explicitly enabled, and can be toggled per connection.</p>
+        </div>
+        <span class="stack__tag">safety</span>
+        <span class="stack__year" aria-hidden="true">↗</span>
+      </li>
+      <li class="stack__row">
+        <span class="stack__num">003</span>
+        <div class="stack__main">
+          <a class="stack__name" href="server/configuration/">multi-server</a>
+          <p class="stack__desc">Configure several DataHub instances via <code>DATAHUB_ADDITIONAL_SERVERS</code>. Query production, staging, and a local stack from the same MCP install. <code>datahub_list_connections</code> lets the AI pick.</p>
+        </div>
+        <span class="stack__tag">runtime</span>
+        <span class="stack__year" aria-hidden="true">↗</span>
+      </li>
+      <li class="stack__row">
+        <span class="stack__num">004</span>
+        <div class="stack__main">
+          <a class="stack__name" href="server/tools/#datahub_get_lineage">column-level lineage</a>
+          <p class="stack__desc"><code>datahub_get_lineage</code> walks upstream and downstream graphs for any entity. Set <code>level=column</code> for column-grain lineage. The AI can trace where a value came from before quoting it.</p>
+        </div>
+        <span class="stack__tag">graph</span>
+        <span class="stack__year" aria-hidden="true">↗</span>
+      </li>
+      <li class="stack__row">
+        <span class="stack__num">005</span>
+        <div class="stack__main">
+          <a class="stack__name" href="server/tools/">crud through one tool</a>
+          <p class="stack__desc">Three write tools cover thirty-five operations through a <code>what</code> discriminator: tag entities, link documents, manage glossary terms, edit data products, file incidents, attach owners. Idempotent updates, destructive deletes flagged.</p>
+        </div>
+        <span class="stack__tag">write</span>
+        <span class="stack__year" aria-hidden="true">↗</span>
+      </li>
+      <li class="stack__row">
+        <span class="stack__num">006</span>
+        <div class="stack__main">
+          <a class="stack__name" href="library/composability/">middleware &amp; interceptors</a>
+          <p class="stack__desc">Wrap tool execution with <code>Use</code> middleware. Block or rewrite requests with interceptors. Redact, audit, or transform results post-execution. Compose enterprise concerns without forking the toolkit.</p>
+        </div>
+        <span class="stack__tag">compose</span>
+        <span class="stack__year" aria-hidden="true">↗</span>
+      </li>
+      <li class="stack__row stack__row--more">
+        <span class="stack__num">···</span>
+        <div class="stack__main">
+          <a class="stack__name" href="ecosystem/">part of the txn2 mcp data platform</a>
+          <p class="stack__desc">Sister projects: <a href="https://mcp-trino.txn2.com">mcp-trino</a> for federated SQL, <a href="https://mcp-s3.txn2.com">mcp-s3</a> for object storage, <a href="https://mcp-data-platform.txn2.com">mcp-data-platform</a> as the catalog.</p>
+        </div>
+        <span class="stack__tag">+ ecosystem</span>
+        <span class="stack__year" aria-hidden="true">↗</span>
+      </li>
+    </ol>
+  </section>
+
+  {# CODA / sister projects, context #}
+  <section class="section section--coda">
+    <div class="coda">
+      <p class="coda__kicker">// open source</p>
+      <p class="coda__big">
+        mcp-datahub is one of several open source components by <a href="https://imti.co"><em class="serif">Craig Johnston</em></a>, sponsored by <a href="https://deasil.works"><em class="serif">Deasil Works, Inc.</em></a> and <a href="https://plexara.io"><em class="serif">Plexara</em></a>. Released under the Apache 2.0 license. Built to give AI assistants a safe, composable bridge to data catalogs.
+      </p>
+      <div class="coda__cta">
+        <a class="btn btn--big" href="https://github.com/txn2/mcp-datahub">github.com/txn2/mcp-datahub →</a>
+        <a class="btn" href="https://txn2.com">txn2.com ↗</a>
+        <a class="btn" href="https://pkg.go.dev/github.com/txn2/mcp-datahub">pkg.go.dev ↗</a>
+        <a class="btn" href="https://github.com/txn2/mcp-datahub/releases">releases ↗</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+{% endblock %}
+
+{# Custom homepage footer replaces Material's. Class names prefixed
+   home-footer to avoid global collision with markdown class="footer". #}
+{% block footer %}
+<footer class="home-footer">
+  <div class="home-footer__rule" aria-hidden="true"></div>
+  <div class="home-footer__inner">
+    <div class="home-footer__col">
+      <p class="home-footer__label">about</p>
+      <p class="home-footer__text">A composable MCP server for DataHub metadata catalogs by <a href="https://imti.co">Craig Johnston</a>, part of the <a href="https://txn2.com">txn2</a> open source organization, sponsored by <a href="https://deasil.works">Deasil Works, Inc.</a> and <a href="https://plexara.io">Plexara</a>.</p>
+    </div>
+    <div class="home-footer__col">
+      <p class="home-footer__label">docs</p>
+      <ul class="home-footer__links">
+        <li><a href="server/installation/">installation</a></li>
+        <li><a href="server/configuration/">configuration</a></li>
+        <li><a href="server/tools/">tools</a></li>
+        <li><a href="library/">go library</a></li>
+        <li><a href="reference/tools-api/">reference</a></li>
+        <li><a href="support/troubleshooting/">troubleshooting</a></li>
+      </ul>
+    </div>
+    <div class="home-footer__col">
+      <p class="home-footer__label">interfaces</p>
+      <ul class="home-footer__links">
+        <li><a href="server/">standalone server</a></li>
+        <li><a href="library/">go library</a></li>
+        <li><a href="https://pkg.go.dev/github.com/txn2/mcp-datahub">pkg.go.dev</a></li>
+        <li><a href="ecosystem/">mcp data platform</a></li>
+      </ul>
+    </div>
+    <div class="home-footer__col">
+      <p class="home-footer__label">code</p>
+      <ul class="home-footer__links">
+        <li><a href="https://github.com/txn2/mcp-datahub">github.com/txn2/mcp-datahub</a></li>
+        <li><a href="https://github.com/txn2/mcp-datahub/releases">releases</a></li>
+        <li><a href="https://github.com/txn2/mcp-datahub/issues">issues</a></li>
+        <li><a href="https://github.com/txn2/mcp-datahub/blob/main/LICENSE">apache 2.0</a></li>
+      </ul>
+    </div>
+    <div class="home-footer__col home-footer__col--meta">
+      <p class="home-footer__label">txn2 / org</p>
+      <p class="home-footer__text"><a href="https://txn2.com">txn2.com&nbsp;↗</a><br>
+      <span class="home-footer__links__sub">canonical home of the txn2 open source organization</span></p>
+      <p class="home-footer__mono">apache 2.0 license <span class="dot">·</span> <span data-clock>·· UTC</span></p>
+    </div>
+  </div>
+  <div class="home-footer__base">
+    <p>© 2025-2026 · <a href="https://txn2.com">txn2</a> · mcp-datahub released under Apache 2.0.</p>
+    <p class="home-footer__base__tag"><a href="https://txn2.com">design · txn2.com&nbsp;↗</a></p>
+  </div>
+</footer>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  // Live UTC clock for rail/footer.
+  // Guarded against duplicate registration: Material's instant-nav rehydrates
+  // the body on every navigation back to the homepage; without this guard a
+  // fresh setInterval handle leaks each visit.
+  (function () {
+    if (window.__mcpDatahubClock) {
+      window.__mcpDatahubClock.tick();
+      return;
+    }
+    function tick() {
+      var now = new Date();
+      var hh = String(now.getUTCHours()).padStart(2, '0');
+      var mm = String(now.getUTCMinutes()).padStart(2, '0');
+      var stamp = hh + ':' + mm + ' UTC';
+      document.querySelectorAll('[data-clock]').forEach(function (el) {
+        el.textContent = stamp;
+      });
+    }
+    tick();
+    var handle = setInterval(tick, 30 * 1000);
+    window.__mcpDatahubClock = { tick: tick, handle: handle };
+  })();
+</script>
+{% endblock %}

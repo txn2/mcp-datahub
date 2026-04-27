@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- canvas -->
+  <rect width="1200" height="630" fill="#0B0B09"/>
+
+  <defs>
+    <radialGradient id="tint" cx="14%" cy="6%" r="55%">
+      <stop offset="0%" stop-color="#FF5A1F" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#FF5A1F" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#ECE3CE" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#tint)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- crosshair corners -->
+  <g stroke="#5A554B" stroke-width="1">
+    <line x1="40" y1="56" x2="68" y2="56"/>
+    <line x1="54" y1="42" x2="54" y2="70"/>
+    <line x1="1132" y1="56" x2="1160" y2="56"/>
+    <line x1="1146" y1="42" x2="1146" y2="70"/>
+    <line x1="40" y1="574" x2="68" y2="574"/>
+    <line x1="54" y1="560" x2="54" y2="588"/>
+    <line x1="1132" y1="574" x2="1160" y2="574"/>
+    <line x1="1146" y1="560" x2="1146" y2="588"/>
+  </g>
+
+  <!-- top rail strip -->
+  <line x1="80" y1="100" x2="1120" y2="100" stroke="#2A2922" stroke-width="1"/>
+  <text x="80" y="80" fill="#ECE3CE" font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="400" font-size="22">mcp-datahub</text>
+  <text x="208" y="80" fill="#968F80" font-family="JetBrains Mono, Menlo, monospace" font-size="13" letter-spacing="0.6">· mcp server for datahub</text>
+  <text x="1120" y="80" fill="#FF5A1F" font-family="JetBrains Mono, Menlo, monospace" font-size="12" font-weight="700" letter-spacing="2.4" text-anchor="end">TXN2 / OPEN SOURCE</text>
+
+  <!-- symbol mark, signal accent -->
+  <svg x="92" y="180" width="280" height="280" viewBox="10 10 80 80" overflow="visible">
+    <path fill="#ECE3CE" d="M16.667,43.33C16.667,69.104 37.559,90 63.333,90L63.333,83.333C41.24,83.333 23.333,65.423 23.333,43.33L16.667,43.33Z M63.333,43.333L63.333,63.333C52.285,63.333 43.333,54.378 43.333,43.33C43.333,32.285 52.285,23.333 63.333,23.333C74.382,23.333 83.333,32.285 83.333,43.33L63.333,43.333Z"/>
+    <path fill="#FF5A1F" d="M63.333,16.667C48.604,16.667 36.667,28.607 36.667,43.331C36.667,58.06 48.604,70 63.333,70L63.333,76.667C44.922,76.667 30,61.741 30,43.33C30,24.922 44.922,10 63.333,10L63.333,16.667Z"/>
+  </svg>
+
+  <!-- typographic display, three rows -->
+  <text x="420" y="270" fill="#ECE3CE" font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="300" font-size="108" letter-spacing="-3">mcp-datahub</text>
+
+  <!-- outline row -->
+  <text x="420" y="380" fill="none" stroke="#ECE3CE" stroke-width="1.4" font-family="Fraunces, Georgia, serif" font-weight="400" font-size="84" letter-spacing="-2">metadata catalog</text>
+
+  <text x="420" y="475" fill="#ECE3CE" font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="300" font-size="78" letter-spacing="-2">for ai.</text>
+
+  <!-- bottom strip -->
+  <line x1="80" y1="538" x2="1120" y2="538" stroke="#2A2922" stroke-width="1"/>
+
+  <line x1="80" y1="560" x2="80" y2="590" stroke="#FF5A1F" stroke-width="2"/>
+  <text x="100" y="582" fill="#C9C0AB" font-family="JetBrains Mono, Menlo, monospace" font-size="13" letter-spacing="1.8">APACHE 2.0  ·  COMPOSABLE MCP SERVER  ·  GO  ·  READ-ONLY BY DEFAULT</text>
+
+  <text x="1120" y="582" fill="#FF5A1F" font-family="JetBrains Mono, Menlo, monospace" font-size="14" font-weight="700" letter-spacing="2.2" text-anchor="end">MCP-DATAHUB.TXN2.COM  ↗</text>
+</svg>
