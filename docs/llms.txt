@@ -1,0 +1,79 @@
+# mcp-datahub
+
+> Composable MCP server for DataHub metadata catalogs. Read-only by default with twelve tools that surface search, schemas, lineage, glossary, and data products. Imports as a Go library to compose custom MCP servers with auth, tenant isolation, and audit logging.
+
+mcp-datahub is a Model Context Protocol server that gives AI assistants safe, structured access to DataHub. Search across datasets, dashboards, pipelines, and queries. Read schemas, walk upstream and downstream lineage at table or column grain, fetch glossary terms, and resolve domains and data products. The standalone server works out of the box; the Go library lets you build custom MCP servers with middleware, interceptors, and transformers without forking.
+
+## MCP Server
+
+- [Server Overview](https://mcp-datahub.txn2.com/server/): How the standalone server works
+- [Installation](https://mcp-datahub.txn2.com/server/installation/): Install and connect to AI clients (Claude Code, Claude Desktop, Cursor)
+- [Configuration](https://mcp-datahub.txn2.com/server/configuration/): Environment variables, tokens, multi-server, write opt-in
+- [Tools Reference](https://mcp-datahub.txn2.com/server/tools/): All twelve tools with parameters and examples
+
+## Go Library
+
+- [Library Overview](https://mcp-datahub.txn2.com/library/): Compose custom MCP servers from mcp-datahub packages
+- [Quick Start](https://mcp-datahub.txn2.com/library/quickstart/): Library usage in five minutes
+- [Architecture](https://mcp-datahub.txn2.com/library/architecture/): Toolkit, client, and extensions layout
+- [Composability](https://mcp-datahub.txn2.com/library/composability/): Combine with mcp-trino, mcp-s3, and custom toolkits
+
+## Tutorials
+
+- [Your First Search](https://mcp-datahub.txn2.com/tutorials/first-search/): Walk through a catalog search end to end
+- [Exploring Lineage](https://mcp-datahub.txn2.com/tutorials/exploring-lineage/): Trace upstream and downstream dependencies
+- [Building a Custom Server](https://mcp-datahub.txn2.com/tutorials/building-custom-server/): Wire mcp-datahub into your own MCP binary
+- [Adding Authentication](https://mcp-datahub.txn2.com/tutorials/adding-authentication/): OAuth, API keys, and SSO middleware
+
+## How-To Guides
+
+- [Authentication](https://mcp-datahub.txn2.com/guides/authentication/): Production auth strategies
+- [Multi-Tenant Isolation](https://mcp-datahub.txn2.com/guides/multi-tenant/): Per-tenant scope and routing
+- [Audit Logging](https://mcp-datahub.txn2.com/guides/audit-logging/): Structured tool-call logs for SOC2 and HIPAA
+- [Rate Limiting](https://mcp-datahub.txn2.com/guides/rate-limiting/): Protect upstream DataHub from runaway queries
+- [Custom Middleware](https://mcp-datahub.txn2.com/guides/custom-middleware/): Wrap tool execution with your own logic
+- [Testing](https://mcp-datahub.txn2.com/guides/testing/): Unit and integration test patterns
+
+## Concepts
+
+- [Understanding URNs](https://mcp-datahub.txn2.com/concepts/urns/): How DataHub identifies entities
+- [Entity Types](https://mcp-datahub.txn2.com/concepts/entity-types/): Datasets, dashboards, charts, pipelines, glossary terms, data products
+- [Lineage Model](https://mcp-datahub.txn2.com/concepts/lineage-model/): Upstream, downstream, and column grain
+- [MCP Protocol](https://mcp-datahub.txn2.com/concepts/mcp-protocol/): The wire protocol AI clients speak
+
+## Reference
+
+- [Tools API](https://mcp-datahub.txn2.com/reference/tools-api/): Detailed tool schemas and contracts
+- [Configuration Reference](https://mcp-datahub.txn2.com/reference/configuration/): All environment variables and structured options
+- [Security](https://mcp-datahub.txn2.com/reference/security/): Read-only mode, write opt-in, token handling, audit logging
+
+## Key Capabilities
+
+- Read-only by default. The three write tools require DATAHUB_WRITE_ENABLED=true and can be toggled per connection.
+- Twelve MCP tools covering thirty-five operations through a discriminator pattern (what parameter on create/update/delete).
+- Search across all entity types with keyword or semantic mode; advanced filters via fieldPaths, fieldTags, platform.
+- Column-level lineage via datahub_get_lineage with level=column.
+- Multi-server: configure several DataHub instances via DATAHUB_ADDITIONAL_SERVERS JSON, route per request.
+- Composable Go library: middleware wraps tool execution; interceptors gate or rewrite requests; transformers redact or audit results.
+- DataHub v1.3+ supported, full feature set on v1.4+, schema validated against v1.5.0.1.
+- Stdio transport: ships as a standard MCP wire-protocol binary, no daemon, no HTTP server.
+
+## Quick Start
+
+```bash
+# Install
+go install github.com/txn2/mcp-datahub/cmd/mcp-datahub@latest
+
+# Wire to Claude Code
+claude mcp add datahub \
+  -e DATAHUB_URL=https://datahub.example.com/api/graphql \
+  -e DATAHUB_TOKEN=$TOKEN \
+  -- mcp-datahub
+```
+
+## Optional
+
+- [Troubleshooting](https://mcp-datahub.txn2.com/support/troubleshooting/): Common issues and fixes
+- [Changelog](https://mcp-datahub.txn2.com/support/changelog/): Release history
+- [GitHub Repository](https://github.com/txn2/mcp-datahub): Source code, issues, and releases
+- [Ecosystem](https://mcp-datahub.txn2.com/ecosystem/): Sister MCP projects (mcp-s3, mcp-trino, mcp-data-platform)
