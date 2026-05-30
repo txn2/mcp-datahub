@@ -3,7 +3,7 @@ module github.com/txn2/mcp-datahub
 go 1.25.0
 
 require (
-	github.com/modelcontextprotocol/go-sdk v1.6.0
+	github.com/modelcontextprotocol/go-sdk v1.6.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
