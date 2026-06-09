@@ -324,8 +324,15 @@ var schemaGetDataProduct = json.RawMessage(`{
     },
     "assets": {
       "type": ["array", "null"],
-      "description": "URNs of constituent datasets",
-      "items": {"type": "string"}
+      "description": "Constituent datasets (member entities) of the data product",
+      "items": {
+        "type": "object",
+        "properties": {
+          "urn":  {"type": "string"},
+          "name": {"type": "string"},
+          "type": {"type": "string"}
+        }
+      }
     },
     "properties": {
       "type": ["object", "null"],

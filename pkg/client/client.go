@@ -1192,8 +1192,15 @@ func (c *Client) GetDataProduct(ctx context.Context, urn string) (*types.DataPro
 		})
 	}
 
-	// Note: Assets field not available in all DataHub versions
-	// Data product assets can be queried via search with the data product URN filter
+	// Best-effort: populate constituent datasets. Issued as a separate query so a
+	// DataHub instance whose schema lacks the data product entities resolver
+	// returns the product without members rather than failing the whole lookup.
+	if assets, err := c.getDataProductEntities(ctx, urn); err != nil {
+		c.logger.Debug("GetDataProduct: member entities unavailable",
+			"urn", urn, "error", err.Error())
+	} else if len(assets) > 0 {
+		product.Assets = assets
+	}
 
 	if len(response.DataProduct.Properties.CustomProperties) > 0 {
 		product.Properties = make(map[string]string)
@@ -1203,6 +1210,51 @@ func (c *Client) GetDataProduct(ctx context.Context, urn string) (*types.DataPro
 	}
 
 	return product, nil
+}
+
+// dataProductEntitiesLimit bounds how many member entities GetDataProduct
+// fetches for a single data product.
+const dataProductEntitiesLimit = 200
+
+// getDataProductEntities returns the entities (constituent datasets) that belong
+// to a data product. It is best-effort: callers treat an error as "members
+// unavailable" rather than failing the whole data product lookup.
+func (c *Client) getDataProductEntities(ctx context.Context, urn string) ([]types.Entity, error) {
+	variables := map[string]any{
+		"urn":   urn,
+		"count": dataProductEntitiesLimit,
+	}
+
+	var response struct {
+		DataProduct struct {
+			Entities struct {
+				SearchResults []struct {
+					Entity struct {
+						URN  string `json:"urn"`
+						Type string `json:"type"`
+						Name string `json:"name"`
+					} `json:"entity"`
+				} `json:"searchResults"`
+			} `json:"entities"`
+		} `json:"dataProduct"`
+	}
+
+	if err := c.Execute(ctx, GetDataProductEntitiesQuery, variables, &response); err != nil {
+		return nil, err
+	}
+
+	assets := make([]types.Entity, 0, len(response.DataProduct.Entities.SearchResults))
+	for _, r := range response.DataProduct.Entities.SearchResults {
+		if r.Entity.URN == "" {
+			continue
+		}
+		assets = append(assets, types.Entity{
+			URN:  r.Entity.URN,
+			Type: r.Entity.Type,
+			Name: r.Entity.Name,
+		})
+	}
+	return assets, nil
 }
 
 // extractDatasetURNFromSchemaFieldURN extracts the dataset URN from a schemaField URN.

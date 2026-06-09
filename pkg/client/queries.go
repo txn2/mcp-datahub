@@ -572,6 +572,31 @@ query getDataProduct($urn: String!) {
 }
 `
 
+	// GetDataProductEntitiesQuery retrieves the member entities (constituent
+	// datasets) of a data product. It is issued separately from
+	// GetDataProductQuery so a DataHub instance whose schema lacks the data
+	// product entities resolver degrades to a product without members instead of
+	// failing the whole lookup. The entities argument is SearchAcrossEntitiesInput,
+	// whose query field is required, so "*" matches all members.
+	GetDataProductEntitiesQuery = `
+query getDataProductEntities($urn: String!, $count: Int!) {
+  dataProduct(urn: $urn) {
+    entities(input: {query: "*", start: 0, count: $count}) {
+      total
+      searchResults {
+        entity {
+          urn
+          type
+          ... on Dataset {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+`
+
 	// GetColumnLineageQuery retrieves fine-grained column-level lineage for a dataset.
 	// Uses SchemaFieldRef.urn (available in DataHub v1.3.x+) to get the dataset URN.
 	GetColumnLineageQuery = `

@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
 // writeJSON writes a JSON response to the http.ResponseWriter for tests.
@@ -1763,7 +1766,34 @@ func TestClientListDataProducts(t *testing.T) {
 // The direct test is complex because it requires coordinating multiple HTTP calls.
 
 func TestClientGetDataProduct(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	// GetDataProduct issues two queries: the data product, then its member
+	// entities. The mock distinguishes them by operation name so the test
+	// exercises the real two-call path that populates Assets.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		if strings.Contains(string(body), "getDataProductEntities") {
+			writeJSON(t, w, map[string]interface{}{
+				"data": map[string]interface{}{
+					"dataProduct": map[string]interface{}{
+						"entities": map[string]interface{}{
+							"total": 2,
+							"searchResults": []map[string]interface{}{
+								{"entity": map[string]interface{}{
+									"urn":  "urn:li:dataset:(urn:li:dataPlatform:hive,sales.orders,PROD)",
+									"type": "DATASET", "name": "orders",
+								}},
+								{"entity": map[string]interface{}{
+									"urn":  "urn:li:dataset:(urn:li:dataPlatform:hive,sales.customers,PROD)",
+									"type": "DATASET", "name": "customers",
+								}},
+								{"entity": map[string]interface{}{"urn": "", "type": "DATASET", "name": "skipped"}},
+							},
+						},
+					},
+				},
+			})
+			return
+		}
 		writeJSON(t, w, map[string]interface{}{
 			"data": map[string]interface{}{
 				"dataProduct": map[string]interface{}{
@@ -1832,6 +1862,58 @@ func TestClientGetDataProduct(t *testing.T) {
 	}
 	if product.Properties["team"] != "data-platform" {
 		t.Error("GetDataProduct() custom properties not set")
+	}
+	wantAssets := []types.Entity{
+		{URN: "urn:li:dataset:(urn:li:dataPlatform:hive,sales.orders,PROD)", Type: "DATASET", Name: "orders"},
+		{URN: "urn:li:dataset:(urn:li:dataPlatform:hive,sales.customers,PROD)", Type: "DATASET", Name: "customers"},
+	}
+	if !reflect.DeepEqual(product.Assets, wantAssets) {
+		t.Errorf("GetDataProduct() Assets = %v, want %v", product.Assets, wantAssets)
+	}
+}
+
+func TestClientGetDataProductMembersBestEffort(t *testing.T) {
+	// When the member-entities query fails (for example a DataHub version
+	// without the resolver), GetDataProduct still returns the product, just
+	// without Assets, rather than failing the whole lookup.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		if strings.Contains(string(body), "getDataProductEntities") {
+			w.WriteHeader(http.StatusOK)
+			writeJSON(t, w, map[string]interface{}{
+				"errors": []map[string]interface{}{
+					{"message": "Cannot query field \"entities\" on type \"DataProduct\""},
+				},
+			})
+			return
+		}
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"dataProduct": map[string]interface{}{
+					"urn": "urn:li:dataProduct:test",
+					"properties": map[string]interface{}{
+						"name": "Test Product",
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{URL: server.URL, Token: "test-token", RetryMax: 0})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	product, err := client.GetDataProduct(context.Background(), "urn:li:dataProduct:test")
+	if err != nil {
+		t.Fatalf("GetDataProduct() unexpected error: %v", err)
+	}
+	if product.Name != "Test Product" {
+		t.Errorf("GetDataProduct() Name = %s, want Test Product", product.Name)
+	}
+	if len(product.Assets) != 0 {
+		t.Errorf("GetDataProduct() Assets = %v, want empty on entities failure", product.Assets)
 	}
 }
 

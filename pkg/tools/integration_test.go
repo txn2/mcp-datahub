@@ -196,7 +196,10 @@ func TestToolsViaServer_SchemaValidation(t *testing.T) {
 				Name:   "Rich Product",
 				Domain: domain,
 				Owners: []types.Owner{owner},
-				Assets: []string{"urn:li:dataset:a", "urn:li:dataset:b"},
+				Assets: []types.Entity{
+					{URN: "urn:li:dataset:a", Type: "DATASET", Name: "a"},
+					{URN: "urn:li:dataset:b", Type: "DATASET", Name: "b"},
+				},
 			}, nil
 		},
 		getSchemaFunc: func(_ context.Context, _ string) (*types.SchemaMetadata, error) {
