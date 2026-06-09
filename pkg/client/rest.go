@@ -245,14 +245,15 @@ func escapeNonASCII(data []byte) string {
 		r, size := utf8.DecodeRune(data[i:])
 		if r > 0x7F {
 			if r <= 0xFFFF {
-				fmt.Fprintf(&buf, "\\u%04x", r)
+				// strings.Builder writes never return an error.
+				_, _ = fmt.Fprintf(&buf, "\\u%04x", r)
 			} else {
 				// Supplementary character: encode as surrogate pair.
 				r -= 0x10000
-				fmt.Fprintf(&buf, "\\u%04x\\u%04x", 0xD800+(r>>10), 0xDC00+(r&0x3FF))
+				_, _ = fmt.Fprintf(&buf, "\\u%04x\\u%04x", 0xD800+(r>>10), 0xDC00+(r&0x3FF))
 			}
 		} else {
-			buf.WriteByte(data[i])
+			_ = buf.WriteByte(data[i])
 		}
 		i += size
 	}

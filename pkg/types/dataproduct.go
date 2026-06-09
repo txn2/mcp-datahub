@@ -8,6 +8,6 @@ type DataProduct struct {
 	Description string            `json:"description,omitempty"`
 	Domain      *Domain           `json:"domain,omitempty"`
 	Owners      []Owner           `json:"owners,omitempty"`
-	Assets      []string          `json:"assets,omitempty"` // URNs of datasets
+	Assets      []Entity          `json:"assets,omitempty"` // constituent datasets (member entities)
 	Properties  map[string]string `json:"properties,omitempty"`
 }
