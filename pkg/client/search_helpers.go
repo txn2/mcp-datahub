@@ -76,7 +76,7 @@ func parseSearchResult(sr searchResultItem) types.SearchEntity {
 	// For Document the title comes from info, content serves as description.
 	// Guard behind type check to avoid mis-attributing info fields from
 	// non-document entities in the polymorphic GraphQL union response.
-	if sr.Entity.Type == "DOCUMENT" {
+	if sr.Entity.Type == EntityTypeDocument {
 		if sr.Entity.Info.Title != "" {
 			name = sr.Entity.Info.Title
 		}

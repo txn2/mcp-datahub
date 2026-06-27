@@ -136,32 +136,12 @@ func (c *Client) doSearchAcrossEntities(
 	extraFlags map[string]any,
 	opts []SearchOption,
 ) (*types.SearchResult, error) {
-	options := &searchOptions{
-		limit:  c.config.DefaultLimit,
-		offset: 0,
-	}
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	if options.limit > c.config.MaxLimit {
-		options.limit = c.config.MaxLimit
-	}
-
-	input := map[string]any{
-		"query": query,
-		"start": options.offset,
-		"count": options.limit,
-	}
+	input, options := c.buildBaseSearchInput(query, opts)
 
 	if len(options.types) > 0 {
 		input["types"] = options.types
 	} else if options.entityType != "" {
 		input["types"] = []string{options.entityType}
-	}
-
-	if len(options.orFilters) > 0 {
-		input["orFilters"] = buildOrFilters(options.orFilters)
 	}
 
 	for k, v := range extraFlags {
@@ -197,6 +177,36 @@ func (c *Client) doSearchAcrossEntities(
 	}
 
 	return result, nil
+}
+
+// buildBaseSearchInput resolves SearchOptions and builds the shared
+// searchAcrossEntities input map (query, start, count, orFilters). Entity-type
+// scoping is left to the caller so each search method can apply its own types.
+// The resolved options are returned so callers can read type/entityType values.
+func (c *Client) buildBaseSearchInput(query string, opts []SearchOption) (map[string]any, *searchOptions) {
+	options := &searchOptions{
+		limit:  c.config.DefaultLimit,
+		offset: 0,
+	}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	if options.limit > c.config.MaxLimit {
+		options.limit = c.config.MaxLimit
+	}
+
+	input := map[string]any{
+		"query": query,
+		"start": options.offset,
+		"count": options.limit,
+	}
+
+	if len(options.orFilters) > 0 {
+		input["orFilters"] = buildOrFilters(options.orFilters)
+	}
+
+	return input, options
 }
 
 // buildOrFilters converts SearchFilter slices into the GraphQL orFilters structure.

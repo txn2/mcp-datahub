@@ -81,6 +81,9 @@ func TestGraphQLQueriesMatchSchema(t *testing.T) {
 		// Semantic search (semantic_search.go)
 		"SemanticSearchQuery": SemanticSearchQuery,
 
+		// Document search (search_documents.go)
+		"SearchDocumentsQuery": SearchDocumentsQuery,
+
 		// Tag/term/description mutations (write_graphql.go)
 		"AddTagMutation":            AddTagMutation,
 		"RemoveTagMutation":         RemoveTagMutation,
