@@ -7,14 +7,11 @@ import (
 	"github.com/txn2/mcp-datahub/pkg/types"
 )
 
-// GraphQL queries for context documents (DataHub 1.4.x+).
-const (
-	// GetDocumentQuery retrieves a single document by URN.
-	GetDocumentQuery = `
-query getDocument($urn: String!) {
-  document(urn: $urn) {
-    urn
-    type
+// documentSelectionFields is the shared GraphQL selection set for a Document
+// entity (everything after urn/type). Reused by GetDocumentQuery and
+// SearchDocumentsQuery so single-document reads and document search return
+// identical metadata from a single source of truth.
+const documentSelectionFields = `
     subType
     info {
       title
@@ -101,7 +98,16 @@ query getDocument($urn: String!) {
         }
       }
     }
-  }
+`
+
+// GraphQL queries for context documents (DataHub 1.4.x+).
+const (
+	// GetDocumentQuery retrieves a single document by URN.
+	GetDocumentQuery = `
+query getDocument($urn: String!) {
+  document(urn: $urn) {
+    urn
+    type` + documentSelectionFields + `  }
 }
 `
 
