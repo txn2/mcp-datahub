@@ -124,72 +124,28 @@ query getRelatedDocuments($urn: String!, $input: RelatedDocumentsInput!) {
       relatedDocuments(input: $input) {
         total
         documents {
-          urn
-          subType
-          info {
-            title
-            contents {
-              text
-            }
-            status {
-              state
-            }
-          }
-        }
+          urn` + documentSelectionFields + `        }
       }
     }
     ... on GlossaryTerm {
       relatedDocuments(input: $input) {
         total
         documents {
-          urn
-          subType
-          info {
-            title
-            contents {
-              text
-            }
-            status {
-              state
-            }
-          }
-        }
+          urn` + documentSelectionFields + `        }
       }
     }
     ... on GlossaryNode {
       relatedDocuments(input: $input) {
         total
         documents {
-          urn
-          subType
-          info {
-            title
-            contents {
-              text
-            }
-            status {
-              state
-            }
-          }
-        }
+          urn` + documentSelectionFields + `        }
       }
     }
     ... on Container {
       relatedDocuments(input: $input) {
         total
         documents {
-          urn
-          subType
-          info {
-            title
-            contents {
-              text
-            }
-            status {
-              state
-            }
-          }
-        }
+          urn` + documentSelectionFields + `        }
       }
     }
   }

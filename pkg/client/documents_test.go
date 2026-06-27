@@ -178,6 +178,65 @@ func TestGetRelatedDocuments(t *testing.T) {
 	}
 }
 
+// TestGetRelatedDocuments_FullProjection guards that related documents carry the
+// same projection as GetDocument/SearchDocuments — specifically settings and
+// relatedAssets. Without settings, a hidden document (showInGlobalContext=false)
+// parses as Settings==nil and a visibility-gated consumer would surface it.
+func TestGetRelatedDocuments_FullProjection(t *testing.T) {
+	response := `{"data": {"entity": {"relatedDocuments": {
+		"total": 1,
+		"documents": [
+			{
+				"urn": "urn:li:document:hidden-1",
+				"subType": "RUNBOOK",
+				"info": {
+					"title": "Hidden Runbook",
+					"contents": {"text": "internal only"},
+					"status": {"state": "PUBLISHED"},
+					"relatedAssets": [{"asset": {"urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)"}}]
+				},
+				"settings": {"showInGlobalContext": false}
+			}
+		]
+	}}}}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL,
+		token:      "test-token",
+		httpClient: server.Client(),
+		logger:     NopLogger{},
+		config:     DefaultConfig(),
+	}
+
+	docs, err := c.GetRelatedDocuments(context.Background(), "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(docs) != 1 {
+		t.Fatalf("len = %d, want 1", len(docs))
+	}
+
+	doc := docs[0]
+	if doc.Settings == nil {
+		t.Fatal("Settings == nil; visibility flag did not travel on the related-documents path")
+	}
+	if doc.Settings.ShowInGlobalContext {
+		t.Errorf("ShowInGlobalContext = true, want false (steward hid this document)")
+	}
+	if len(doc.RelatedAssets) != 1 {
+		t.Fatalf("RelatedAssets len = %d, want 1", len(doc.RelatedAssets))
+	}
+	if doc.RelatedAssets[0].URN != "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.users,PROD)" {
+		t.Errorf("RelatedAssets[0].URN = %q", doc.RelatedAssets[0].URN)
+	}
+}
+
 func TestParseDocumentResponse(t *testing.T) {
 	raw := `{
 		"urn": "urn:li:document:test",
