@@ -220,6 +220,37 @@ query getEntity($urn: String!) {
 }
 `
 
+	// GetEntityAspectsQuery reads the globalTags and glossaryTerms raw aspects of
+	// GraphQL-only entity types (domain, glossaryTerm, glossaryNode). These types
+	// do not expose typed tags/glossaryTerms GraphQL fields, so their associations
+	// are read through the experimental aspects API instead. This is a separate
+	// query from GetEntityQuery so a failure (older DataHub, unauthorized token)
+	// degrades gracefully rather than failing the whole GetEntity call.
+	GetEntityAspectsQuery = `
+query getEntityAspects($urn: String!) {
+  entity(urn: $urn) {
+    ... on Domain {
+      aspects(input: { aspectNames: ["globalTags", "glossaryTerms"] }) {
+        aspectName
+        payload
+      }
+    }
+    ... on GlossaryTerm {
+      aspects(input: { aspectNames: ["globalTags", "glossaryTerms"] }) {
+        aspectName
+        payload
+      }
+    }
+    ... on GlossaryNode {
+      aspects(input: { aspectNames: ["globalTags", "glossaryTerms"] }) {
+        aspectName
+        payload
+      }
+    }
+  }
+}
+`
+
 	// GetSchemaQuery retrieves schema for a dataset.
 	GetSchemaQuery = `
 query getSchema($urn: String!) {

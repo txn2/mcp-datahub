@@ -525,6 +525,174 @@ func TestClientGetEntityWithEditableProperties(t *testing.T) {
 	}
 }
 
+func TestClientGetEntityRawAspectsTagsTerms(t *testing.T) {
+	// Domain/glossaryTerm/glossaryNode do not expose typed tags/glossaryTerms
+	// GraphQL fields; GetEntity reads them from raw aspect payloads instead.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"entity": map[string]interface{}{
+					"urn":  "urn:li:domain:marketing",
+					"type": "DOMAIN",
+					"aspects": []map[string]interface{}{
+						{
+							"aspectName": "globalTags",
+							"payload":    `{"tags":[{"tag":"urn:li:tag:Curated"},{"tag":"urn:li:tag:PII"}]}`,
+						},
+						{
+							"aspectName": "glossaryTerms",
+							"payload":    `{"terms":[{"urn":"urn:li:glossaryTerm:Revenue"}],"auditStamp":{"time":0,"actor":"urn:li:corpuser:datahub"}}`,
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{URL: server.URL, Token: "test-token", RetryMax: 0})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	entity, err := client.GetEntity(context.Background(), "urn:li:domain:marketing")
+	if err != nil {
+		t.Fatalf("GetEntity() unexpected error: %v", err)
+	}
+
+	wantTags := []string{"urn:li:tag:Curated", "urn:li:tag:PII"}
+	if len(entity.Tags) != len(wantTags) {
+		t.Fatalf("GetEntity() Tags len = %d, want %d", len(entity.Tags), len(wantTags))
+	}
+	for i, want := range wantTags {
+		if entity.Tags[i].URN != want {
+			t.Errorf("GetEntity() Tags[%d].URN = %q, want %q", i, entity.Tags[i].URN, want)
+		}
+	}
+
+	if len(entity.GlossaryTerms) != 1 {
+		t.Fatalf("GetEntity() GlossaryTerms len = %d, want 1", len(entity.GlossaryTerms))
+	}
+	if got := entity.GlossaryTerms[0].URN; got != "urn:li:glossaryTerm:Revenue" {
+		t.Errorf("GetEntity() GlossaryTerms[0].URN = %q, want urn:li:glossaryTerm:Revenue", got)
+	}
+}
+
+func TestClientGetEntityRawAspectsGracefulDegradation(t *testing.T) {
+	// When the raw-aspect read fails (e.g. unsupported on older DataHub or an
+	// unauthorized token), GetEntity must still return the entity with empty
+	// tags/terms rather than failing the whole call.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		if strings.Contains(string(body), "getEntityAspects") {
+			writeJSON(t, w, map[string]interface{}{
+				"errors": []map[string]interface{}{
+					{"message": "Unauthorized to read aspects"},
+				},
+			})
+			return
+		}
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"entity": map[string]interface{}{
+					"urn":  "urn:li:domain:marketing",
+					"type": "DOMAIN",
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{URL: server.URL, Token: "test-token", RetryMax: 0})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	entity, err := client.GetEntity(context.Background(), "urn:li:domain:marketing")
+	if err != nil {
+		t.Fatalf("GetEntity() should degrade gracefully, got error: %v", err)
+	}
+	if entity.URN != "urn:li:domain:marketing" {
+		t.Errorf("GetEntity() URN = %q, want urn:li:domain:marketing", entity.URN)
+	}
+	if len(entity.Tags) != 0 || len(entity.GlossaryTerms) != 0 {
+		t.Errorf("GetEntity() expected empty tags/terms on degraded read, got %d tags, %d terms", len(entity.Tags), len(entity.GlossaryTerms))
+	}
+}
+
+func TestApplyRawAspects(t *testing.T) {
+	tests := []struct {
+		name      string
+		entity    *types.Entity
+		aspects   []rawAspect
+		wantTags  []string
+		wantTerms []string
+	}{
+		{
+			name:   "populates tags and terms from payloads",
+			entity: &types.Entity{},
+			aspects: []rawAspect{
+				{AspectName: "globalTags", Payload: `{"tags":[{"tag":"urn:li:tag:A"}]}`},
+				{AspectName: "glossaryTerms", Payload: `{"terms":[{"urn":"urn:li:glossaryTerm:B"}]}`},
+			},
+			wantTags:  []string{"urn:li:tag:A"},
+			wantTerms: []string{"urn:li:glossaryTerm:B"},
+		},
+		{
+			name:      "typed values take precedence and are not overwritten",
+			entity:    &types.Entity{Tags: []types.Tag{{URN: "urn:li:tag:Existing", Name: "Existing"}}},
+			aspects:   []rawAspect{{AspectName: "globalTags", Payload: `{"tags":[{"tag":"urn:li:tag:Raw"}]}`}},
+			wantTags:  []string{"urn:li:tag:Existing"},
+			wantTerms: nil,
+		},
+		{
+			name:      "malformed payload is a no-op",
+			entity:    &types.Entity{},
+			aspects:   []rawAspect{{AspectName: "globalTags", Payload: `not-json`}, {AspectName: "glossaryTerms", Payload: ``}},
+			wantTags:  nil,
+			wantTerms: nil,
+		},
+		{
+			name:      "empty urns are skipped",
+			entity:    &types.Entity{},
+			aspects:   []rawAspect{{AspectName: "globalTags", Payload: `{"tags":[{"tag":""},{"tag":"urn:li:tag:Keep"}]}`}},
+			wantTags:  []string{"urn:li:tag:Keep"},
+			wantTerms: nil,
+		},
+		{
+			name:      "unknown aspect names ignored",
+			entity:    &types.Entity{},
+			aspects:   []rawAspect{{AspectName: "ownership", Payload: `{"owners":[]}`}},
+			wantTags:  nil,
+			wantTerms: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			applyRawAspects(tt.entity, tt.aspects)
+
+			if len(tt.entity.Tags) != len(tt.wantTags) {
+				t.Fatalf("Tags len = %d, want %d", len(tt.entity.Tags), len(tt.wantTags))
+			}
+			for i, want := range tt.wantTags {
+				if tt.entity.Tags[i].URN != want {
+					t.Errorf("Tags[%d].URN = %q, want %q", i, tt.entity.Tags[i].URN, want)
+				}
+			}
+
+			if len(tt.entity.GlossaryTerms) != len(tt.wantTerms) {
+				t.Fatalf("GlossaryTerms len = %d, want %d", len(tt.entity.GlossaryTerms), len(tt.wantTerms))
+			}
+			for i, want := range tt.wantTerms {
+				if tt.entity.GlossaryTerms[i].URN != want {
+					t.Errorf("GlossaryTerms[%d].URN = %q, want %q", i, tt.entity.GlossaryTerms[i].URN, want)
+				}
+			}
+		})
+	}
+}
+
 func TestClientGetEntityWithPropertiesAndDeprecation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(t, w, map[string]interface{}{

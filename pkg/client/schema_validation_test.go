@@ -30,6 +30,7 @@ func TestGraphQLQueriesMatchSchema(t *testing.T) {
 		// Core queries (queries.go)
 		"SearchQuery":                 SearchQuery,
 		"GetEntityQuery":              GetEntityQuery,
+		"GetEntityAspectsQuery":       GetEntityAspectsQuery,
 		"GetSchemaQuery":              GetSchemaQuery,
 		"GetLineageQuery":             GetLineageQuery,
 		"GetQueriesQuery":             GetQueriesQuery,
