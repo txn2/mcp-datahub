@@ -578,7 +578,104 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 		}
 	}
 
+	// Supplement tags/glossary terms for GraphQL-only entity types via a separate
+	// raw-aspect read. Degrades gracefully so it never fails the GetEntity call.
+	c.enrichRawAspectAssociations(ctx, entity)
+
 	return entity, nil
+}
+
+// rawAspectReadTypes are entity types whose globalTags/glossaryTerms associations
+// are not exposed as typed GraphQL fields and so must be read from raw aspects.
+var rawAspectReadTypes = map[string]bool{
+	entityTypeDomain:       true,
+	entityTypeGlossaryTerm: true,
+	entityTypeGlossaryNode: true,
+}
+
+// enrichRawAspectAssociations populates an entity's Tags and GlossaryTerms for
+// GraphQL-only entity types (domain, glossaryTerm, glossaryNode) by reading the
+// globalTags/glossaryTerms raw aspects in a separate query. DataHub does not
+// expose typed tags/glossaryTerms GraphQL fields for these types. The read
+// degrades gracefully: any failure (unsupported on older DataHub, unauthorized
+// token) leaves the associations untouched and logs at debug level, preserving
+// the prior GetEntity behavior of returning the entity rather than erroring.
+func (c *Client) enrichRawAspectAssociations(ctx context.Context, entity *types.Entity) {
+	entityType, err := entityTypeFromURN(entity.URN)
+	if err != nil || !rawAspectReadTypes[entityType] {
+		return
+	}
+
+	var response struct {
+		Entity struct {
+			Aspects []rawAspect `json:"aspects"`
+		} `json:"entity"`
+	}
+
+	if err := c.Execute(ctx, GetEntityAspectsQuery, map[string]any{"urn": entity.URN}, &response); err != nil {
+		c.logger.Debug("GetEntity raw-aspect association fallback", "urn", entity.URN, "error", err.Error())
+		return
+	}
+
+	applyRawAspects(entity, response.Entity.Aspects)
+}
+
+// rawAspect mirrors the GraphQL RawAspect type. It carries an aspect's name and
+// its serialized JSON payload, used to read aspects that are not exposed as
+// typed GraphQL fields on an entity (e.g. globalTags/glossaryTerms on domain,
+// glossaryTerm, and glossaryNode).
+type rawAspect struct {
+	AspectName string `json:"aspectName"`
+	Payload    string `json:"payload"`
+}
+
+// applyRawAspects populates an entity's Tags and GlossaryTerms from raw aspect
+// payloads. Typed values parsed from dedicated GraphQL fields take precedence
+// and are never overwritten. URN is the only field available from raw aspects.
+func applyRawAspects(entity *types.Entity, aspects []rawAspect) {
+	for _, a := range aspects {
+		switch a.AspectName {
+		case "globalTags":
+			applyRawGlobalTags(entity, a.Payload)
+		case "glossaryTerms":
+			applyRawGlossaryTerms(entity, a.Payload)
+		}
+	}
+}
+
+// applyRawGlobalTags parses a globalTags aspect payload and appends its tag URNs
+// to the entity. A malformed payload or already-populated tags is a no-op.
+func applyRawGlobalTags(entity *types.Entity, payload string) {
+	if len(entity.Tags) > 0 {
+		return
+	}
+	var ga globalTagsAspect
+	if err := json.Unmarshal([]byte(payload), &ga); err != nil {
+		return
+	}
+	for _, t := range ga.Tags {
+		if t.Tag != "" {
+			entity.Tags = append(entity.Tags, types.Tag{URN: t.Tag})
+		}
+	}
+}
+
+// applyRawGlossaryTerms parses a glossaryTerms aspect payload and appends its
+// term URNs to the entity. A malformed payload or already-populated terms is a
+// no-op.
+func applyRawGlossaryTerms(entity *types.Entity, payload string) {
+	if len(entity.GlossaryTerms) > 0 {
+		return
+	}
+	var gt glossaryTermsAspect
+	if err := json.Unmarshal([]byte(payload), &gt); err != nil {
+		return
+	}
+	for _, term := range gt.Terms {
+		if term.URN != "" {
+			entity.GlossaryTerms = append(entity.GlossaryTerms, types.GlossaryTerm{URN: term.URN})
+		}
+	}
 }
 
 // GetSchema retrieves schema metadata for a dataset.
