@@ -103,6 +103,14 @@ type DataHubClient interface {
 	// RemoveStructuredProperties removes structured properties from an entity.
 	RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error
 
+	// Custom properties (legacy customProperties map, distinct from structured properties).
+
+	// SetCustomProperties sets or overwrites legacy customProperties key/values on an entity.
+	SetCustomProperties(ctx context.Context, urn string, properties map[string]string) error
+
+	// RemoveCustomProperties removes legacy customProperties keys from an entity.
+	RemoveCustomProperties(ctx context.Context, urn string, keys []string) error
+
 	// Incidents (DataHub 1.3.x+).
 
 	// GetIncidents retrieves active incidents for an entity.

@@ -260,6 +260,12 @@ func TestUpdateDescriptionGraphQL(t *testing.T) {
 			response:    `{"data": {"updateDescription": true}}`,
 		},
 		{
+			name:        "tag entity",
+			urn:         "urn:li:tag:PII",
+			description: "Personally identifiable information",
+			response:    `{"data": {"updateDescription": true}}`,
+		},
+		{
 			name:        "graphql error",
 			urn:         "urn:li:domain:engineering",
 			description: "Updated",
@@ -373,7 +379,7 @@ func TestAddTag_DatasetStillUsesREST(t *testing.T) {
 
 func TestGraphQLWriteTypes(t *testing.T) {
 	// Verify the graphQLWriteTypes map has the correct entries.
-	expected := []string{"domain", "glossaryTerm", "glossaryNode"}
+	expected := []string{"domain", "glossaryTerm", "glossaryNode", "tag"}
 	for _, et := range expected {
 		if !graphQLWriteTypes[et] {
 			t.Errorf("expected %q in graphQLWriteTypes", et)

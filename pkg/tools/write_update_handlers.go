@@ -198,6 +198,34 @@ func (t *Toolkit) handleUpdateStructuredProperties(
 	}
 }
 
+func (t *Toolkit) handleUpdateCustomProperties(
+	ctx context.Context, c DataHubClient, input UpdateInput, action string,
+) (UpdateOutput, error) {
+	if action == "" {
+		action = actionSet
+	}
+	switch action {
+	case actionSet:
+		if len(input.CustomProperties) == 0 {
+			return UpdateOutput{}, errRequired("custom_properties")
+		}
+		if err := c.SetCustomProperties(ctx, input.URN, input.CustomProperties); err != nil {
+			return UpdateOutput{}, err
+		}
+		return UpdateOutput{URN: input.URN, What: "custom_properties", Action: "updated"}, nil
+	case actionRemove:
+		if len(input.PropertyKeys) == 0 {
+			return UpdateOutput{}, errRequired("property_keys")
+		}
+		if err := c.RemoveCustomProperties(ctx, input.URN, input.PropertyKeys); err != nil {
+			return UpdateOutput{}, err
+		}
+		return UpdateOutput{URN: input.URN, What: "custom_properties", Action: "removed"}, nil
+	default:
+		return UpdateOutput{}, errInvalidAction(action, "set", "remove")
+	}
+}
+
 func (t *Toolkit) handleUpdateStructuredProperty(
 	ctx context.Context, c DataHubClient, input UpdateInput,
 ) (UpdateOutput, error) {

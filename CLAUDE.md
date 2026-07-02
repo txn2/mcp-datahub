@@ -120,12 +120,12 @@ All are customizable via the three-tier priority pattern.
 
 ### Write Tools (require `WriteEnabled: true`)
 
-3 CRUD tools using the discriminator pattern (`what` parameter) to cover 35 operations:
+3 CRUD tools using the discriminator pattern (`what` parameter) to cover 37 operations:
 
 | Tool | Title | Operations | Description |
 |------|-------|------------|-------------|
 | `datahub_create` | Create Entity | 10 | Create tags, domains, glossary terms, data products, documents, applications, queries, incidents, structured properties, data contracts |
-| `datahub_update` | Update Entity | 17 | Update descriptions, tags, glossary terms, links, owners, domains, structured properties, incidents, queries, document contents/status/related entities/sub-type, data contracts |
+| `datahub_update` | Update Entity | 19 | Update descriptions (including tag/glossaryTerm descriptions), tags, glossary terms, links, owners, domains, structured properties, custom properties, incidents, queries, document contents/status/related entities/sub-type, data contracts |
 | `datahub_delete` | Delete Entity | 8 | Delete queries, tags, domains, glossary entities, data products, applications, documents, structured properties |
 
 ## Description Overrides

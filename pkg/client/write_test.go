@@ -1272,8 +1272,9 @@ func TestLookupDescriptionAspect(t *testing.T) {
 		{"glossaryNode", "glossaryNodeInfo", "definition", false},
 		{"domain", "domainProperties", "description", false},
 		{"glossaryTerm", "glossaryTermInfo", "definition", false},
+		// tag is supported for descriptions via the GraphQL updateDescription path.
+		{"tag", "tagProperties", "description", false},
 		// Unsupported types return errors
-		{"tag", "", "", true},
 		{"corpuser", "", "", true},
 	}
 
@@ -1397,7 +1398,8 @@ func TestUpdateDescription_EntityTypes(t *testing.T) {
 
 func TestUpdateDescription_UnsupportedEntityType(t *testing.T) {
 	c := &Client{logger: NopLogger{}}
-	err := c.UpdateDescription(context.Background(), "urn:li:tag:PII", "desc")
+	// corpuser has no editable description aspect and no GraphQL routing.
+	err := c.UpdateDescription(context.Background(), "urn:li:corpuser:jdoe", "desc")
 	if err == nil {
 		t.Fatal("expected error for unsupported entity type")
 	}

@@ -40,6 +40,8 @@ type mockClient struct {
 	listStructuredPropertyDefinitionsFunc func(ctx context.Context) ([]types.StructuredPropertyDefinition, error)
 	upsertStructuredPropertiesFunc        func(ctx context.Context, urn string, properties []types.StructuredPropertyInput) error
 	removeStructuredPropertiesFunc        func(ctx context.Context, urn string, propertyURNs []string) error
+	setCustomPropertiesFunc               func(ctx context.Context, urn string, properties map[string]string) error
+	removeCustomPropertiesFunc            func(ctx context.Context, urn string, keys []string) error
 	getIncidentsFunc                      func(ctx context.Context, urn string) (*types.IncidentResult, error)
 	raiseIncidentFunc                     func(ctx context.Context, input types.RaiseIncidentInput) (string, error)
 	updateIncidentStatusFunc              func(ctx context.Context, incidentURN, state, message string) error
@@ -261,6 +263,20 @@ func (m *mockClient) UpsertStructuredProperties(ctx context.Context, urn string,
 func (m *mockClient) RemoveStructuredProperties(ctx context.Context, urn string, propertyURNs []string) error {
 	if m.removeStructuredPropertiesFunc != nil {
 		return m.removeStructuredPropertiesFunc(ctx, urn, propertyURNs)
+	}
+	return nil
+}
+
+func (m *mockClient) SetCustomProperties(ctx context.Context, urn string, properties map[string]string) error {
+	if m.setCustomPropertiesFunc != nil {
+		return m.setCustomPropertiesFunc(ctx, urn, properties)
+	}
+	return nil
+}
+
+func (m *mockClient) RemoveCustomProperties(ctx context.Context, urn string, keys []string) error {
+	if m.removeCustomPropertiesFunc != nil {
+		return m.removeCustomPropertiesFunc(ctx, urn, keys)
 	}
 	return nil
 }

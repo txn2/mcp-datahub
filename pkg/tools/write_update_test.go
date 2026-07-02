@@ -206,6 +206,18 @@ func TestHandleUpdate_MetadataOperations(t *testing.T) {
 			What: "structured_properties", URN: urn,
 			Properties: []types.StructuredPropertyInput{{PropertyURN: "urn:li:sp:test", Values: []any{"v"}}},
 		}, "structured_properties", "updated", ""},
+		{"custom_properties_set", UpdateInput{
+			What: "custom_properties", Action: "set", URN: urn,
+			CustomProperties: map[string]string{"source_system": "warehouse"},
+		}, "custom_properties", "updated", ""},
+		{"custom_properties_remove", UpdateInput{
+			What: "custom_properties", Action: "remove", URN: urn,
+			PropertyKeys: []string{"source_system"},
+		}, "custom_properties", "removed", ""},
+		{"custom_properties_default_action", UpdateInput{
+			What: "custom_properties", URN: urn,
+			CustomProperties: map[string]string{"a": "b"},
+		}, "custom_properties", "updated", ""},
 	}
 
 	for _, tt := range tests {
@@ -300,6 +312,16 @@ func TestHandleUpdate_MissingRequiredFields(t *testing.T) {
 		{"structured_properties_remove_empty", UpdateInput{
 			What: "structured_properties", Action: "remove", URN: urn,
 		}},
+		{"custom_properties_invalid_action", UpdateInput{
+			What: "custom_properties", Action: "add", URN: urn,
+			CustomProperties: map[string]string{"a": "b"},
+		}},
+		{"custom_properties_set_empty", UpdateInput{
+			What: "custom_properties", Action: "set", URN: urn,
+		}},
+		{"custom_properties_remove_empty", UpdateInput{
+			What: "custom_properties", Action: "remove", URN: urn,
+		}},
 	}
 
 	for _, tt := range tests {
@@ -334,5 +356,35 @@ func TestHandleUpdate_ClientErrorPropagation(t *testing.T) {
 	}
 	if tc.Text == "" {
 		t.Error("error message should not be empty")
+	}
+}
+
+func TestHandleUpdate_CustomPropertiesClientErrorPropagation(t *testing.T) {
+	clientErr := errors.New("DataHub API error")
+	mock := &mockClient{
+		setCustomPropertiesFunc: func(_ context.Context, _ string, _ map[string]string) error {
+			return clientErr
+		},
+		removeCustomPropertiesFunc: func(_ context.Context, _ string, _ []string) error {
+			return clientErr
+		},
+	}
+	toolkit := NewToolkit(mock, Config{WriteEnabled: true})
+	urn := "urn:li:glossaryTerm:revenue"
+
+	setResult, _, _ := toolkit.handleUpdate(context.Background(), nil, UpdateInput{
+		What: "custom_properties", Action: "set", URN: urn,
+		CustomProperties: map[string]string{"a": "b"},
+	})
+	if !setResult.IsError {
+		t.Error("expected error when SetCustomProperties fails")
+	}
+
+	removeResult, _, _ := toolkit.handleUpdate(context.Background(), nil, UpdateInput{
+		What: "custom_properties", Action: "remove", URN: urn,
+		PropertyKeys: []string{"a"},
+	})
+	if !removeResult.IsError {
+		t.Error("expected error when RemoveCustomProperties fails")
 	}
 }

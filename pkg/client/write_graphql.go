@@ -55,11 +55,17 @@ mutation updateDescription($input: DescriptionUpdateInput!) {
 // graphQLWriteTypes lists entity types that require GraphQL mutations for write
 // operations because the REST API does not support their aspects (globalTags,
 // glossaryTerms, editable description).
+//
+// tag is included for description writes only: DataHub's updateDescription
+// GraphQL mutation routes a tag URN to tagProperties.description internally.
+// Tag association operations (AddTag/RemoveTag) do not apply to tag entities and
+// are rejected earlier by globalTagsSupportedTypes, so this entry is safe.
 var graphQLWriteTypes = map[string]bool{
 	entityTypeDomain:       true,
 	entityTypeGlossaryTerm: true,
 	entityTypeGlossaryNode: true,
 	entityTypeDocument:     true,
+	entityTypeTag:          true,
 }
 
 // addTagGraphQL adds a tag to an entity using the GraphQL addTag mutation.

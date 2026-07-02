@@ -23,9 +23,17 @@ func (c *Client) restBaseURL() string {
 	return strings.TrimSuffix(c.endpoint, "/api/graphql")
 }
 
-// aspectResponse represents the response from GET /aspects endpoint.
+// aspectResponse represents the OpenAPI v3 GET response: {"value": {...}}.
 type aspectResponse struct {
 	Value json.RawMessage `json:"value"`
+}
+
+// v1AspectResponse represents the legacy Rest.li GET response, which wraps the
+// aspect under its fully-qualified class name: {"aspect":{"<FQCN>": {...}}}.
+// Value tolerates a normalized flat {"value": {...}} body from proxies.
+type v1AspectResponse struct {
+	Aspect map[string]json.RawMessage `json:"aspect"`
+	Value  json.RawMessage            `json:"value"`
 }
 
 // ingestProposal represents a metadata change proposal for the REST API.
@@ -89,23 +97,51 @@ func (c *Client) getAspect(ctx context.Context, entityType, entityURN, aspectNam
 		"status", resp.StatusCode,
 		"response_size", len(body))
 
-	if err := c.checkRESTStatus(resp.StatusCode, body); err != nil {
+	if err = c.checkRESTStatus(resp.StatusCode, body); err != nil {
 		return nil, err
 	}
 
-	var aspectResp aspectResponse
-	if err := json.Unmarshal(body, &aspectResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal aspect response: %w", err)
+	value, err := c.extractAspectValue(body)
+	if err != nil {
+		return nil, err
 	}
 
 	// DataHub may return 200 OK with a null or empty value when the entity
 	// exists but the requested aspect has never been written. Treat this the
 	// same as 404 so callers initialize a default struct.
-	if isNullOrEmptyJSON(aspectResp.Value) {
+	if isNullOrEmptyJSON(value) {
 		return nil, ErrNotFound
 	}
 
-	return aspectResp.Value, nil
+	return value, nil
+}
+
+// extractAspectValue pulls the flat aspect JSON out of a GET response.
+// The OpenAPI v3 endpoint wraps it as {"value": {...}}. The legacy v1 Rest.li
+// endpoint wraps it as {"version":N,"aspect":{"<fully.qualified.ClassName>": {...}}}.
+// Parsing only the v3 shape for both left v1 read-modify-write starting from an
+// empty aspect, silently dropping existing fields on write-back.
+func (c *Client) extractAspectValue(body []byte) (json.RawMessage, error) {
+	if c.config.isV3() {
+		var resp aspectResponse
+		if err := json.Unmarshal(body, &resp); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal aspect response: %w", err)
+		}
+		return resp.Value, nil
+	}
+
+	var resp v1AspectResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal aspect response: %w", err)
+	}
+	// The "aspect" object holds exactly one entry keyed by the aspect's
+	// fully-qualified PDL class name; return its value regardless of the key.
+	for _, raw := range resp.Aspect {
+		return raw, nil
+	}
+	// Tolerate a flat {"value": {...}} body as well (some gateways/proxies
+	// normalize the envelope); real Rest.li responses always use "aspect".
+	return resp.Value, nil
 }
 
 // postIngestProposal posts a metadata change proposal to the DataHub REST API.
@@ -151,8 +187,14 @@ func (c *Client) postAspectV1(ctx context.Context, proposal ingestProposal) erro
 }
 
 // postAspectV3 sends an aspect update via the OpenAPI v3 endpoint.
+//
+// createIfNotExists=false forces UPSERT semantics. Without it, DataHub defaults the
+// OpenAPI v3 write to a CREATE, which fails with HTTP 400 ("Cannot perform CREATE
+// since the aspect already exists") whenever the target aspect is already present.
+// Every write in this client is a read-modify-write UPSERT, so create-only semantics
+// are never wanted; the flag makes writes succeed whether the aspect exists or not.
 func (c *Client) postAspectV3(ctx context.Context, proposal ingestProposal) error {
-	reqURL := fmt.Sprintf("%s/openapi/v3/entity/%s/%s/%s",
+	reqURL := fmt.Sprintf("%s/openapi/v3/entity/%s/%s/%s?createIfNotExists=false",
 		c.restBaseURL(), proposal.EntityType,
 		url.PathEscape(proposal.EntityURN), proposal.AspectName)
 
