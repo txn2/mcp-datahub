@@ -10,7 +10,7 @@ import (
 
 // ErrUnsupportedEntityType is returned when an entity type does not support description updates.
 // Entity types intentionally excluded (no editable description aspect in DataHub):
-// tag, corpuser, corpGroup, mlModel, mlModelGroup, notebook.
+// corpuser, corpGroup, mlModel, mlModelGroup, notebook.
 var ErrUnsupportedEntityType = errors.New("unsupported entity type for description update")
 
 // Entity type constants used in aspect maps and URN parsing.
@@ -26,6 +26,7 @@ const (
 	entityTypeGlossaryTerm = "glossaryTerm"
 	entityTypeDomain       = "domain"
 	entityTypeDocument     = "document"
+	entityTypeTag          = "tag"
 )
 
 // entityTypeFromURN derives the DataHub entity type string from a parsed URN.
@@ -50,6 +51,8 @@ type DescriptionAspectInfo struct {
 // glossaryNode uses "definition" instead of "description".
 // dataProduct uses its non-editable property aspect (dataProductProperties).
 // domain uses domainProperties and glossaryTerm uses glossaryTermInfo.
+// tag uses tagProperties, but is written via the GraphQL updateDescription
+// mutation (see graphQLWriteTypes) rather than a REST aspect write.
 var descriptionAspectMap = map[string]DescriptionAspectInfo{
 	entityTypeDataset:      {AspectName: "editableDatasetProperties", FieldName: "description"},
 	entityTypeDashboard:    {AspectName: "editableDashboardProperties", FieldName: "description"},
@@ -61,6 +64,7 @@ var descriptionAspectMap = map[string]DescriptionAspectInfo{
 	entityTypeGlossaryNode: {AspectName: "glossaryNodeInfo", FieldName: "definition"},
 	entityTypeDomain:       {AspectName: "domainProperties", FieldName: "description"},
 	entityTypeGlossaryTerm: {AspectName: "glossaryTermInfo", FieldName: "definition"},
+	entityTypeTag:          {AspectName: "tagProperties", FieldName: "description"},
 }
 
 // globalTagsSupportedTypes lists entity types that support the globalTags aspect.

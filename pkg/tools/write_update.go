@@ -12,10 +12,10 @@ import (
 // UpdateInput is the input for the datahub_update tool.
 type UpdateInput struct {
 	//nolint:lll // struct tag cannot be split
-	What string `json:"what" jsonschema_description:"What to update: description, column_description, tag, glossary_term, link, owner, domain, structured_properties, structured_property, incident_status, incident, query, document_contents, document_status, document_related_entities, document_sub_type, or data_contract" jsonschema_enum:"description,column_description,tag,glossary_term,link,owner,domain,structured_properties,structured_property,incident_status,incident,query,document_contents,document_status,document_related_entities,document_sub_type,data_contract"`
+	What string `json:"what" jsonschema_description:"What to update: description (also updates tag/glossaryTerm descriptions), column_description, tag, glossary_term, link, owner, domain, structured_properties, structured_property, custom_properties, incident_status, incident, query, document_contents, document_status, document_related_entities, document_sub_type, or data_contract" jsonschema_enum:"description,column_description,tag,glossary_term,link,owner,domain,structured_properties,structured_property,custom_properties,incident_status,incident,query,document_contents,document_status,document_related_entities,document_sub_type,data_contract"`
 
 	//nolint:lll // struct tag cannot be split
-	Action string `json:"action,omitempty" jsonschema_description:"Action: add/remove (tag, glossary_term, link, owner), set/remove (domain, structured_properties), not used for other what values" jsonschema_enum:"add,remove,set"`
+	Action string `json:"action,omitempty" jsonschema_description:"Action: add/remove (tag, glossary_term, link, owner), set/remove (domain, structured_properties, custom_properties), not used for other what values" jsonschema_enum:"add,remove,set"`
 
 	// Entity identification
 	URN string `json:"urn" jsonschema_description:"URN of the entity to update"`
@@ -38,6 +38,12 @@ type UpdateInput struct {
 	// Structured properties on assets
 	Properties   []types.StructuredPropertyInput `json:"properties,omitempty" jsonschema_description:"Structured property values to set"`
 	PropertyURNs []string                        `json:"property_urns,omitempty" jsonschema_description:"Property URNs to remove"`
+
+	// Legacy custom properties (custom_properties what)
+	//nolint:lll // struct tag cannot be split
+	CustomProperties map[string]string `json:"custom_properties,omitempty" jsonschema_description:"Legacy customProperties key/values to set (custom_properties, action=set)"`
+	//nolint:lll // struct tag cannot be split
+	PropertyKeys []string `json:"property_keys,omitempty" jsonschema_description:"Legacy customProperties keys to remove (custom_properties, action=remove)"`
 
 	// Query-specific
 	Name        string   `json:"name,omitempty" jsonschema_description:"Updated name (query, incident, structured_property)"`
@@ -161,6 +167,9 @@ func (t *Toolkit) dispatchUpdateMetadata(
 		return updateResult{out, err}, true
 	case "structured_properties":
 		out, err := t.handleUpdateStructuredProperties(ctx, c, input, action)
+		return updateResult{out, err}, true
+	case "custom_properties":
+		out, err := t.handleUpdateCustomProperties(ctx, c, input, action)
 		return updateResult{out, err}, true
 	default:
 		return updateResult{}, false

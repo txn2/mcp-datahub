@@ -36,4 +36,8 @@ var (
 
 	// ErrUnsupportedLinkEntity indicates the entity type does not support link operations.
 	ErrUnsupportedLinkEntity = errors.New("entity type does not support link operations")
+
+	// ErrUnsupportedCustomPropertiesEntity indicates the entity type has no aspect that
+	// carries the legacy customProperties map.
+	ErrUnsupportedCustomPropertiesEntity = errors.New("entity type does not support custom properties operations")
 )

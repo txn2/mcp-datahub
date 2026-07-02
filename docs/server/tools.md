@@ -705,7 +705,7 @@ Update metadata on an existing entity.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `what` | string | Yes | What to update (see table below) |
-| `action` | string | Varies | `add`/`remove` (required for tag, glossary_term, link, owner); `set`/`remove` (domain, structured_properties, default: set); not used for other what values |
+| `action` | string | Varies | `add`/`remove` (required for tag, glossary_term, link, owner); `set`/`remove` (domain, structured_properties, custom_properties, default: set); not used for other what values |
 | `urn` | string | Yes | Entity URN |
 | `value` | string | No | New value (description, status, label, message) |
 | `target_urn` | string | No | Target URN for add/remove (tag, glossary term, owner, domain) |
@@ -716,6 +716,8 @@ Update metadata on an existing entity.
 | `ownership_type` | string | No | Ownership type, e.g. TECHNICAL_OWNER (owner add only) |
 | `properties` | object[] | No | Structured property values to set (structured_properties) |
 | `property_urns` | string[] | No | Property URNs to remove (structured_properties) |
+| `custom_properties` | object | No | Legacy customProperties key/values to set (custom_properties, action=set) |
+| `property_keys` | string[] | No | Legacy customProperties keys to remove (custom_properties, action=remove) |
 | `language` | string | No | Query language (query only) |
 | `dataset_urns` | string[] | No | Dataset URNs (query, data_contract) |
 | `incident_type` | string | No | Incident type (incident only) |
@@ -733,7 +735,7 @@ Update metadata on an existing entity.
 
 | what | action | Description |
 |------|--------|-------------|
-| `description` | _(not used)_ | Set entity description |
+| `description` | _(not used)_ | Set entity description (also edits tag and glossaryTerm descriptions) |
 | `column_description` | _(not used)_ | Set schema field description |
 | `tag` | **required**: add/remove | Add or remove a tag |
 | `glossary_term` | **required**: add/remove | Add or remove a glossary term |
@@ -741,6 +743,7 @@ Update metadata on an existing entity.
 | `owner` | **required**: add/remove | Add or remove an owner |
 | `domain` | set/remove (default: set) | Set or remove domain assignment |
 | `structured_properties` | set/remove (default: set) | Set or remove structured property values |
+| `custom_properties` | set/remove (default: set) | Set or remove legacy customProperties key/values |
 | `structured_property` | _(not used)_ | Update a structured property definition |
 | `incident_status` | _(not used)_ | Update incident status (requires `state`) |
 | `incident` | _(not used)_ | Update incident details |
