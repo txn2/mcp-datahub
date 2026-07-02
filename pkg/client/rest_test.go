@@ -710,6 +710,36 @@ func TestGetAspect_V3_NotFound(t *testing.T) {
 	}
 }
 
+// TestGetAspect_V1_RestLiEnvelope verifies the client parses the REAL legacy
+// Rest.li GET envelope ({"aspect":{"<FQCN>":{...}}}) and does not start from an
+// empty aspect. This is the shape a live DataHub returns on the v1 path; parsing
+// only {"value":...} caused read-modify-write to silently drop existing fields.
+func TestGetAspect_V1_RestLiEnvelope(t *testing.T) {
+	inner := `{"name":"n","definition":"d","termSource":"INTERNAL","customProperties":{"k":"v"}}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// No "value" key — only the Rest.li "aspect" wrapper.
+		_, _ = w.Write([]byte(`{"version":0,"aspect":{"com.linkedin.glossary.GlossaryTermInfo":` + inner + `}}`))
+	}))
+	defer server.Close()
+
+	c := &Client{
+		endpoint:   server.URL + "/api/graphql",
+		token:      "test-token",
+		httpClient: server.Client(),
+		config:     Config{APIVersion: APIVersionV1},
+		logger:     NopLogger{},
+	}
+
+	raw, err := c.getAspect(context.Background(), "glossaryTerm", "urn:li:glossaryTerm:x", "glossaryTermInfo")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(raw) != inner {
+		t.Errorf("got %s, want %s", string(raw), inner)
+	}
+}
+
 func TestPostIngestProposal_V3(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -720,6 +750,11 @@ func TestPostIngestProposal_V3(t *testing.T) {
 		wantPath := "/openapi/v3/entity/dataset/urn%3Ali%3Adataset%3Atest/globalTags"
 		if r.URL.RawPath != wantPath && r.URL.Path != "/openapi/v3/entity/dataset/urn:li:dataset:test/globalTags" {
 			t.Errorf("unexpected path: raw=%q path=%q, want %q", r.URL.RawPath, r.URL.Path, wantPath)
+		}
+
+		// UPSERT semantics: createIfNotExists=false so writes to existing aspects succeed.
+		if got := r.URL.Query().Get("createIfNotExists"); got != "false" {
+			t.Errorf("expected createIfNotExists=false, got %q", got)
 		}
 
 		// No RestLi header
