@@ -21,10 +21,12 @@ type UpdateInput struct {
 	URN string `json:"urn" jsonschema_description:"URN of the entity to update"`
 
 	// Common value field
-	Value string `json:"value,omitempty" jsonschema_description:"New value (description text, status, sub_type, label, message, etc.)"`
+	//nolint:lll // struct tag cannot be split
+	Value string `json:"value,omitempty" jsonschema_description:"New value (description text, status, sub_type, label, message, etc.). NOT the tag/term/owner/domain URN for add/remove/set: use target_urn (a URN passed here alone is accepted as a fallback)"`
 
 	// Target URN for add/remove operations (tag, glossary_term, owner, domain)
-	TargetURN string `json:"target_urn,omitempty" jsonschema_description:"Target URN (tag, glossary term, owner, or domain URN)"`
+	//nolint:lll // struct tag cannot be split
+	TargetURN string `json:"target_urn,omitempty" jsonschema_description:"Target tag, glossary term, owner, or domain URN. Required for tag/glossary_term/owner add and remove, and domain set"`
 
 	// Link-specific fields
 	URL string `json:"url,omitempty" jsonschema_description:"URL for link operations"`

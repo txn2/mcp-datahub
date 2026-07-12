@@ -37,6 +37,13 @@ func errInvalidAction(got string, valid ...string) error {
 	return fmt.Errorf("action must be '%s', got '%s'", strings.Join(valid, "' or '"), got)
 }
 
+// errTargetConflict returns an error when target_urn and value both carry a
+// URN for an association operation but disagree, rather than silently
+// preferring one.
+func errTargetConflict(targetURN, value string) error {
+	return fmt.Errorf("target_urn (%s) and value (%s) differ; set only target_urn", targetURN, value)
+}
+
 // JSONResult creates a JSON result for tool responses.
 func JSONResult(v any) (*mcp.CallToolResult, error) {
 	data, err := json.MarshalIndent(v, "", "  ")

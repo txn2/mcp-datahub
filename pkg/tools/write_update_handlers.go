@@ -14,6 +14,23 @@ const (
 	actionSet    = "set"
 )
 
+// resolveTargetURN determines the target of an association operation (tag,
+// glossary_term, owner, domain add/remove/set). target_urn is authoritative,
+// but a lone value carrying the URN is accepted so agents that pass the URN in
+// the generic value field succeed on the first attempt. When both are set they
+// must agree; a genuine disagreement is rejected rather than silently
+// preferring one. Returns "" when neither is set so callers surface the usual
+// "target_urn parameter is required" error.
+func resolveTargetURN(input UpdateInput) (string, error) {
+	if input.TargetURN != "" && input.Value != "" && input.TargetURN != input.Value {
+		return "", errTargetConflict(input.TargetURN, input.Value)
+	}
+	if input.TargetURN != "" {
+		return input.TargetURN, nil
+	}
+	return input.Value, nil
+}
+
 func (t *Toolkit) handleUpdateDescription(
 	ctx context.Context, c DataHubClient, input UpdateInput,
 ) (UpdateOutput, error) {
@@ -47,20 +64,24 @@ func (t *Toolkit) handleUpdateTag(
 	if action == "" {
 		return UpdateOutput{}, errRequired("action (add or remove)")
 	}
-	if input.TargetURN == "" {
+	target, err := resolveTargetURN(input)
+	if err != nil {
+		return UpdateOutput{}, err
+	}
+	if target == "" {
 		return UpdateOutput{}, errRequired("target_urn")
 	}
 	switch action {
 	case actionAdd:
-		if err := c.AddTag(ctx, input.URN, input.TargetURN); err != nil {
+		if err := c.AddTag(ctx, input.URN, target); err != nil {
 			return UpdateOutput{}, err
 		}
-		return UpdateOutput{URN: input.URN, What: "tag", Action: "added", TargetURN: input.TargetURN}, nil
+		return UpdateOutput{URN: input.URN, What: "tag", Action: "added", TargetURN: target}, nil
 	case actionRemove:
-		if err := c.RemoveTag(ctx, input.URN, input.TargetURN); err != nil {
+		if err := c.RemoveTag(ctx, input.URN, target); err != nil {
 			return UpdateOutput{}, err
 		}
-		return UpdateOutput{URN: input.URN, What: "tag", Action: "removed", TargetURN: input.TargetURN}, nil
+		return UpdateOutput{URN: input.URN, What: "tag", Action: "removed", TargetURN: target}, nil
 	default:
 		return UpdateOutput{}, errInvalidAction(action, "add", "remove")
 	}
@@ -72,20 +93,24 @@ func (t *Toolkit) handleUpdateGlossaryTerm(
 	if action == "" {
 		return UpdateOutput{}, errRequired("action (add or remove)")
 	}
-	if input.TargetURN == "" {
+	target, err := resolveTargetURN(input)
+	if err != nil {
+		return UpdateOutput{}, err
+	}
+	if target == "" {
 		return UpdateOutput{}, errRequired("target_urn")
 	}
 	switch action {
 	case actionAdd:
-		if err := c.AddGlossaryTerm(ctx, input.URN, input.TargetURN); err != nil {
+		if err := c.AddGlossaryTerm(ctx, input.URN, target); err != nil {
 			return UpdateOutput{}, err
 		}
-		return UpdateOutput{URN: input.URN, What: "glossary_term", Action: "added", TargetURN: input.TargetURN}, nil
+		return UpdateOutput{URN: input.URN, What: "glossary_term", Action: "added", TargetURN: target}, nil
 	case actionRemove:
-		if err := c.RemoveGlossaryTerm(ctx, input.URN, input.TargetURN); err != nil {
+		if err := c.RemoveGlossaryTerm(ctx, input.URN, target); err != nil {
 			return UpdateOutput{}, err
 		}
-		return UpdateOutput{URN: input.URN, What: "glossary_term", Action: "removed", TargetURN: input.TargetURN}, nil
+		return UpdateOutput{URN: input.URN, What: "glossary_term", Action: "removed", TargetURN: target}, nil
 	default:
 		return UpdateOutput{}, errInvalidAction(action, "add", "remove")
 	}
@@ -122,7 +147,11 @@ func (t *Toolkit) handleUpdateOwner(
 	if action == "" {
 		return UpdateOutput{}, errRequired("action (add or remove)")
 	}
-	if input.TargetURN == "" {
+	target, err := resolveTargetURN(input)
+	if err != nil {
+		return UpdateOutput{}, err
+	}
+	if target == "" {
 		return UpdateOutput{}, errRequired("target_urn (owner URN)")
 	}
 	switch action {
@@ -131,15 +160,15 @@ func (t *Toolkit) handleUpdateOwner(
 		if ownerType == "" {
 			ownerType = "TECHNICAL_OWNER"
 		}
-		if err := c.AddOwner(ctx, input.URN, input.TargetURN, ownerType); err != nil {
+		if err := c.AddOwner(ctx, input.URN, target, ownerType); err != nil {
 			return UpdateOutput{}, err
 		}
-		return UpdateOutput{URN: input.URN, What: "owner", Action: "added", TargetURN: input.TargetURN}, nil
+		return UpdateOutput{URN: input.URN, What: "owner", Action: "added", TargetURN: target}, nil
 	case actionRemove:
-		if err := c.RemoveOwner(ctx, input.URN, input.TargetURN); err != nil {
+		if err := c.RemoveOwner(ctx, input.URN, target); err != nil {
 			return UpdateOutput{}, err
 		}
-		return UpdateOutput{URN: input.URN, What: "owner", Action: "removed", TargetURN: input.TargetURN}, nil
+		return UpdateOutput{URN: input.URN, What: "owner", Action: "removed", TargetURN: target}, nil
 	default:
 		return UpdateOutput{}, errInvalidAction(action, "add", "remove")
 	}
@@ -153,13 +182,17 @@ func (t *Toolkit) handleUpdateDomain(
 	}
 	switch action {
 	case actionSet:
-		if input.TargetURN == "" {
-			return UpdateOutput{}, errRequired("target_urn (domain URN)")
-		}
-		if err := c.SetDomain(ctx, input.URN, input.TargetURN); err != nil {
+		target, err := resolveTargetURN(input)
+		if err != nil {
 			return UpdateOutput{}, err
 		}
-		return UpdateOutput{URN: input.URN, What: "domain", Action: "set", TargetURN: input.TargetURN}, nil
+		if target == "" {
+			return UpdateOutput{}, errRequired("target_urn (domain URN)")
+		}
+		if err := c.SetDomain(ctx, input.URN, target); err != nil {
+			return UpdateOutput{}, err
+		}
+		return UpdateOutput{URN: input.URN, What: "domain", Action: "set", TargetURN: target}, nil
 	case actionRemove:
 		if err := c.UnsetDomain(ctx, input.URN); err != nil {
 			return UpdateOutput{}, err

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -148,6 +149,33 @@ func TestHandleUpdate_MetadataOperations(t *testing.T) {
 			"tag_remove",
 			UpdateInput{What: "tag", Action: "remove", URN: urn, TargetURN: "urn:li:tag:PII"},
 			"tag", "removed", "urn:li:tag:PII",
+		},
+		{
+			// Issue #181: a lone value carrying the tag URN is accepted as target.
+			"tag_add_via_value",
+			UpdateInput{What: "tag", Action: "add", URN: urn, Value: "urn:li:tag:PII"},
+			"tag", "added", "urn:li:tag:PII",
+		},
+		{
+			// target_urn and value agree: not a conflict.
+			"tag_add_both_equal",
+			UpdateInput{What: "tag", Action: "add", URN: urn, TargetURN: "urn:li:tag:PII", Value: "urn:li:tag:PII"},
+			"tag", "added", "urn:li:tag:PII",
+		},
+		{
+			"glossary_term_add_via_value",
+			UpdateInput{What: "glossary_term", Action: "add", URN: urn, Value: "urn:li:glossaryTerm:X"},
+			"glossary_term", "added", "urn:li:glossaryTerm:X",
+		},
+		{
+			"owner_add_via_value",
+			UpdateInput{What: "owner", Action: "add", URN: urn, Value: "urn:li:corpuser:user1"},
+			"owner", "added", "urn:li:corpuser:user1",
+		},
+		{
+			"domain_set_via_value",
+			UpdateInput{What: "domain", Action: "set", URN: urn, Value: "urn:li:domain:eng"},
+			"domain", "set", "urn:li:domain:eng",
 		},
 		{
 			"glossary_term_add",
@@ -331,6 +359,65 @@ func TestHandleUpdate_MissingRequiredFields(t *testing.T) {
 				t.Errorf("expected error for %s", tt.name)
 			}
 		})
+	}
+}
+
+// TestHandleUpdate_TargetURNAndValueConflict verifies that when target_urn and
+// value both carry a URN but disagree, the update is rejected rather than
+// silently preferring one (issue #181).
+func TestHandleUpdate_TargetURNAndValueConflict(t *testing.T) {
+	toolkit := NewToolkit(&mockClient{}, Config{WriteEnabled: true})
+	urn := "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)"
+
+	tests := []struct {
+		name  string
+		input UpdateInput
+	}{
+		{"tag", UpdateInput{
+			What: "tag", Action: "add", URN: urn,
+			TargetURN: "urn:li:tag:PII", Value: "urn:li:tag:Financial",
+		}},
+		{"glossary_term", UpdateInput{
+			What: "glossary_term", Action: "add", URN: urn,
+			TargetURN: "urn:li:glossaryTerm:X", Value: "urn:li:glossaryTerm:Y",
+		}},
+		{"owner", UpdateInput{
+			What: "owner", Action: "add", URN: urn,
+			TargetURN: "urn:li:corpuser:a", Value: "urn:li:corpuser:b",
+		}},
+		{"domain", UpdateInput{
+			What: "domain", Action: "set", URN: urn,
+			TargetURN: "urn:li:domain:eng", Value: "urn:li:domain:sales",
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, _, _ := toolkit.handleUpdate(context.Background(), nil, tt.input)
+			if !result.IsError {
+				t.Fatalf("expected error for conflicting target_urn/value")
+			}
+			msg := result.Content[0].(*mcp.TextContent).Text
+			if !strings.Contains(msg, "target_urn") || !strings.Contains(msg, "differ") {
+				t.Errorf("error = %q, want it to mention target_urn and differ", msg)
+			}
+		})
+	}
+}
+
+// TestHandleUpdate_NeitherTargetNorValueNamesTargetURN verifies the missing-target
+// error still names target_urn (not value) when both are absent (issue #181).
+func TestHandleUpdate_NeitherTargetNorValueNamesTargetURN(t *testing.T) {
+	toolkit := NewToolkit(&mockClient{}, Config{WriteEnabled: true})
+	urn := "urn:li:dataset:(urn:li:dataPlatform:hive,db.table,PROD)"
+
+	result, _, _ := toolkit.handleUpdate(context.Background(), nil,
+		UpdateInput{What: "tag", Action: "add", URN: urn})
+	if !result.IsError {
+		t.Fatal("expected error when neither target_urn nor value is set")
+	}
+	if msg := result.Content[0].(*mcp.TextContent).Text; !strings.Contains(msg, "target_urn") {
+		t.Errorf("error = %q, want it to name target_urn", msg)
 	}
 }
 
