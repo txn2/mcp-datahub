@@ -34,7 +34,7 @@ func TestGetDocument(t *testing.T) {
 				},
 				"settings": {"showInGlobalContext": true},
 				"ownership": {"owners": [{"owner": {"urn": "urn:li:corpuser:alice", "username": "alice"}, "type": "DATAOWNER"}]},
-				"tags": {"tags": [{"tag": {"urn": "urn:li:tag:Production", "name": "Production"}}]},
+				"tags": {"tags": [{"tag": {"urn": "urn:li:tag:uuid-key", "name": "uuid-key", "properties": {"name": "Production"}}}]},
 				"glossaryTerms": {"terms": [{"term": {"urn": "urn:li:glossaryTerm:pii", "properties": {"name": "PII"}}}]},
 				"domain": {"domain": {"urn": "urn:li:domain:eng", "properties": {"name": "Engineering"}}}
 			}}}`,

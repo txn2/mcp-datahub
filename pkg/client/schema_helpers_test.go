@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/txn2/mcp-datahub/pkg/types"
@@ -8,20 +9,20 @@ import (
 
 func TestParseSchemaField(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    rawSchemaField
-		expected types.SchemaField
+		name      string
+		inputJSON string
+		expected  types.SchemaField
 	}{
 		{
 			name: "basic field",
-			input: rawSchemaField{
-				FieldPath:      "customer_id",
-				Type:           "NUMBER",
-				NativeDataType: "INT64",
-				Description:    "Customer identifier",
-				Nullable:       false,
-				IsPartOfKey:    true,
-			},
+			inputJSON: `{
+				"fieldPath": "customer_id",
+				"type": "NUMBER",
+				"nativeDataType": "INT64",
+				"description": "Customer identifier",
+				"nullable": false,
+				"isPartOfKey": true
+			}`,
 			expected: types.SchemaField{
 				FieldPath:      "customer_id",
 				Type:           "NUMBER",
@@ -33,34 +34,14 @@ func TestParseSchemaField(t *testing.T) {
 		},
 		{
 			name: "field with tags",
-			input: rawSchemaField{
-				FieldPath: "email",
-				Type:      "STRING",
-				Tags: struct {
-					Tags []struct {
-						Tag struct {
-							URN  string `json:"urn"`
-							Name string `json:"name"`
-						} `json:"tag"`
-					} `json:"tags"`
-				}{
-					Tags: []struct {
-						Tag struct {
-							URN  string `json:"urn"`
-							Name string `json:"name"`
-						} `json:"tag"`
-					}{
-						{Tag: struct {
-							URN  string `json:"urn"`
-							Name string `json:"name"`
-						}{URN: "urn:li:tag:pii", Name: "pii"}},
-						{Tag: struct {
-							URN  string `json:"urn"`
-							Name string `json:"name"`
-						}{URN: "urn:li:tag:sensitive", Name: "sensitive"}},
-					},
-				},
-			},
+			inputJSON: `{
+				"fieldPath": "email",
+				"type": "STRING",
+				"tags": {"tags": [
+					{"tag": {"urn": "urn:li:tag:pii", "name": "pii"}},
+					{"tag": {"urn": "urn:li:tag:sensitive", "name": "sensitive"}}
+				]}
+			}`,
 			expected: types.SchemaField{
 				FieldPath: "email",
 				Type:      "STRING",
@@ -71,31 +52,36 @@ func TestParseSchemaField(t *testing.T) {
 			},
 		},
 		{
-			name: "field with glossary terms",
-			input: rawSchemaField{
-				FieldPath: "revenue",
-				Type:      "NUMBER",
-				GlossaryTerms: struct {
-					Terms []struct {
-						Term struct {
-							URN  string `json:"urn"`
-							Name string `json:"name"`
-						} `json:"term"`
-					} `json:"terms"`
-				}{
-					Terms: []struct {
-						Term struct {
-							URN  string `json:"urn"`
-							Name string `json:"name"`
-						} `json:"term"`
-					}{
-						{Term: struct {
-							URN  string `json:"urn"`
-							Name string `json:"name"`
-						}{URN: "urn:li:glossaryTerm:Finance.Revenue", Name: "Revenue"}},
-					},
+			// A UUID-keyed tag surfaces its properties.name, not the key-derived
+			// top-level name; a legacy tag without properties falls back.
+			name: "field with UUID tag and legacy fallback",
+			inputJSON: `{
+				"fieldPath": "ssn",
+				"type": "STRING",
+				"tags": {"tags": [
+					{"tag": {"urn": "urn:li:tag:f18a56d4", "name": "f18a56d4",
+						"properties": {"name": "v1101-live-test"}}},
+					{"tag": {"urn": "urn:li:tag:PII", "name": "PII"}}
+				]}
+			}`,
+			expected: types.SchemaField{
+				FieldPath: "ssn",
+				Type:      "STRING",
+				Tags: []types.Tag{
+					{URN: "urn:li:tag:f18a56d4", Name: "v1101-live-test"},
+					{URN: "urn:li:tag:PII", Name: "PII"},
 				},
 			},
+		},
+		{
+			name: "field with glossary terms",
+			inputJSON: `{
+				"fieldPath": "revenue",
+				"type": "NUMBER",
+				"glossaryTerms": {"terms": [
+					{"term": {"urn": "urn:li:glossaryTerm:Finance.Revenue", "name": "Revenue"}}
+				]}
+			}`,
 			expected: types.SchemaField{
 				FieldPath: "revenue",
 				Type:      "NUMBER",
@@ -108,7 +94,11 @@ func TestParseSchemaField(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parseSchemaField(tc.input)
+			var input rawSchemaField
+			if err := json.Unmarshal([]byte(tc.inputJSON), &input); err != nil {
+				t.Fatalf("unmarshal input: %v", err)
+			}
+			result := parseSchemaField(input)
 
 			if result.FieldPath != tc.expected.FieldPath {
 				t.Errorf("FieldPath = %s, want %s", result.FieldPath, tc.expected.FieldPath)
@@ -348,17 +338,13 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 	tests := []struct {
 		name           string
 		schema         *types.SchemaMetadata
-		edited         rawEditableSchemaMetadata
+		editedJSON     string
 		expectedFields []types.SchemaField
 	}{
 		{
-			name:   "nil schema does not panic",
-			schema: nil,
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{FieldPath: "field1", Description: "edited"},
-				},
-			},
+			name:           "nil schema does not panic",
+			schema:         nil,
+			editedJSON:     `{"editableSchemaFieldInfo":[{"fieldPath":"field1","description":"edited"}]}`,
 			expectedFields: nil,
 		},
 		{
@@ -368,7 +354,7 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					{FieldPath: "field1", Description: "original"},
 				},
 			},
-			edited: rawEditableSchemaMetadata{},
+			editedJSON: `{}`,
 			expectedFields: []types.SchemaField{
 				{FieldPath: "field1", Description: "original"},
 			},
@@ -380,11 +366,7 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					{FieldPath: "field1", Description: "original description"},
 				},
 			},
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{FieldPath: "field1", Description: "UI edited description"},
-				},
-			},
+			editedJSON: `{"editableSchemaFieldInfo":[{"fieldPath":"field1","description":"UI edited description"}]}`,
 			expectedFields: []types.SchemaField{
 				{FieldPath: "field1", Description: "UI edited description"},
 			},
@@ -396,11 +378,7 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					{FieldPath: "field1", Description: "original description"},
 				},
 			},
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{FieldPath: "field1", Description: ""},
-				},
-			},
+			editedJSON: `{"editableSchemaFieldInfo":[{"fieldPath":"field1","description":""}]}`,
 			expectedFields: []types.SchemaField{
 				{FieldPath: "field1", Description: "original description"},
 			},
@@ -417,33 +395,10 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					},
 				},
 			},
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{
-						FieldPath: "revenue",
-						GlossaryTerms: struct {
-							Terms []struct {
-								Term struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								} `json:"term"`
-							} `json:"terms"`
-						}{
-							Terms: []struct {
-								Term struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								} `json:"term"`
-							}{
-								{Term: struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								}{URN: "urn:li:glossaryTerm:ui_added", Name: "UI Added Term"}},
-							},
-						},
-					},
-				},
-			},
+			editedJSON: `{"editableSchemaFieldInfo":[{"fieldPath":"revenue",
+				"glossaryTerms":{"terms":[
+					{"term":{"urn":"urn:li:glossaryTerm:ui_added","name":"UI Added Term"}}
+				]}}]}`,
 			expectedFields: []types.SchemaField{
 				{
 					FieldPath: "revenue",
@@ -465,33 +420,10 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					},
 				},
 			},
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{
-						FieldPath: "email",
-						Tags: struct {
-							Tags []struct {
-								Tag struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								} `json:"tag"`
-							} `json:"tags"`
-						}{
-							Tags: []struct {
-								Tag struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								} `json:"tag"`
-							}{
-								{Tag: struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								}{URN: "urn:li:tag:pii", Name: "PII"}},
-							},
-						},
-					},
-				},
-			},
+			editedJSON: `{"editableSchemaFieldInfo":[{"fieldPath":"email",
+				"tags":{"tags":[
+					{"tag":{"urn":"urn:li:tag:pii","name":"PII"}}
+				]}}]}`,
 			expectedFields: []types.SchemaField{
 				{
 					FieldPath: "email",
@@ -513,15 +445,7 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					},
 				},
 			},
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{
-						FieldPath:   "revenue",
-						Description: "Edited description only",
-						// No glossaryTerms - should preserve ingested ones
-					},
-				},
-			},
+			editedJSON: `{"editableSchemaFieldInfo":[{"fieldPath":"revenue","description":"Edited description only"}]}`,
 			expectedFields: []types.SchemaField{
 				{
 					FieldPath:   "revenue",
@@ -539,11 +463,7 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					{FieldPath: "existing_field", Description: "original"},
 				},
 			},
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{FieldPath: "nonexistent_field", Description: "should be ignored"},
-				},
-			},
+			editedJSON: `{"editableSchemaFieldInfo":[{"fieldPath":"nonexistent_field","description":"should be ignored"}]}`,
 			expectedFields: []types.SchemaField{
 				{FieldPath: "existing_field", Description: "original"},
 			},
@@ -557,12 +477,10 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					{FieldPath: "field3", Description: "desc3"},
 				},
 			},
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{FieldPath: "field1", Description: "edited1"},
-					{FieldPath: "field3", Description: "edited3"},
-				},
-			},
+			editedJSON: `{"editableSchemaFieldInfo":[
+				{"fieldPath":"field1","description":"edited1"},
+				{"fieldPath":"field3","description":"edited3"}
+			]}`,
 			expectedFields: []types.SchemaField{
 				{FieldPath: "field1", Description: "edited1"},
 				{FieldPath: "field2", Description: "desc2"},
@@ -576,33 +494,10 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 					{FieldPath: "field1"},
 				},
 			},
-			edited: rawEditableSchemaMetadata{
-				EditableSchemaFieldInfo: []rawEditableSchemaFieldInfo{
-					{
-						FieldPath: "field1",
-						GlossaryTerms: struct {
-							Terms []struct {
-								Term struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								} `json:"term"`
-							} `json:"terms"`
-						}{
-							Terms: []struct {
-								Term struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								} `json:"term"`
-							}{
-								{Term: struct {
-									URN  string `json:"urn"`
-									Name string `json:"name"`
-								}{URN: "urn:li:glossaryTerm:new", Name: "New Term"}},
-							},
-						},
-					},
-				},
-			},
+			editedJSON: `{"editableSchemaFieldInfo":[{"fieldPath":"field1",
+				"glossaryTerms":{"terms":[
+					{"term":{"urn":"urn:li:glossaryTerm:new","name":"New Term"}}
+				]}}]}`,
 			expectedFields: []types.SchemaField{
 				{
 					FieldPath: "field1",
@@ -616,7 +511,11 @@ func TestMergeEditableSchemaMetadata(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mergeEditableSchemaMetadata(tc.schema, tc.edited)
+			var edited rawEditableSchemaMetadata
+			if err := json.Unmarshal([]byte(tc.editedJSON), &edited); err != nil {
+				t.Fatalf("unmarshal edited: %v", err)
+			}
+			mergeEditableSchemaMetadata(tc.schema, edited)
 
 			if tc.schema == nil {
 				return

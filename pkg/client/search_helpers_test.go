@@ -1,6 +1,9 @@
 package client
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestParseSearchResult_DocumentEntity(t *testing.T) {
 	sr := searchResultItem{}
@@ -78,18 +81,11 @@ func TestParseSearchResult_NonDocumentEntity(t *testing.T) {
 			Type: "DATAOWNER",
 		},
 	}
-	sr.Entity.Tags.Tags = []struct {
-		Tag struct {
-			URN         string `json:"urn"`
-			Name        string `json:"name"`
-			Description string `json:"description"`
-		} `json:"tag"`
-	}{
-		{Tag: struct {
-			URN         string `json:"urn"`
-			Name        string `json:"name"`
-			Description string `json:"description"`
-		}{URN: "urn:li:tag:prod", Name: "prod"}},
+	if err := json.Unmarshal(
+		[]byte(`{"tags":[{"tag":{"urn":"urn:li:tag:prod","name":"prod"}}]}`),
+		&sr.Entity.Tags,
+	); err != nil {
+		t.Fatalf("unmarshal tags: %v", err)
 	}
 	sr.Entity.Domain.Domain.URN = "urn:li:domain:eng"
 	sr.Entity.Domain.Domain.Properties.Name = "Engineering"
@@ -129,5 +125,40 @@ func TestParseSearchResult_PropertiesOverride(t *testing.T) {
 	}
 	if entity.Description != "Personally Identifiable Information" {
 		t.Errorf("Description = %q, want from properties", entity.Description)
+	}
+}
+
+// TestParseSearchResult_TagPropertiesName verifies a tag whose entity key is a
+// UUID surfaces its properties.name/description rather than the deprecated
+// key-derived top-level fields, and that legacy tags without properties fall
+// back to the top-level fields.
+func TestParseSearchResult_TagPropertiesName(t *testing.T) {
+	sr := searchResultItem{}
+	sr.Entity.URN = "urn:li:dataset:test"
+	sr.Entity.Type = "DATASET"
+	if err := json.Unmarshal([]byte(`{"tags":[
+		{"tag":{"urn":"urn:li:tag:f18a56d4","name":"f18a56d4","description":"",
+			"properties":{"name":"v1101-live-test","description":"live desc"}}},
+		{"tag":{"urn":"urn:li:tag:PII","name":"PII","description":"legacy desc"}}
+	]}`), &sr.Entity.Tags); err != nil {
+		t.Fatalf("unmarshal tags: %v", err)
+	}
+
+	entity := parseSearchResult(sr)
+
+	if len(entity.Tags) != 2 {
+		t.Fatalf("Tags len = %d, want 2", len(entity.Tags))
+	}
+	if entity.Tags[0].Name != "v1101-live-test" {
+		t.Errorf("Tags[0].Name = %q, want v1101-live-test (from properties)", entity.Tags[0].Name)
+	}
+	if entity.Tags[0].Description != "live desc" {
+		t.Errorf("Tags[0].Description = %q, want live desc (from properties)", entity.Tags[0].Description)
+	}
+	if entity.Tags[1].Name != "PII" {
+		t.Errorf("Tags[1].Name = %q, want PII (legacy fallback)", entity.Tags[1].Name)
+	}
+	if entity.Tags[1].Description != "legacy desc" {
+		t.Errorf("Tags[1].Description = %q, want legacy desc (fallback)", entity.Tags[1].Description)
 	}
 }

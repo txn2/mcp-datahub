@@ -40,6 +40,10 @@ query search($input: SearchInput!) {
                 urn
                 name
                 description
+                properties {
+                  name
+                  description
+                }
               }
             }
           }
@@ -150,6 +154,10 @@ query getEntity($urn: String!) {
             urn
             name
             description
+            properties {
+              name
+              description
+            }
           }
         }
       }
@@ -276,6 +284,9 @@ query getSchema($urn: String!) {
             tag {
               urn
               name
+              properties {
+                name
+              }
             }
           }
         }
@@ -319,6 +330,9 @@ query getSchema($urn: String!) {
             tag {
               urn
               name
+              properties {
+                name
+              }
             }
           }
         }
@@ -728,6 +742,9 @@ query batchGetSchemas($urns: [String!]!) {
               tag {
                 urn
                 name
+                properties {
+                  name
+                }
               }
             }
           }
@@ -771,6 +788,9 @@ query batchGetSchemas($urns: [String!]!) {
               tag {
                 urn
                 name
+                properties {
+                  name
+                }
               }
             }
           }
