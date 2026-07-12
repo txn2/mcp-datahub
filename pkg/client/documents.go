@@ -75,6 +75,10 @@ const documentSelectionFields = `
           urn
           name
           description
+          properties {
+            name
+            description
+          }
         }
       }
     }
@@ -269,6 +273,10 @@ type documentResponse struct {
 				URN         string `json:"urn"`
 				Name        string `json:"name"`
 				Description string `json:"description"`
+				Properties  struct {
+					Name        string `json:"name"`
+					Description string `json:"description"`
+				} `json:"properties"`
 			} `json:"tag"`
 		} `json:"tags"`
 	} `json:"tags"`
@@ -345,12 +353,13 @@ func parseDocumentResponse(d *documentResponse) *types.Document {
 		})
 	}
 
-	// Parse tags
+	// Parse tags. Prefer properties.name/description over the deprecated
+	// key-derived top-level fields (UUIDs for tags created without an explicit id).
 	for _, t := range d.Tags.Tags {
 		doc.Tags = append(doc.Tags, types.Tag{
 			URN:         t.Tag.URN,
-			Name:        t.Tag.Name,
-			Description: t.Tag.Description,
+			Name:        firstNonEmpty(t.Tag.Properties.Name, t.Tag.Name),
+			Description: firstNonEmpty(t.Tag.Properties.Description, t.Tag.Description),
 		})
 	}
 

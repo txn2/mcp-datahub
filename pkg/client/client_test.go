@@ -445,6 +445,74 @@ func TestClientGetEntity(t *testing.T) {
 	}
 }
 
+// TestClientGetEntityTagPropertiesName reproduces issue #180: a tag created
+// without an explicit id has a UUID entity key, so its deprecated top-level
+// name is the UUID. GetEntity must surface properties.name/description instead,
+// while falling back to the top-level fields for legacy tags lacking properties.
+func TestClientGetEntityTagPropertiesName(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]interface{}{
+			"data": map[string]interface{}{
+				"entity": map[string]interface{}{
+					"urn":  "urn:li:dataset:(urn:li:dataPlatform:snowflake,db.schema.table,PROD)",
+					"type": "DATASET",
+					"name": "table",
+					"tags": map[string]interface{}{
+						"tags": []interface{}{
+							map[string]interface{}{
+								"tag": map[string]interface{}{
+									"urn":         "urn:li:tag:f18a56d4-c008-4c19-a1f4-b4ca776204c0",
+									"name":        "f18a56d4-c008-4c19-a1f4-b4ca776204c0",
+									"description": "",
+									"properties": map[string]interface{}{
+										"name":        "v1101-live-test",
+										"description": "live desc",
+									},
+								},
+							},
+							map[string]interface{}{
+								"tag": map[string]interface{}{
+									"urn":         "urn:li:tag:PII",
+									"name":        "PII",
+									"description": "legacy desc",
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{URL: server.URL, Token: "test-token", RetryMax: 0})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	entity, err := client.GetEntity(context.Background(),
+		"urn:li:dataset:(urn:li:dataPlatform:snowflake,db.schema.table,PROD)")
+	if err != nil {
+		t.Fatalf("GetEntity() unexpected error: %v", err)
+	}
+
+	if len(entity.Tags) != 2 {
+		t.Fatalf("GetEntity() Tags len = %d, want 2", len(entity.Tags))
+	}
+	if entity.Tags[0].Name != "v1101-live-test" {
+		t.Errorf("Tags[0].Name = %q, want v1101-live-test (from properties, not UUID)", entity.Tags[0].Name)
+	}
+	if entity.Tags[0].Description != "live desc" {
+		t.Errorf("Tags[0].Description = %q, want live desc (from properties)", entity.Tags[0].Description)
+	}
+	if entity.Tags[1].Name != "PII" {
+		t.Errorf("Tags[1].Name = %q, want PII (legacy fallback)", entity.Tags[1].Name)
+	}
+	if entity.Tags[1].Description != "legacy desc" {
+		t.Errorf("Tags[1].Description = %q, want legacy desc (fallback)", entity.Tags[1].Description)
+	}
+}
+
 func TestClientGetEntityNotFound(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(t, w, map[string]interface{}{

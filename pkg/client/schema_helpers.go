@@ -26,8 +26,11 @@ type rawSchemaField struct {
 	Tags           struct {
 		Tags []struct {
 			Tag struct {
-				URN  string `json:"urn"`
-				Name string `json:"name"`
+				URN        string `json:"urn"`
+				Name       string `json:"name"`
+				Properties struct {
+					Name string `json:"name"`
+				} `json:"properties"`
 			} `json:"tag"`
 		} `json:"tags"`
 	} `json:"tags"`
@@ -76,8 +79,11 @@ type rawEditableSchemaFieldInfo struct {
 	Tags struct {
 		Tags []struct {
 			Tag struct {
-				URN  string `json:"urn"`
-				Name string `json:"name"`
+				URN        string `json:"urn"`
+				Name       string `json:"name"`
+				Properties struct {
+					Name string `json:"name"`
+				} `json:"properties"`
 			} `json:"tag"`
 		} `json:"tags"`
 	} `json:"tags"`
@@ -117,10 +123,12 @@ func parseSchemaField(f rawSchemaField) types.SchemaField {
 		IsPartitionKey: f.IsPartOfKey,
 	}
 
+	// Prefer properties.name over the deprecated key-derived top-level name,
+	// which is a UUID for tags created without an explicit id.
 	for _, t := range f.Tags.Tags {
 		field.Tags = append(field.Tags, types.Tag{
 			URN:  t.Tag.URN,
-			Name: t.Tag.Name,
+			Name: firstNonEmpty(t.Tag.Properties.Name, t.Tag.Name),
 		})
 	}
 
@@ -196,7 +204,7 @@ func mergeEditableSchemaMetadata(schema *types.SchemaMetadata, edited rawEditabl
 			for _, t := range editedInfo.Tags.Tags {
 				field.Tags = append(field.Tags, types.Tag{
 					URN:  t.Tag.URN,
-					Name: t.Tag.Name,
+					Name: firstNonEmpty(t.Tag.Properties.Name, t.Tag.Name),
 				})
 			}
 		}

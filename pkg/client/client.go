@@ -459,6 +459,10 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 						URN         string `json:"urn"`
 						Name        string `json:"name"`
 						Description string `json:"description"`
+						Properties  struct {
+							Name        string `json:"name"`
+							Description string `json:"description"`
+						} `json:"properties"`
 					} `json:"tag"`
 				} `json:"tags"`
 			} `json:"tags"`
@@ -529,12 +533,15 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 		})
 	}
 
-	// Parse tags
+	// Parse tags. The top-level name/description are derived from the tag's
+	// entity key (deprecated in the GraphQL schema); for tags created without an
+	// explicit id the key is a UUID, so prefer properties.name/description and
+	// fall back to the legacy fields for older servers or key-only tags.
 	for _, t := range response.Entity.Tags.Tags {
 		entity.Tags = append(entity.Tags, types.Tag{
 			URN:         t.Tag.URN,
-			Name:        t.Tag.Name,
-			Description: t.Tag.Description,
+			Name:        firstNonEmpty(t.Tag.Properties.Name, t.Tag.Name),
+			Description: firstNonEmpty(t.Tag.Properties.Description, t.Tag.Description),
 		})
 	}
 

@@ -42,6 +42,10 @@ type searchResultItem struct {
 					URN         string `json:"urn"`
 					Name        string `json:"name"`
 					Description string `json:"description"`
+					Properties  struct {
+						Name        string `json:"name"`
+						Description string `json:"description"`
+					} `json:"properties"`
 				} `json:"tag"`
 			} `json:"tags"`
 		} `json:"tags"`
@@ -105,11 +109,13 @@ func parseSearchResult(sr searchResultItem) types.SearchEntity {
 		})
 	}
 
+	// Prefer properties.name/description over the deprecated key-derived
+	// top-level fields, which are UUIDs for tags created without an explicit id.
 	for _, t := range sr.Entity.Tags.Tags {
 		entity.Tags = append(entity.Tags, types.Tag{
 			URN:         t.Tag.URN,
-			Name:        t.Tag.Name,
-			Description: t.Tag.Description,
+			Name:        firstNonEmpty(t.Tag.Properties.Name, t.Tag.Name),
+			Description: firstNonEmpty(t.Tag.Properties.Description, t.Tag.Description),
 		})
 	}
 
