@@ -490,20 +490,6 @@ a.rail__brand:focus-visible { outline-offset: 4px; }
   font-weight: 400;
   font-family: var(--serif);
 }
-.page--home .hero__chip {
-  font-family: var(--mono);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  color: var(--mute);
-  background: var(--ink-3);
-  border: 1px solid var(--rule);
-  padding: 6px 12px;
-  border-radius: 2px;
-  text-transform: uppercase;
-  align-self: center;
-  transform: translateY(-12px);
-  white-space: nowrap;
-}
 
 .page--home .hero__intro {
   display: grid;
@@ -554,7 +540,6 @@ a.rail__brand:focus-visible { outline-offset: 4px; }
     margin-bottom: 36px;
   }
   .page--home .hero__intro { grid-template-columns: 1fr; padding-left: 0; }
-  .page--home .hero__chip { display: none; }
 }
 
 /* Ticker */
