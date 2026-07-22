@@ -15,6 +15,15 @@ updates:
     commit-message:
       prefix: "ci"
     labels: ["dependencies", "github-actions"]
+    # github/codeql-action ships init/autobuild/analyze/upload-sarif as
+    # sub-actions that must all run the same version; a partial bump makes
+    # init write a config the older autobuild rejects ("Loaded a
+    # configuration file for version X, but running version Y"). Group them
+    # so every codeql-action ref moves in a single PR.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
 
   - package-ecosystem: "docker"
     directory: "/"
