@@ -707,12 +707,12 @@ Update metadata on an existing entity.
 | `what` | string | Yes | What to update (see table below) |
 | `action` | string | Varies | `add`/`remove` (required for tag, glossary_term, link, owner); `set`/`remove` (domain, structured_properties, custom_properties, default: set); not used for other what values |
 | `urn` | string | Yes | Entity URN |
-| `value` | string | No | New value (description, status, label, message) |
+| `value` | string | No | New value: the description text for `description` and `column_description`, otherwise status, label, message |
 | `target_urn` | string | No | Target URN for add/remove (tag, glossary term, owner, domain) |
 | `url` | string | No | URL for link operations |
 | `field_path` | string | No | Schema field path (column_description) |
 | `name` | string | No | Updated name (query, incident, structured_property) |
-| `description` | string | No | Updated description |
+| `description` | string | No | Updated description (query, incident, structured_property). For `description` and `column_description` the text belongs in `value`; it is accepted here too, and one of the two must carry it |
 | `ownership_type` | string | No | Ownership type, e.g. TECHNICAL_OWNER (owner add only) |
 | `properties` | object[] | No | Structured property values to set (structured_properties) |
 | `property_urns` | string[] | No | Property URNs to remove (structured_properties) |
@@ -735,8 +735,8 @@ Update metadata on an existing entity.
 
 | what | action | Description |
 |------|--------|-------------|
-| `description` | _(not used)_ | Set entity description (also edits tag and glossaryTerm descriptions) |
-| `column_description` | _(not used)_ | Set schema field description |
+| `description` | _(not used)_ | Set entity description from `value` (also edits tag and glossaryTerm descriptions) |
+| `column_description` | _(not used)_ | Set schema field description from `value` |
 | `tag` | **required**: add/remove | Add or remove a tag |
 | `glossary_term` | **required**: add/remove | Add or remove a glossary term |
 | `link` | **required**: add/remove | Add or remove a link |

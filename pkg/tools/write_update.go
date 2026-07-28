@@ -22,7 +22,7 @@ type UpdateInput struct {
 
 	// Common value field
 	//nolint:lll // struct tag cannot be split
-	Value string `json:"value,omitempty" jsonschema_description:"New value (description text, status, sub_type, label, message, etc.). NOT the tag/term/owner/domain URN for add/remove/set: use target_urn (a URN passed here alone is accepted as a fallback)"`
+	Value string `json:"value,omitempty" jsonschema_description:"New value (description text for what=description and what=column_description, status, sub_type, label, message, etc.). NOT the tag/term/owner/domain URN for add/remove/set: use target_urn (a URN passed here alone is accepted as a fallback)"`
 
 	// Target URN for add/remove operations (tag, glossary_term, owner, domain)
 	//nolint:lll // struct tag cannot be split
@@ -48,8 +48,9 @@ type UpdateInput struct {
 	PropertyKeys []string `json:"property_keys,omitempty" jsonschema_description:"Legacy customProperties keys to remove (custom_properties, action=remove)"`
 
 	// Query-specific
-	Name        string   `json:"name,omitempty" jsonschema_description:"Updated name (query, incident, structured_property)"`
-	Description string   `json:"description,omitempty" jsonschema_description:"Updated description"`
+	Name string `json:"name,omitempty" jsonschema_description:"Updated name (query, incident, structured_property)"`
+	//nolint:lll // struct tag cannot be split
+	Description string   `json:"description,omitempty" jsonschema_description:"Updated description (query, incident, structured_property). For what=description and what=column_description the text belongs in value; it is accepted here too, and one of the two must carry it"`
 	Language    string   `json:"language,omitempty" jsonschema_description:"Query language (query only)"`
 	DatasetURNs []string `json:"dataset_urns,omitempty" jsonschema_description:"Dataset URNs (query, data_contract)"`
 

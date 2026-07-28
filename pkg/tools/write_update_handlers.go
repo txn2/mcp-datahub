@@ -31,10 +31,34 @@ func resolveTargetURN(input UpdateInput) (string, error) {
 	return input.Value, nil
 }
 
+// resolveDescription returns the text of a description update (what:
+// description, what: column_description). value is authoritative; description is
+// accepted when value is empty, since description is a real field for other what
+// values (query, incident, structured_property) and the schema therefore admits
+// it here. When both are set they must agree. Both empty is refused rather than
+// written: an empty description erases the text the target already carried, and
+// the response would still report "updated" (#194).
+func resolveDescription(input UpdateInput) (string, error) {
+	if input.Value != "" && input.Description != "" && input.Value != input.Description {
+		return "", errDescriptionConflict(input.Value, input.Description)
+	}
+	if input.Value != "" {
+		return input.Value, nil
+	}
+	if input.Description == "" {
+		return "", errRequired("value (the description text)")
+	}
+	return input.Description, nil
+}
+
 func (t *Toolkit) handleUpdateDescription(
 	ctx context.Context, c DataHubClient, input UpdateInput,
 ) (UpdateOutput, error) {
-	if err := c.UpdateDescription(ctx, input.URN, input.Value); err != nil {
+	description, err := resolveDescription(input)
+	if err != nil {
+		return UpdateOutput{}, err
+	}
+	if err := c.UpdateDescription(ctx, input.URN, description); err != nil {
 		return UpdateOutput{}, err
 	}
 	aspectName := "unknown"
@@ -52,7 +76,11 @@ func (t *Toolkit) handleUpdateColumnDescription(
 	if input.FieldPath == "" {
 		return UpdateOutput{}, errRequired("field_path")
 	}
-	if err := c.UpdateColumnDescription(ctx, input.URN, input.FieldPath, input.Value); err != nil {
+	description, err := resolveDescription(input)
+	if err != nil {
+		return UpdateOutput{}, err
+	}
+	if err := c.UpdateColumnDescription(ctx, input.URN, input.FieldPath, description); err != nil {
 		return UpdateOutput{}, err
 	}
 	return UpdateOutput{URN: input.URN, What: "column_description", Action: "updated"}, nil
