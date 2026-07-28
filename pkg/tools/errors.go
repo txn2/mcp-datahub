@@ -44,6 +44,13 @@ func errTargetConflict(targetURN, value string) error {
 	return fmt.Errorf("target_urn (%s) and value (%s) differ; set only target_urn", targetURN, value)
 }
 
+// errDescriptionConflict returns an error when value and description both carry
+// description text for a description update but disagree, rather than silently
+// preferring one.
+func errDescriptionConflict(value, description string) error {
+	return fmt.Errorf("value (%s) and description (%s) differ; set only value", value, description)
+}
+
 // JSONResult creates a JSON result for tool responses.
 func JSONResult(v any) (*mcp.CallToolResult, error) {
 	data, err := json.MarshalIndent(v, "", "  ")
