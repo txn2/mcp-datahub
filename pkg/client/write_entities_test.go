@@ -205,6 +205,89 @@ func TestCreateGlossaryTerm(t *testing.T) {
 	}
 }
 
+func TestCreateGlossaryNode(t *testing.T) {
+	tests := []struct {
+		name       string
+		nodeName   string
+		definition string
+		parentNode string
+		response   string
+		wantURN    string
+		wantErr    bool
+		checkInput func(t *testing.T, input map[string]any)
+	}{
+		{
+			name:       "success without parent",
+			nodeName:   "Finance",
+			definition: "Finance domain terms",
+			response:   `{"data": {"createGlossaryNode": "urn:li:glossaryNode:finance"}}`,
+			wantURN:    "urn:li:glossaryNode:finance",
+			checkInput: func(t *testing.T, input map[string]any) {
+				t.Helper()
+				if _, hasParent := input["parentNode"]; hasParent {
+					t.Error("expected no parentNode when empty")
+				}
+				if input["description"] != "Finance domain terms" {
+					t.Errorf("description = %v, want %q", input["description"], "Finance domain terms")
+				}
+			},
+		},
+		{
+			name:       "success with parent",
+			nodeName:   "Revenue",
+			definition: "Revenue sub-glossary",
+			parentNode: "urn:li:glossaryNode:finance",
+			response:   `{"data": {"createGlossaryNode": "urn:li:glossaryNode:revenue"}}`,
+			wantURN:    "urn:li:glossaryNode:revenue",
+			checkInput: func(t *testing.T, input map[string]any) {
+				t.Helper()
+				if input["parentNode"] != "urn:li:glossaryNode:finance" {
+					t.Errorf("parentNode = %v, want urn:li:glossaryNode:finance", input["parentNode"])
+				}
+			},
+		},
+		{
+			name:       "graphql error",
+			nodeName:   "Finance",
+			definition: "desc",
+			response:   `{"errors": [{"message": "creation failed"}]}`,
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				input := extractGraphQLInput(t, r)
+				if input["name"] != tt.nodeName {
+					t.Errorf("name = %v, want %v", input["name"], tt.nodeName)
+				}
+				if tt.checkInput != nil {
+					tt.checkInput(t, input)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tt.response))
+			}))
+			defer server.Close()
+
+			c := &Client{
+				endpoint:   server.URL,
+				token:      "test-token",
+				httpClient: server.Client(),
+				logger:     NopLogger{},
+			}
+
+			urn, err := c.CreateGlossaryNode(context.Background(), tt.nodeName, tt.definition, tt.parentNode)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && urn != tt.wantURN {
+				t.Errorf("URN = %q, want %q", urn, tt.wantURN)
+			}
+		})
+	}
+}
+
 func TestCreateDataProduct(t *testing.T) {
 	tests := []struct {
 		name      string

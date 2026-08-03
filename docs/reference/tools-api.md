@@ -625,6 +625,11 @@ type Config struct {
 | `GetColumnLineage(ctx, urn)` | Get column-level lineage mappings |
 | `GetQueries(ctx, urn)` | Get associated queries |
 | `GetGlossaryTerm(ctx, urn)` | Get glossary term details |
+| `CreateGlossaryNode(ctx, name, definition, parentNode)` | Create a glossary node, returns its URN |
+| `GetRootGlossaryNodes(ctx, start, count)` | List glossary nodes with no parent, plus the total |
+| `GetRootGlossaryTerms(ctx, start, count)` | List glossary terms with no parent, plus the total |
+| `GetGlossaryNodeChildren(ctx, nodeURN, start, count)` | List the nodes and terms directly under a node |
+| `GetGlossaryParentChain(ctx, urn)` | Ancestor nodes of a term or node, direct parent first |
 | `ListTags(ctx, filter)` | List tags |
 | `ListDomains(ctx)` | List domains |
 | `ListDataProducts(ctx)` | List data products |
@@ -728,6 +733,42 @@ type Domain struct {
     EntityCount int    `json:"entityCount,omitempty"`
 }
 ```
+
+### GlossaryNode
+
+Represents a business glossary node: a directory holding glossary terms and
+other nodes.
+
+```go
+type GlossaryNode struct {
+    URN         string `json:"urn"`
+    Name        string `json:"name"`
+    Description string `json:"description,omitempty"`
+    ParentNode  string `json:"parent_node,omitempty"`
+    TermsCount  int    `json:"terms_count"`
+    NodesCount  int    `json:"nodes_count"`
+}
+```
+
+### GlossaryChildren
+
+A page of the entities directly under a glossary node. Nodes and terms share
+one result set in DataHub, so `Start`, `Count`, and `Total` describe the
+combined page rather than either slice.
+
+```go
+type GlossaryChildren struct {
+    Nodes []GlossaryNode `json:"nodes,omitempty"`
+    Terms []GlossaryTerm `json:"terms,omitempty"`
+    Start int            `json:"start"`
+    Count int            `json:"count"`
+    Total int            `json:"total"`
+}
+```
+
+Children are read from DataHub's graph index, which is populated
+asynchronously, so an entity created moments earlier may not appear yet.
+`GetGlossaryParentChain` reads the entity itself and is immediately consistent.
 
 ### DataProduct
 
