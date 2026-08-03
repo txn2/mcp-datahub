@@ -21,6 +21,10 @@ const (
 		createGlossaryTerm(input: $input)
 	}`
 
+	createGlossaryNodeMutation = `mutation createGlossaryNode($input: CreateGlossaryEntityInput!) {
+		createGlossaryNode(input: $input)
+	}`
+
 	createDataProductMutation = `mutation createDataProduct($input: CreateDataProductInput!) {
 		createDataProduct(input: $input) {
 			urn
@@ -96,6 +100,29 @@ func (c *Client) CreateGlossaryTerm(ctx context.Context, name, description, pare
 		return "", fmt.Errorf("CreateGlossaryTerm: %w", err)
 	}
 	return resp.CreateGlossaryTerm, nil
+}
+
+// CreateGlossaryNode creates a new glossary node entity in DataHub and returns
+// its URN. A glossary node is a container for glossary terms and other nodes.
+// Pass an empty parentNode to create a root node.
+//
+// definition is sent as the CreateGlossaryEntityInput "description" field,
+// which DataHub stores in the glossaryNodeInfo aspect's "definition" field.
+func (c *Client) CreateGlossaryNode(ctx context.Context, name, definition, parentNode string) (string, error) {
+	input := map[string]any{
+		"name":        name,
+		"description": definition,
+	}
+	if parentNode != "" {
+		input["parentNode"] = parentNode
+	}
+	var resp struct {
+		CreateGlossaryNode string `json:"createGlossaryNode"`
+	}
+	if err := c.Execute(ctx, createGlossaryNodeMutation, map[string]any{"input": input}, &resp); err != nil {
+		return "", fmt.Errorf("CreateGlossaryNode: %w", err)
+	}
+	return resp.CreateGlossaryNode, nil
 }
 
 // CreateDataProduct creates a new data product entity in DataHub.

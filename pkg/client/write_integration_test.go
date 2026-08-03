@@ -103,7 +103,7 @@ func TestIntegrationUpdateDescription(t *testing.T) {
 
 	// Read original description via REST so we can restore it
 	var originalDesc string
-	raw, err := c.getAspect(ctx, urn, "editableDatasetProperties")
+	raw, err := c.getAspect(ctx, "dataset", urn, "editableDatasetProperties")
 	if err == nil {
 		var props struct {
 			Description string `json:"description"`
@@ -130,7 +130,7 @@ func TestIntegrationUpdateDescription(t *testing.T) {
 	}
 
 	// Verify via REST
-	raw, err = c.getAspect(ctx, urn, "editableDatasetProperties")
+	raw, err = c.getAspect(ctx, "dataset", urn, "editableDatasetProperties")
 	if err != nil {
 		t.Fatalf("getAspect after write: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestIntegrationAddTag(t *testing.T) {
 	}
 
 	// Verify
-	tags, err := c.readGlobalTags(ctx, urn)
+	tags, err := c.readGlobalTags(ctx, "dataset", urn)
 	if err != nil {
 		t.Fatalf("readGlobalTags after add: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestIntegrationAddTag(t *testing.T) {
 		if err := c.AddTag(ctx, urn, tagURN); err != nil {
 			t.Fatalf("AddTag (idempotent): %v", err)
 		}
-		tags2, err := c.readGlobalTags(ctx, urn)
+		tags2, err := c.readGlobalTags(ctx, "dataset", urn)
 		if err != nil {
 			t.Fatalf("readGlobalTags after idempotent add: %v", err)
 		}
@@ -234,7 +234,7 @@ func TestIntegrationRemoveTag(t *testing.T) {
 	}
 
 	// Verify removed
-	tags, err := c.readGlobalTags(ctx, urn)
+	tags, err := c.readGlobalTags(ctx, "dataset", urn)
 	if err != nil {
 		t.Fatalf("readGlobalTags after remove: %v", err)
 	}
@@ -266,7 +266,7 @@ func TestIntegrationAddGlossaryTerm(t *testing.T) {
 	}
 
 	// Verify
-	terms, err := c.readGlossaryTerms(ctx, urn)
+	terms, err := c.readGlossaryTerms(ctx, "dataset", urn)
 	if err != nil {
 		t.Fatalf("readGlossaryTerms after add: %v", err)
 	}
@@ -279,7 +279,7 @@ func TestIntegrationAddGlossaryTerm(t *testing.T) {
 		if err := c.AddGlossaryTerm(ctx, urn, termURN); err != nil {
 			t.Fatalf("AddGlossaryTerm (idempotent): %v", err)
 		}
-		terms2, err := c.readGlossaryTerms(ctx, urn)
+		terms2, err := c.readGlossaryTerms(ctx, "dataset", urn)
 		if err != nil {
 			t.Fatalf("readGlossaryTerms after idempotent add: %v", err)
 		}
@@ -323,7 +323,7 @@ func TestIntegrationRemoveGlossaryTerm(t *testing.T) {
 	}
 
 	// Verify removed
-	terms, err := c.readGlossaryTerms(ctx, urn)
+	terms, err := c.readGlossaryTerms(ctx, "dataset", urn)
 	if err != nil {
 		t.Fatalf("readGlossaryTerms after remove: %v", err)
 	}
@@ -356,7 +356,7 @@ func TestIntegrationAddLink(t *testing.T) {
 	}
 
 	// Verify
-	memory, err := c.readInstitutionalMemory(ctx, urn)
+	memory, err := c.readInstitutionalMemory(ctx, "dataset", urn)
 	if err != nil {
 		t.Fatalf("readInstitutionalMemory after add: %v", err)
 	}
@@ -369,7 +369,7 @@ func TestIntegrationAddLink(t *testing.T) {
 		if err := c.AddLink(ctx, urn, linkURL, linkDesc); err != nil {
 			t.Fatalf("AddLink (idempotent): %v", err)
 		}
-		memory2, err := c.readInstitutionalMemory(ctx, urn)
+		memory2, err := c.readInstitutionalMemory(ctx, "dataset", urn)
 		if err != nil {
 			t.Fatalf("readInstitutionalMemory after idempotent add: %v", err)
 		}
@@ -414,7 +414,7 @@ func TestIntegrationRemoveLink(t *testing.T) {
 	}
 
 	// Verify removed
-	memory, err := c.readInstitutionalMemory(ctx, urn)
+	memory, err := c.readInstitutionalMemory(ctx, "dataset", urn)
 	if err != nil {
 		t.Fatalf("readInstitutionalMemory after remove: %v", err)
 	}
