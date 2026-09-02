@@ -340,6 +340,25 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+// absentEntityErr reports a by-URN GraphQL response that describes an entity
+// which does not exist, and returns nil otherwise.
+//
+// DataHub's entity resolvers hydrate a stub from the key aspect for a URN that
+// was never ingested: the requested URN comes back with a name derived from it,
+// no GraphQL error, and every real aspect null. An empty URN therefore never
+// fires against a real server, and "exists" is the signal that does. Only a
+// definitive false means absent - a DataHub version (or an entity type) that
+// omits the field leaves the pointer nil and the entity still stands.
+func absentEntityErr(responseURN string, exists *bool) error {
+	if responseURN == "" {
+		return fmt.Errorf("empty URN in response (entity may not exist or access denied): %w", ErrNotFound)
+	}
+	if exists != nil && !*exists {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // Ping tests the connection to DataHub.
 func (c *Client) Ping(ctx context.Context) error {
 	var result map[string]any
@@ -420,6 +439,7 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 		Entity struct {
 			URN         string `json:"urn"`
 			Type        string `json:"type"`
+			Exists      *bool  `json:"exists"`
 			Name        string `json:"name"`
 			Description string `json:"description"`
 			Platform    struct {
@@ -499,8 +519,8 @@ func (c *Client) GetEntity(ctx context.Context, urn string) (*types.Entity, erro
 		return nil, fmt.Errorf("GetEntity(%s): %w", urn, err)
 	}
 
-	if response.Entity.URN == "" {
-		return nil, fmt.Errorf("GetEntity(%s): empty URN in response (entity may not exist or access denied): %w", urn, ErrNotFound)
+	if err := absentEntityErr(response.Entity.URN, response.Entity.Exists); err != nil {
+		return nil, fmt.Errorf("GetEntity(%s): %w", urn, err)
 	}
 
 	entity := &types.Entity{
@@ -933,6 +953,7 @@ func (c *Client) GetGlossaryTerm(ctx context.Context, urn string) (*types.Glossa
 	var response struct {
 		GlossaryTerm struct {
 			URN              string `json:"urn"`
+			Exists           *bool  `json:"exists"`
 			Name             string `json:"name"`
 			HierarchicalName string `json:"hierarchicalName"`
 			Properties       struct {
@@ -967,8 +988,11 @@ func (c *Client) GetGlossaryTerm(ctx context.Context, urn string) (*types.Glossa
 		return nil, fmt.Errorf("GetGlossaryTerm(%s): %w", urn, err)
 	}
 
-	if response.GlossaryTerm.URN == "" {
-		return nil, fmt.Errorf("GetGlossaryTerm(%s): %w", urn, ErrNotFound)
+	// A term that was never ingested resolves to a key-aspect stub whose name is
+	// the URN's id segment - exactly what a real term's name usually is - so
+	// "exists" is the only signal that separates the two.
+	if err := absentEntityErr(response.GlossaryTerm.URN, response.GlossaryTerm.Exists); err != nil {
+		return nil, fmt.Errorf("GetGlossaryTerm(%s): %w", urn, err)
 	}
 
 	term := &types.GlossaryTerm{
@@ -1225,8 +1249,12 @@ func (c *Client) GetDataProduct(ctx context.Context, urn string) (*types.DataPro
 
 	var response struct {
 		DataProduct struct {
-			URN        string `json:"urn"`
-			Properties struct {
+			URN string `json:"urn"`
+			// Pointer so a null properties aspect is distinguishable from an
+			// empty one: DataProduct has no "exists" field, and a product
+			// cannot be created without dataProductProperties, so null
+			// properties is the absence signal for this entity type.
+			Properties *struct {
 				Name             string `json:"name"`
 				Description      string `json:"description"`
 				CustomProperties []struct {
@@ -1264,8 +1292,13 @@ func (c *Client) GetDataProduct(ctx context.Context, urn string) (*types.DataPro
 		return nil, fmt.Errorf("GetDataProduct(%s): %w", urn, err)
 	}
 
-	if response.DataProduct.URN == "" {
-		return nil, fmt.Errorf("GetDataProduct(%s): %w", urn, ErrNotFound)
+	// DataProduct exposes no "exists" field, so a null properties aspect stands
+	// in for it: a product cannot be created without dataProductProperties, and a
+	// product that was never ingested resolves to a key-aspect stub carrying the
+	// requested URN and nothing else.
+	productExists := response.DataProduct.Properties != nil
+	if err := absentEntityErr(response.DataProduct.URN, &productExists); err != nil {
+		return nil, fmt.Errorf("GetDataProduct(%s): %w", urn, err)
 	}
 
 	product := &types.DataProduct{

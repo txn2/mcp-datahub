@@ -117,13 +117,21 @@ query search($input: SearchInput!) {
 }
 `
 
-	// GetEntityQuery retrieves a single entity by URN.
+	// GetEntityQuery retrieves a single entity by URN. Each inline fragment
+	// selects "exists" because DataHub's entity resolvers hydrate a stub from the
+	// key aspect for a URN that was never ingested - the response carries the
+	// requested URN and a name derived from it, so the URN alone cannot tell a
+	// missing entity from a real one. "exists" lives on the concrete types, not
+	// on the Entity interface, so selecting it at the top level is a validation
+	// error. Domain and Tag carry no "exists" field at all, so a stub for those
+	// two types is still indistinguishable from a real entity.
 	GetEntityQuery = `
 query getEntity($urn: String!) {
   entity(urn: $urn) {
     urn
     type
     ... on Dataset {
+      exists
       name
       description
       platform {
@@ -203,6 +211,7 @@ query getEntity($urn: String!) {
       }
     }
     ... on Dashboard {
+      exists
       dashboardId
       info {
         name
@@ -223,6 +232,12 @@ query getEntity($urn: String!) {
           type
         }
       }
+    }
+    ... on GlossaryTerm {
+      exists
+    }
+    ... on GlossaryNode {
+      exists
     }
   }
 }
@@ -432,11 +447,14 @@ query getUsageStatsQueries($urn: String!) {
 }
 `
 
-	// GetGlossaryTermQuery retrieves a glossary term.
+	// GetGlossaryTermQuery retrieves a glossary term. It selects "exists" because
+	// a term URN that was never ingested resolves to a key-aspect stub whose name
+	// is the URN's id segment - exactly what a real term's name usually is.
 	GetGlossaryTermQuery = `
 query getGlossaryTerm($urn: String!) {
   glossaryTerm(urn: $urn) {
     urn
+    exists
     name
     hierarchicalName
     properties {
@@ -572,7 +590,10 @@ query listDataProducts {
 }
 `
 
-	// GetDataProductQuery retrieves a single data product by URN.
+	// GetDataProductQuery retrieves a single data product by URN. DataProduct has
+	// no "exists" field, so a product that was never ingested is detected by a
+	// null properties aspect: a product cannot be created without
+	// dataProductProperties.
 	GetDataProductQuery = `
 query getDataProduct($urn: String!) {
   dataProduct(urn: $urn) {

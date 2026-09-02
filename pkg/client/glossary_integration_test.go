@@ -4,6 +4,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -222,5 +223,57 @@ func eventually(t *testing.T, cond func() bool) bool {
 			return false
 		}
 		time.Sleep(time.Second)
+	}
+}
+
+// TestIntegrationMissingEntityNotFound proves the by-URN reads report a missing
+// entity as ErrNotFound against a live DataHub.
+//
+// It cannot be settled by mocks: the bug it guards is that DataHub hydrates a
+// key-aspect stub for a URN that was never ingested - the requested URN comes
+// back with a name derived from it, no GraphQL error, and every real aspect
+// null. Only a live instance proves which field distinguishes that stub from a
+// real entity. Verified against DataHub v1.6.0.
+func TestIntegrationMissingEntityNotFound(t *testing.T) {
+	skipIfNoEnv(t)
+	c := testClient(t)
+	ctx := testCtx(t)
+
+	suffix := nanos()
+
+	tests := []struct {
+		name string
+		read func() (any, error)
+	}{
+		{
+			name: "GetEntity",
+			read: func() (any, error) {
+				urn := fmt.Sprintf(
+					"urn:li:dataset:(urn:li:dataPlatform:trino,warehouse.public.missing_%s,PROD)", suffix)
+				return c.GetEntity(ctx, urn)
+			},
+		},
+		{
+			name: "GetGlossaryTerm",
+			read: func() (any, error) {
+				return c.GetGlossaryTerm(ctx, fmt.Sprintf("urn:li:glossaryTerm:Missing%s", suffix))
+			},
+		},
+		{
+			name: "GetDataProduct",
+			read: func() (any, error) {
+				return c.GetDataProduct(ctx, fmt.Sprintf("urn:li:dataProduct:missing_%s", suffix))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.read()
+			if !errors.Is(err, ErrNotFound) {
+				t.Fatalf("%s on a URN that was never ingested: error = %v, want ErrNotFound (got %+v)",
+					tt.name, err, got)
+			}
+		})
 	}
 }
